@@ -1,10 +1,9 @@
-import DigitalClock from "./DigitalClock";
+import Stopwatch from "./StopWatch";
 function App() {
-
 
   return (
     <>
-      <DigitalClock/>
+      <Stopwatch/>
     </>
   );
 }

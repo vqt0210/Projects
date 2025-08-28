@@ -1,30 +1,64 @@
 body {
-  background-image: url(assets/background.jpg);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-attachment: fixed;
-  margin: 0;
-  display: flex;
-  justify-content: center;
-  min-height: 100vh;
-  align-items: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: rgb(245, 245, 245);
+    }
 
+    .stopwatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 5px solid black;
+      border-radius: 30px;
+      padding: 30px;
+      background-color: white;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+    }
 
+    .display {
+      font-size: 4rem;
+      font-family: monospace;
+      font-weight: bold;
+      color: rgb(80, 80, 80);
+      text-shadow: 1px 1px 2px black;
+      margin-bottom: 20px;
+    }
+
+  .controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .controls button {
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+
+.start-button{
+  background-color: rgb(22, 188, 47) ;
+}
+.start-button:hover{
+  background-color: rgb(20, 171, 43) ;
 }
 
-.clock-container {
-
-  backdrop-filter: blur(5px);
-  width: 100vh;
-  padding: 100px 0;
-
+.stop-button{
+  background-color: rgb(207, 40, 40) ;
+}
+.stop-button:hover{
+  background-color: rgb(255, 62, 62) ;
 }
 
-.clock {
-  color: white;
-  font-size: 6rem;
-  font-weight: bold;
-  font-family: monospace;
-  text-shadow: 3px 3px 5px rgb(110, 110,110 )
+.reset-button{
+  background-color: rgb(0, 0, 0) ;
+}
+.reset-button:hover{
+  background-color: rgb(188, 188, 188) ;
 }
