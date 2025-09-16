@@ -1,0 +1,62 @@
+<!-- movie-time-navbar.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="200" height="80" role="img" aria-label="Movie Time">
+  <!-- background circle (logo) -->
+  <circle cx="40" cy="40" r="36" fill="#0b1220"/>
+  
+  <!-- film strip top & bottom -->
+  <rect x="4" y="12" width="72" height="12" rx="2" fill="#1f2937"/>
+  <rect x="4" y="56" width="72" height="12" rx="2" fill="#1f2937"/>
+  
+  <!-- sprocket holes top -->
+  <g fill="#0b1220">
+    <rect x="10" y="14" width="6" height="8" rx="1"/>
+    <rect x="22" y="14" width="6" height="8" rx="1"/>
+    <rect x="34" y="14" width="6" height="8" rx="1"/>
+    <rect x="46" y="14" width="6" height="8" rx="1"/>
+    <rect x="58" y="14" width="6" height="8" rx="1"/>
+  </g>
+  
+  <!-- sprocket holes bottom -->
+  <g fill="#0b1220">
+    <rect x="10" y="58" width="6" height="8" rx="1"/>
+    <rect x="22" y="58" width="6" height="8" rx="1"/>
+    <rect x="34" y="58" width="6" height="8" rx="1"/>
+    <rect x="46" y="58" width="6" height="8" rx="1"/>
+    <rect x="58" y="58" width="6" height="8" rx="1"/>
+  </g>
+  
+  <!-- clock face -->
+  <circle cx="40" cy="40" r="18" fill="#f8fafc"/>
+  
+  <!-- clock hands -->
+  <rect x="39" y="24" width="2" height="18" rx="1" fill="#0b1220" transform="rotate(10 40 40)"/>
+  <rect x="40" y="40" width="12" height="2" rx="1" fill="#0b1220" transform="rotate(110 40 40)"/>
+  
+  <!-- small center dot -->
+  <circle cx="40" cy="40" r="2" fill="#0b1220"/>
+  
+  <!-- play triangle overlay -->
+  <polygon points="50,40 44,46 44,34" fill="#f97316" opacity="0.95"/>
+  
+  <!-- Gradient + Glow definitions -->
+  <defs>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff7eb9"/>
+      <stop offset="50%" stop-color="#f84565"/>
+      <stop offset="100%" stop-color="#ff7e5f"/>
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Movie Time text next to logo -->
+  <text x="60" y="50" font-size="24" font-family="Poppins, 'Outfit', sans-serif" font-weight="700" 
+        fill="url(#textGradient)" filter="url(#glow)">
+    MovieTime
+  </text>
+</svg>

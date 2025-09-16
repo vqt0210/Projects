@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import "tailwindcss";
+
+
+/*Use this color the entire project*/
+@theme {
+  --color-primary: #f84565;
+  --color-primary-dull: #d63854;
+}
+
+/*Apply this font on all HTML elements*/
+* {
+  font-family: "Outfit", sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: #787777 #1e1e1e;
+}
+
+body {
+  color: white;
+  background-color: #09090B;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@font-face {
+  font-family: 'BloodCrow';
+  src: url('./assets/fonts/bloodcrow.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BloodCrow';
+  src: url('./assets/fonts/bloodcrows.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BloodCrow';
+  src: url('./assets/fonts/bloodcrowi.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'BloodCrow';
+  src: url('./assets/fonts/bloodcrowsi.ttf') format('truetype');
+  font-weight: bold;
+  font-style: italic;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+

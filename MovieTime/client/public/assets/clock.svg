@@ -1,0 +1,33 @@
+<!-- movie-clock.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Movie Time">
+  <!-- background circle -->
+  <circle cx="60" cy="60" r="56" fill="#0b1220"/>
+  <!-- film strip (top) -->
+  <rect x="10" y="18" width="100" height="18" rx="3" fill="#1f2937"/>
+  <rect x="10" y="82" width="100" height="18" rx="3" fill="#1f2937"/>
+  <!-- sprocket holes top -->
+  <g fill="#0b1220">
+    <rect x="18" y="22" width="8" height="10" rx="1"/>
+    <rect x="36" y="22" width="8" height="10" rx="1"/>
+    <rect x="54" y="22" width="8" height="10" rx="1"/>
+    <rect x="72" y="22" width="8" height="10" rx="1"/>
+    <rect x="90" y="22" width="8" height="10" rx="1"/>
+  </g>
+  <!-- sprocket holes bottom -->
+  <g fill="#0b1220">
+    <rect x="18" y="86" width="8" height="10" rx="1"/>
+    <rect x="36" y="86" width="8" height="10" rx="1"/>
+    <rect x="54" y="86" width="8" height="10" rx="1"/>
+    <rect x="72" y="86" width="8" height="10" rx="1"/>
+    <rect x="90" y="86" width="8" height="10" rx="1"/>
+  </g>
+  <!-- clock face -->
+  <circle cx="60" cy="60" r="28" fill="#f8fafc"/>
+  <!-- clock hands -->
+  <rect x="59" y="36" width="2" height="26" rx="1" fill="#0b1220" transform="rotate(10 60 60)"/>
+  <rect x="60" y="60" width="18" height="2" rx="1" fill="#0b1220" transform="rotate(110 60 60)"/>
+  <!-- small center dot -->
+  <circle cx="60" cy="60" r="3" fill="#0b1220"/>
+  <!-- play triangle overlay (subtle) -->
+  <polygon points="74,60 64,68 64,52" fill="#f97316" opacity="0.95"/>
+</svg>
