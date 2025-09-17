@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef  } from "react"
 import { dummyShowsData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
@@ -12,37 +12,35 @@ const AddShows = () => {
   const [dateTimeSelection, setDateTimeSelection] = useState([]);
   const [dateTimeInput, setDateTimeInput] = useState("");
   const [showPrice, setShowPrice] = useState("");
+  const dateTimeInputRef = useRef(null);
 
   const fetchNowPlayingMovies = async () => {
     setNowPlayingMovies(dummyShowsData)
   };
 
   const handleDateTimeAdd = () => {
-    if (!dateTimeInput) return;
-    const [date, time] = dateTimeInput.split("T");
-    if (!date || !time) return;
+  if (!dateTimeInput) return;
+  const [date, time] = dateTimeInput.split("T");
+  if (!date || !time) return;
 
-    setDateTimeSelection((prev) => {
-      const times = prev[date] || [];
-      if (!times.includes(time)) {
-        return { ...prev, [date]: [...times, time]};
-      }
-      return prev;
-    });
+  setDateTimeSelection(prev => {
+    const times = prev[date] ? [...prev[date]] : [];
+    if (times.includes(time)) return prev;
+    const newTimes = [...times, time].sort(); // optional: sort
+    return { ...prev, [date]: newTimes };
+  });
   };
 
   const handleRemoveTime = (date, time) => {
-    setDateTimeSelection((prev) => {
-      const filteredTimes = prev[date].filter((t) => t !== time);
-      if ( filteredTimes.length === 0 ) {
-        const { [date]: _, ...rest } = prev;
-        return rest;
-      }
-      return {
-        ...prev,
-        [date]: filteredTimes,
-      };
-    });
+  setDateTimeSelection(prev => {
+    const times = prev[date] || [];
+    const filteredTimes = times.filter(t => t !== time);
+    if (filteredTimes.length === 0) {
+      const { [date]: _, ...rest } = prev;
+      return rest;
+    }
+    return { ...prev, [date]: filteredTimes };
+  });
   };
 
   useEffect(() => {
@@ -94,7 +92,7 @@ const AddShows = () => {
       <div className="mt-6">
         <label className="block text-sm font-medium mb-2">Select Date and Time</label>
         <div className="inline-flex gap-5 border border-gray-600 p-1 pl-3 rounded-lg">
-          <input type="datetime-local" value={dateTimeInput} onChange={(e) => setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
+          <input type="datetime-local" ref={dateTimeInputRef} value={dateTimeInput} onChange={(e) => setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
           <button onClick={handleDateTimeAdd} className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer">
             Add Time
           </button>
@@ -111,7 +109,7 @@ const AddShows = () => {
               <div className="font-medium">{date}</div>
               <div className="flex flex-wrap gap-2 mt-1 text-sm">
                 {times.map((time) => (
-                  <div ley={time} className="border border-primary px-2 py-1 flex items-center rounded">
+                  <div key={time} className="border border-primary px-2 py-1 flex items-center rounded">
                     <span>{time}</span>
                     <DeleteIcon onClick={() => handleRemoveTime(date, time)} width={15} className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"/>
                   </div>
