@@ -1,12 +1,13 @@
 import { ArrowRightIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import BlurCircle from './BlurCircle'
-import { dummyShowsData } from '../assets/assets'
 import MovieCard from './MovieCard'
+import { useAppContext } from '../context/AppContext'
 
 
 const FeaturedSection = () => {
   const navigate = useNavigate()
+  const { shows } = useAppContext()
   return (
     <div className='px-6 md:px-16 lg:px-24 xl:px-44 overflow-hidden'> {/*Overflow-hidden dùng để tránh phần tử con tràn ra ngoài */}
       <div className='relative flex items-center justify-between pt-20 pb-10'>
@@ -15,8 +16,9 @@ const FeaturedSection = () => {
         <button onClick={() => navigate('/movies')} className='group flex items-center gap-2 text-sm text-gray-300 cursor-pointer'>View All<ArrowRightIcon className='group-hover:translate-x-0.5 transition w-4.5 h-4.5'/></button>
       </div>
       <div className='flex flex-wrap max-sm:justify-center gap-8 mt-8'>
-        {dummyShowsData.slice(10,14).map((show) => (
-          <MovieCard key={show._id} movie={show}/> // dùng key để nhận diện phần tử, ko có key sẽ phải render lại từ đầu
+        
+        {shows.slice(0,7).map((show) => (
+          <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} /> // dùng key để nhận diện phần tử, ko có key sẽ phải render lại từ đầu
         ))}
       </div>
       {/*Show more button will navigate to the /movies route through the onClick arrow fucntion */}
