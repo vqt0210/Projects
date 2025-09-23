@@ -91,18 +91,16 @@ export const addShow = async( req, res) => {
 // API to get all shows from the database
 export const getShows = async (req, res) => {
   try {
-      const shows = await Show.find({showDateTime: {$gte: new Date()}}).populate('movie').sort({ showDateTime: 1});
-      // ShowDateTime phải lớn hơn thời gian hiện tại thì mới hiển thị đc phim khi gọi tới API
+    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+      .populate('movie')
+      .sort({ showDateTime: 1 });
 
-      // filter unique shows
-      const uniqueShows = new Set(shows.map(show => show.movie))
-
-      res.json({success: true, shows: Array.from(uniqueShows)})
+    res.json({ success: true, shows })
   } catch (error) {
-      console.error(error);
-      res.json({ success: false, message: error.message});
+    console.error(error);
+    res.json({ success: false, message: error.message });
   }
-}
+};
 
 // API to get a single show from the database
 export const getShow = async (req, res) => {
