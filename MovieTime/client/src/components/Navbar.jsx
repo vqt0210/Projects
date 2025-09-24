@@ -44,7 +44,8 @@ const Navbar = () => {
         <Link onClick={() => { scrollTo(0, 0); closeMenu(); }} to='/movies'>Movies</Link>
         <Link onClick={() => { scrollTo(0, 0); closeMenu(); }} to='/'>Theaters</Link>
         <Link onClick={() => { scrollTo(0, 0); closeMenu(); }} to='/'>Releases</Link>
-        {favoriteMovies.length > 0 && <Link onClick={() => { scrollTo(0, 0); closeMenu(); }} to='/favorite'>Favorites</Link>}
+        {favoriteMovies?.length > 0 && (<Link onClick={() => { scrollTo(0, 0); closeMenu(); }} to='/favorite'>Favorites</Link>
+)}
       </div>
 
       {/* Right Section */}
