@@ -2,6 +2,7 @@
 
 // Function to check availability of selected seats for a movie
 
+import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import Stripe from 'stripe'

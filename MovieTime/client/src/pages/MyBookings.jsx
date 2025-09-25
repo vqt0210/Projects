@@ -71,10 +71,10 @@ const MyBookings = () => {
             </div>
 
           </div>
-          <div className='flex flex-col md:items-end md:text-right justify-between p-4'>
-            <div className='flex items-center gap-4'>
-              <p className='text-2xl font-semibold mb-3'>{currency}{item.amount}</p>
-              {!item.isPaid && <Link to={item.paymentLink} className='bg-primary min-w-[100px] px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer'>Pay Now</Link>}
+          <div className='flex flex-col md:items-end md:text-right justify-between p-4 mb-2'>
+            <div className='flex items-center gap-4 mb-3'>
+              <p className='text-2xl font-semibold leading-none'>{currency}{item.amount}</p>
+              {!item.isPaid && <Link to={item.paymentL} className='bg-primary min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium cursor-pointer'>Pay Now</Link>}
             </div>
             <div className='text-sm'>
               <p><span className='text-gray-400'>Total Tickets: </span> {item.bookedSeats.length}</p>
