@@ -10,7 +10,7 @@ const checkSeatsAvailability = async (showId, selectedSeats)=>{
    const showData = await Show.findById(showId)
    if(!showData) return false;
    
-   const occupiedSeats = showData.occupiedSeats;
+   const occupiedSeats = showData.occupiedSeats || {};
 
    const isAnySeatTaken = selectedSeats.some(seat => occupiedSeats[seat]);
 
@@ -21,7 +21,7 @@ const checkSeatsAvailability = async (showId, selectedSeats)=>{
   }
 }
 
-export const createBooking = async ()=>{
+export const createBooking = async (req, res)=>{
   try {
     const {userId} = req.auth();
     const {showId, selectedSeats} = req.body;
@@ -46,10 +46,13 @@ export const createBooking = async ()=>{
       bookedSeats: selectedSeats
     })
 
-    selectedSeats.map((seat)=>{
-      showData.occupiedSeats[seat] = userId;
+    if (!showData.occupiedSeats) {
+        showData.occupiedSeats = {};
+    }
 
-    })
+    selectedSeats.forEach(seat => {
+    showData.occupiedSeats[seat] = userId;
+    });
 
     showData.markModified('occupiedSeats');
 
@@ -69,8 +72,11 @@ export const getOccupiedSeats = async (req, res)=>{
   try {
       const {showId} = req.params;
       const showData = await Show.findById(showId)
+      if (!showData) {
+      return res.json({ success: false, message: "Show not found" });
+    }
 
-      const occupiedSeats = Object.keys(showData.occupiedSeats)
+      const occupiedSeats = Object.keys(showData.occupiedSeats || {})
 
       res.json({success: true, occupiedSeats})
   } catch (error) {

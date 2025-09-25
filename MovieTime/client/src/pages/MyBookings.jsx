@@ -1,23 +1,39 @@
 import { useEffect, useState } from 'react'
 import Loading from '../components/Loading'
 import BlurCircle from '../components/BlurCircle'
-import { dummyBookingData } from '../assets/assets'
 import timeFormat from '../lib/TimeFormat'
 import { dateFormat } from '../lib/dateFormat'
+import { useAppContext } from '../context/AppContext'
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY
+
+  const {axios, getToken, user, image_base_url} = useAppContext()
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
   const getMyBookings = async() => {
-    setBookings(dummyBookingData)
+    try {
+      const {data} = await axios.get('/api/user/bookings', {
+        headers: { Authorization: `Bearer ${await getToken()}`}
+      })
+
+      if(data.success){
+          setBookings(data.bookings)
+      }
+    } catch (error) {
+      console.log(error)
+
+    }
     setIsLoading(false)
   }
 
   useEffect(() => {
-    getMyBookings()
-  }, [])
+    if(user){
+      getMyBookings()
+    }
+ 
+  }, [user])
 
 
   return !isLoading ? (
@@ -31,10 +47,24 @@ const MyBookings = () => {
       {bookings.map((item, index) => (
         <div key={index} className='flex flex-col md:flex-row justify-between bg-primary/8 border border-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
           <div className='flex flex-col md:flex-row'>
-            <img src={item.show.movie.poster_path} alt="" className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded' />
+            {item.show.movie && item.show.movie.poster_path ? (
+              <img 
+                src={image_base_url + item.show.movie.poster_path} 
+                alt={item.show.movie.title} 
+                className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded' 
+              />
+            ) : (
+              <div className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded bg-gray-300' />
+            )}
             <div className='flex flex-col p-4'>
-              <p className='text-lg font-semibold'>{item.show.movie.title}</p>
-              <p className='text-gray-400 text-sm'>{timeFormat(item.show.movie.runtime)}</p>
+               {/* Check if movie exists before accessing title */}
+              <p className="text-lg font-semibold">
+                {item.show && item.show.movie ? item.show.movie.title : 'Unknown Movie'}
+              </p>
+              {/* Check if movie exists before accessing runtime */}
+              <p className="text-gray-400 text-sm">
+                {item.show && item.show.movie ? timeFormat(item.show.movie.runtime) : 'N/A'}
+              </p>
               <p className='text-gray-400 text-sm mt-auto'>{dateFormat(item.show.showDateTime)}</p>
 
             </div>
@@ -43,7 +73,7 @@ const MyBookings = () => {
           <div className='flex flex-col md:items-end md:text-right justify-between p-4'>
             <div className='flex items-center gap-4'>
               <p className='text-2xl font-semibold mb-3'>{currency}{item.amount}</p>
-              {!item.isPaid && <button className='bg-primary px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer'>Pay Now</button>}
+              {!item.isPaid && <button className='bg-primary min-w-[100px] px-4 py-1.5 mb-3 text-sm rounded-full font-medium cursor-pointer'>Pay Now</button>}
             </div>
             <div className='text-sm'>
               <p><span className='text-gray-400'>Total Tickets: </span> {item.bookedSeats.length}</p>

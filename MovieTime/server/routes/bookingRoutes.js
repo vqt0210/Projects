@@ -4,6 +4,6 @@ import { createBooking, getOccupiedSeats } from '../controllers/bookingControlle
 const bookingRouter = express.Router();
 
 bookingRouter.post('/create', createBooking);
-bookingRouter.get('/seats/:showId', getOccupiedSeats);
+bookingRouter.get('/:showId/seats', getOccupiedSeats);
 
 export default bookingRouter;
