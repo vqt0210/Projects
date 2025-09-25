@@ -6,21 +6,28 @@ import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import Stripe from 'stripe'
 
-const checkSeatsAvailability = async (showId, selectedSeats)=>{
+const checkSeatsAvailability = async (showId, selectedSeats) => {
   try {
-   const showData = await Show.findById(showId)
-   if(!showData) return false;
-   
-   const occupiedSeats = showData.occupiedSeats || {};
+    const showData = await Show.findById(showId);
+    if (!showData) return false;
 
-   const isAnySeatTaken = selectedSeats.some(seat => occupiedSeats[seat]);
+    // Lấy tất cả bookings của show
+    const bookings = await Booking.find({ show: showId });
 
-   return !isAnySeatTaken;
+    // Lấy danh sách ghế đã đặt
+    const occupiedSeats = bookings.flatMap(b => b.bookedSeats);
+
+    // Kiểm tra có seat nào bị trùng không
+    const isAnySeatTaken = selectedSeats.some(seat =>
+      occupiedSeats.includes(seat)
+    );
+
+    return !isAnySeatTaken;
   } catch (error) {
-      console.log(error.message);
-      return false;
+    console.log(error.message);
+    return false;
   }
-}
+};
 
 export const createBooking = async (req, res)=>{
   try {
@@ -89,6 +96,14 @@ export const createBooking = async (req, res)=>{
     booking.paymentLink = session.url
     await booking.save()
 
+    // Run Inngest Scheduler Function to check payment status after 10 minutes
+    await inngest.send({
+      name: "app/checkpayment",
+      data: {
+        bookingId: booking._id.toString()
+      }
+    })
+
     
 
     res.json({success: true, url: session.url})
@@ -99,19 +114,25 @@ export const createBooking = async (req, res)=>{
   }
 }
 
-export const getOccupiedSeats = async (req, res)=>{
+export const getOccupiedSeats = async (req, res) => {
   try {
-      const {showId} = req.params;
-      const showData = await Show.findById(showId)
-      if (!showData) {
+    const { showId } = req.params;
+
+    // Kiểm tra show có tồn tại
+    const showData = await Show.findById(showId);
+    if (!showData) {
       return res.json({ success: false, message: "Show not found" });
     }
 
-      const occupiedSeats = Object.keys(showData.occupiedSeats || {})
+    // Lấy tất cả booking của show
+    const bookings = await Booking.find({ show: showId });
 
-      res.json({success: true, occupiedSeats})
+    // Gom tất cả bookedSeats lại thành 1 mảng
+    const occupiedSeats = bookings.flatMap(b => b.bookedSeats);
+
+    res.json({ success: true, occupiedSeats });
   } catch (error) {
-      console.log(error.message);
-      res.json({success: false, message: error.message})
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
   }
-}
+};
