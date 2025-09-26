@@ -12,6 +12,7 @@ const MyBookings = () => {
   const {axios, getToken, user, image_base_url} = useAppContext()
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  
 
   const getMyBookings = async() => {
     try {
@@ -45,46 +46,86 @@ const MyBookings = () => {
       </div>
       <h1 className='text-lg font-semibold mb-4'>My Bookings</h1>
 
-      {bookings.map((item, index) => (
-        <div key={index} className='flex flex-col md:flex-row justify-between bg-primary/8 border border-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
-          <div className='flex flex-col md:flex-row'>
-            {item.show.movie && item.show.movie.poster_path ? (
-              <img 
-                src={image_base_url + item.show.movie.poster_path} 
-                alt={item.show.movie.title} 
-                className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded' 
-              />
-            ) : (
-              <div className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded bg-gray-300' />
-            )}
-            <div className='flex flex-col p-4'>
-               {/* Check if movie exists before accessing title */}
-              <p className="text-lg font-semibold">
-                {item.show && item.show.movie ? item.show.movie.title : 'Unknown Movie'}
-              </p>
-              {/* Check if movie exists before accessing runtime */}
-              <p className="text-gray-400 text-sm">
-                {item.show && item.show.movie ? timeFormat(item.show.movie.runtime) : 'N/A'}
-              </p>
-              <p className='text-gray-400 text-sm mt-auto'>{dateFormat(item.show.showDateTime)}</p>
+      {bookings.map((item, index) => {
+  // 👉 TÍNH TOÁN Ở ĐÂY
+  const amount = Number(item?.amount) || 0;
+  const isPaid = !!item?.isPaid;
 
-            </div>
+  // Tuỳ BE trả field nào, ưu tiên paymentLink rồi fallback sang payment
+  const paymentUrl = item?.paymentLink ?? item?.payment ?? "";
+  const hasLink = typeof paymentUrl === "string" && paymentUrl.length > 0;
 
-          </div>
-          <div className='flex flex-col md:items-end md:text-right justify-between p-4 mb-2'>
-            <div className='flex items-center gap-4 mb-3'>
-              <p className='text-2xl font-semibold leading-none'>{currency}{item.amount}</p>
-              {!item.isPaid && <Link to={item.paymentL} className='bg-primary min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium cursor-pointer'>Pay Now</Link>}
-            </div>
-            <div className='text-sm'>
-              <p><span className='text-gray-400'>Total Tickets: </span> {item.bookedSeats.length}</p>
-              <p><span className='text-gray-400'>Seat Number: </span> {item.bookedSeats.join(", ")}</p>
+  const canPay = amount > 0 && !isPaid && hasLink;
 
-            </div>
-          </div>
+  const movie = item?.show?.movie;
+  const poster = movie?.poster_path;
+  const title = movie?.title || "Unknown Movie";
+  const runtime = movie?.runtime;
+  const showTime = item?.show?.showDateTime;
 
+  const seats = Array.isArray(item?.bookedSeats) ? item.bookedSeats : [];
+
+  return (
+    <div
+      key={item?._id || index}
+      className='flex flex-col md:flex-row justify-between bg-primary/8 border border-primary/20 rounded-lg mt-4 p-2 max-w-3xl'
+    >
+      <div className='flex flex-col md:flex-row'>
+        {poster ? (
+          <img
+            src={image_base_url + poster}
+            alt={title}
+            className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded'
+          />
+        ) : (
+          <div className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded bg-gray-300' />
+        )}
+
+        <div className='flex flex-col p-4'>
+          <p className='text-lg font-semibold'>{title}</p>
+          <p className='text-gray-400 text-sm'>
+            {runtime != null ? timeFormat(runtime) : 'N/A'}
+          </p>
+          <p className='text-gray-400 text-sm mt-auto'>
+            {showTime ? dateFormat(showTime) : '—'}
+          </p>
         </div>
-      ))}
+      </div>
+
+      <div className='flex flex-col md:items-end md:text-right justify-between p-4 mb-2'>
+        <div className='flex items-center gap-4 mb-3'>
+          <p className='text-2xl font-semibold leading-none'>
+            {currency}{amount}
+          </p>
+
+          {canPay ? (
+            // Nếu URL thanh toán là link ngoài (Stripe,...), dùng <a>.
+            <a
+              href={paymentUrl}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex items-center justify-center h-9 min-w-[110px] px-5
+             rounded-full bg-primary text-sm font-medium leading-none
+             text-center whitespace-nowrap'
+            >
+              Pay Now
+            </a>
+          ) : (
+            <span className='min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium bg-green-500/20 text-green-300 text-center'>
+              {amount === 0 ? 'Free Booking' : (isPaid ? 'Paid' : 'Pending')}
+            </span>
+          )}
+        </div>
+
+        <div className='text-sm'>
+          <p><span className='text-gray-400'>Total Tickets: </span>{seats.length}</p>
+          <p><span className='text-gray-400'>Seat Number: </span>{seats.join(', ')}</p>
+        </div>
+      </div>
+    </div>
+  );
+})}
+
     </div>
   ) : <Loading />
 }

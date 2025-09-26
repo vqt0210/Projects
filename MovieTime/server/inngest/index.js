@@ -45,7 +45,7 @@ const syncUserUpdation = inngest.createFunction(
     const { id, first_name, last_name, email_addresses, image_url} =event.data
     const userData = {
       _id: id,
-      email: email_addresses[0].email_addresses,
+      email: email_addresses?.[0]?.email_address || '',
       name: first_name + ' ' + last_name,
       image: image_url
     }
@@ -66,9 +66,16 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
       await step.run('check-payment-status', async ()=>{
         const bookingId = event.data.bookingId;
         const booking = await Booking.findById(bookingId)
+        if (!booking) return;
+
+        const amount = Number(booking.amount) || 0;
+        // Bỏ qua free/đã trả/đã confirm
+        if (amount <= 0 || booking.isPaid === true || booking.status === "CONFIRMED") {
+          return;
+        }
+
 
         // If payment is not made, release seats and delete booking
-        if(!booking.isPaid){
           const show = await Show.findById(booking.show);
           booking.bookedSeats.forEach((seat) => {
             delete show.occupiedSeats[seat]
@@ -76,39 +83,57 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
           show.markModified('occupiedSeats')
           await show.save()
           await Booking.findByIdAndDelete(booking._id)
-        }
+        
       })
   }
 )
 
 // Inngest Function to send email when user books a show
 const sendBookingConfirmationEmail = inngest.createFunction(
-  {id: "send-booking-confirmation-email"},
-  {event: "app/show.booked"},
-  async({event, step}) => {
-    const {bookingId} = event.data;
-    const booking = await Booking.findById(bookingId).populate({
-      path: 'show',
-      populate: {path: "movie", model: "Movie"}
-    }).populate('user');
+  { id: "send-booking-confirmation-email" },
+  { event: "app/show.booked" },
+  async ({ event, step }) => {
+    const { bookingId } = event.data;
 
-    await sendEmail({
-      to: booking.user.email,
-      subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
-      body: `<div style="font-family: Arial, sans-serif; line-height: 1.5;">
-        <h2>Hi ${booking.user.name},</h2>
-        <p>Your booking for <strong style="color: #F84565;">"${booking.show.movie.title}"</strong> is confirmed.</p>
-        <p>
-          <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata'})}<br/>
-          <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata'})}
-        </p>
-        <p>Enjoy the show! 🎞🎭</p>
-        <p>Thanks for booking with us!<br/> MovieTeam</p>
-      
-      </div>`
-    })
+    const booking = await Booking.findById(bookingId)
+      .populate({ path: 'show', populate: { path: 'movie', model: 'Movie' } })
+      .populate('user');
+
+    if (!booking) {
+      await step.log('skip', { reason: 'booking not found', bookingId });
+      return { status: 'skip', reason: 'no_booking', bookingId };
+    }
+
+    const to = booking?.user?.email;
+    await step.log('recipient', { to });
+
+    if (!to) {
+      await step.log('skip', { reason: 'missing user email', userId: booking?.user?._id });
+      return { status: 'skip', reason: 'missing_email', bookingId, userId: booking?.user?._id };
+    }
+
+    const info = await step.run('send-email', async () => {
+      return await sendEmail({
+        to,
+        subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
+        body: `<div style="font-family: Arial, sans-serif; line-height: 1.5;">
+          <h2>Hi ${booking.user.name || ''},</h2>
+          <p>Your booking for <strong style="color:#F84565;">"${booking.show.movie.title}"</strong> is confirmed.</p>
+          <p>
+            <strong>Date:</strong> ${new Date(booking.show.showDateTime).toLocaleDateString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })}<br/>
+            <strong>Time:</strong> ${new Date(booking.show.showDateTime).toLocaleTimeString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })}
+          </p>
+          <p>Enjoy the show! 🎞🎭</p>
+          <p>Thanks for booking with us!<br/>MovieTeam</p>
+        </div>`
+      });
+    });
+
+    await step.log('smtp-result', info);
+    return { status: 'sent', to, ...info };   
   }
-)
+);
+
 
 export const functions = [
   syncUserCreation,

@@ -45,6 +45,7 @@ export const createBooking = async (req, res)=>{
 
     // Get the show details
     const showData = await Show.findById(showId).populate('movie');
+    const amount = Number(showData.showPrice) * selectedSeats.length;   // tổng tiền
 
     // Create a new booking
 
@@ -52,11 +53,27 @@ export const createBooking = async (req, res)=>{
       user: userId,
       show: showId,
       amount: showData.showPrice * selectedSeats.length,
-      bookedSeats: selectedSeats
-    })
+      bookedSeats: selectedSeats,
+      isPaid: false,
+      status: "HOLD",
+    });
 
-    if (!showData.occupiedSeats) {
-        showData.occupiedSeats = {};
+        // cập nhật occupiedSeats
+    if (!showData.occupiedSeats) showData.occupiedSeats = {};
+    selectedSeats.forEach(seat => { showData.occupiedSeats[seat] = userId; });
+    showData.markModified("occupiedSeats");
+    await showData.save();
+    // FREE BOOKING (amount = 0): confirm ngay, KHÔNG Stripe, KHÔNG checkpayment
+    if (amount <= 0) {
+      booking.isPaid = true;
+      booking.status = "CONFIRMED";
+      booking.paymentLink = null;
+      await booking.save();
+    await inngest.send({
+        name: "app/show.booked",
+        data: { bookingId: booking._id.toString() },
+      });
+    return res.json({ success: true, url: `${origin}/loading/my-bookings` });
     }
 
     selectedSeats.forEach(seat => {
