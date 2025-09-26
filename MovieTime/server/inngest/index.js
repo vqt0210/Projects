@@ -60,6 +60,7 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
   {id:'release-seats-delete-booking'},
   {event: "app/checkpayment"},
   async ({event, step}) => {
+    if (typeof step?.log !== 'function') step.log = async () => {};
       const tenMinutesLater = new Date(Date.now() + 10 * 60 *1000);
       await step.sleepUntil('wait-for-10-minutes', tenMinutesLater);
 
@@ -90,10 +91,11 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
 
 // Inngest Function to send email when user books a show
 const sendBookingConfirmationEmail = inngest.createFunction(
-  { id: "send-booking-confirmation-email" },
+  { id: "send-booking-confirmation-email-v2" },
   { event: "app/show.booked" },
   async ({ event, step }) => {
     const { bookingId } = event.data;
+    if (typeof step?.log !== 'function') step.log = async () => {};
 
     const booking = await Booking.findById(bookingId)
       .populate({ path: 'show', populate: { path: 'movie', model: 'Movie' } })
