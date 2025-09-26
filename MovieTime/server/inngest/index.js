@@ -100,18 +100,24 @@ const sendBookingConfirmationEmail = inngest.createFunction(
       .populate('user');
 
     if (!booking) {
-      await step.log('skip', { reason: 'booking not found', bookingId });
+      // Dùng step.run để “log” và hiển thị trong Output
+      await step.run('log:skip-no-booking', async () => ({ bookingId }));
       return { status: 'skip', reason: 'no_booking', bookingId };
     }
 
     const to = booking?.user?.email;
-    await step.log('recipient', { to });
+
+    await step.run('log:recipient', async () => ({ to }));
 
     if (!to) {
-      await step.log('skip', { reason: 'missing user email', userId: booking?.user?._id });
-      return { status: 'skip', reason: 'missing_email', bookingId, userId: booking?.user?._id };
+      await step.run('log:missing-email', async () => ({
+        bookingId,
+        userId: booking?.user?._id || null
+      }));
+      return { status: 'skip', reason: 'missing_email', bookingId, userId: booking?.user?._id || null };
     }
 
+    // Gửi mail và trả info để thấy trong Output
     const info = await step.run('send-email', async () => {
       return await sendEmail({
         to,
@@ -129,10 +135,13 @@ const sendBookingConfirmationEmail = inngest.createFunction(
       });
     });
 
-    await step.log('smtp-result', info);
-    return { status: 'sent', to, ...info };   
+    // “log” kết quả SMTP (cũng hiện trong Output)
+    await step.run('log:smtp-result', async () => info);
+
+    return { status: 'sent', to, ...info };
   }
 );
+
 
 
 export const functions = [
