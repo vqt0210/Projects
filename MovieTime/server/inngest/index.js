@@ -89,7 +89,7 @@ const sendBookingConfirmationEmail = inngest.createFunction(
     const {bookingId} = event.data;
     const booking = await Booking.findById(bookingId).populate({
       path: 'show',
-      populate: {path: "movie", model: "movie"}
+      populate: {path: "movie", model: "Movie"}
     }).populate('user');
 
     await sendEmail({
