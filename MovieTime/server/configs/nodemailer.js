@@ -1,11 +1,20 @@
 // configs/nodemailer.js
 import nodemailer from "nodemailer";
 
-const SENDER = process.env.SENDER_EMAIL || "";
-const REPLY_TO = process.env.REPLY_TO || SENDER;
+const RAW_SENDER = (process.env.SENDER_EMAIL || "").trim();
+const SENDER = RAW_SENDER.toLowerCase();
+const REPLY_TO = (process.env.REPLY_TO || RAW_SENDER).trim();
+const isGmail = /@(gmail\.com|googlemail\.com)$/.test(SENDER);
 
-// Gmail: dùng khi From là @gmail.com / @googlemail.com
-const isGmail = /@(gmail\.com|googlemail\.com)$/i.test(SENDER);
+// Gmail app password: Gmail hiển thị có khoảng trắng -> loại bỏ
+const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
+
+if (!SENDER) {
+  throw new Error("SENDER_EMAIL is required");
+}
+if (isGmail && !GMAIL_APP_PASSWORD) {
+  throw new Error("GMAIL_APP_PASSWORD is required when SENDER_EMAIL is a Gmail address");
+}
 
 // Khởi tạo transporter theo loại tài khoản
 const transporter = isGmail
@@ -14,8 +23,8 @@ const transporter = isGmail
       port: 465,
       secure: true,
       auth: {
-        user: SENDER,                          // chính email Gmail
-        pass: process.env.GMAIL_APP_PASSWORD,  
+        user: SENDER,                 // phải đúng email Gmail thật
+        pass: GMAIL_APP_PASSWORD,     // App Password 16 ký tự, KHÔNG khoảng trắng
       },
     })
   : nodemailer.createTransport({
@@ -28,23 +37,27 @@ const transporter = isGmail
       },
     });
 
-// (tuỳ chọn) verify một lần khi khởi tạo – tránh verify mỗi lần gửi
+// verify 1 lần sau khi khởi tạo
 let verifiedOnce = false;
 async function ensureVerified() {
-  if (verifiedOnce) return;
-  await transporter.verify();
-  verifiedOnce = true;
+  if (!verifiedOnce) {
+    await transporter.verify();
+    verifiedOnce = true;
+  }
 }
 
-const sendEmail = async ({ to, subject, body, from = SENDER }) => {
+export default async function sendEmail({ to, subject, body, from }) {
   await ensureVerified();
 
+  // Gmail bắt buộc "from" phải chính là tài khoản đăng nhập (hoặc alias đã cấu hình trong "Send mail as")
+  const fromAddr = isGmail ? SENDER : (from || SENDER);
+
   const info = await transporter.sendMail({
-    from: `MovieTeam <${from}>`,   // Gmail: phải đúng chính SENDER
+    from: `MovieTeam <${fromAddr}>`,
     to,
     subject,
     html: body,
-    replyTo: REPLY_TO,             
+    replyTo: REPLY_TO,
   });
 
   return {
@@ -53,6 +66,4 @@ const sendEmail = async ({ to, subject, body, from = SENDER }) => {
     response: info.response,
     messageId: info.messageId,
   };
-};
-
-export default sendEmail;
+}
