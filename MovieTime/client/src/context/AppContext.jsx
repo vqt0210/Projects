@@ -59,7 +59,7 @@ export const AppProvider = ({ children})=> {
       if(data.success) {
         setFavoriteMovies(data.movies)
       }else{
-        toast.error(data.message)
+        console.warn(data.message)
       }
     } catch (error) {
       console.error(error) 
