@@ -26,31 +26,32 @@ body {
 
 @font-face {
   font-family: 'BloodCrow';
-  src: url('./assets/fonts/bloodcrow.ttf') format('truetype');
+  src: url('/fonts/bloodcrow.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'BloodCrow';
-  src: url('./assets/fonts/bloodcrows.ttf') format('truetype');
+  src: url('/fonts/bloodcrows.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'BloodCrow';
-  src: url('./assets/fonts/bloodcrowi.ttf') format('truetype');
+  src: url('/fonts/bloodcrowi.ttf') format('truetype');
   font-weight: normal;
   font-style: italic;
 }
 
 @font-face {
   font-family: 'BloodCrow';
-  src: url('./assets/fonts/bloodcrowsi.ttf') format('truetype');
+  src: url('/fonts/bloodcrowsi.ttf') format('truetype');
   font-weight: bold;
   font-style: italic;
 }
+
 
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
