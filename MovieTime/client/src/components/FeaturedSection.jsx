@@ -15,11 +15,9 @@ const FeaturedSection = () => {
         <p className='text-gray-300 font-medium text-lg'>Now Showing</p>
         <button onClick={() => navigate('/movies')} className='group flex items-center gap-2 text-sm text-gray-300 cursor-pointer'>View All<ArrowRightIcon className='group-hover:translate-x-0.5 transition w-4.5 h-4.5'/></button>
       </div>
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-6">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {shows.slice(0,7).map((show) => (
-          <div key={`${show._id}-${show.movie._id}`} className="mb-6 break-inside-avoid">
-            <MovieCard movie={show.movie} />
-          </div>
+          <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} />
         ))}
       </div>
       {/*Show more button will navigate to the /movies route through the onClick arrow fucntion */}
