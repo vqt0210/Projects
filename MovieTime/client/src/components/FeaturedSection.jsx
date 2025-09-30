@@ -15,7 +15,8 @@ const FeaturedSection = () => {
         <p className='text-gray-300 font-medium text-lg'>Now Showing</p>
         <button onClick={() => navigate('/movies')} className='group flex items-center gap-2 text-sm text-gray-300 cursor-pointer'>View All<ArrowRightIcon className='group-hover:translate-x-0.5 transition w-4.5 h-4.5'/></button>
       </div>
-      <div className='flex flex-wrap max-sm:justify-center gap-8 mt-8'>
+      <div className='grid gap-8 mt-8 
+                grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
         
         {shows.slice(0,7).map((show) => (
           <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} /> // dùng key để nhận diện phần tử, ko có key sẽ phải render lại từ đầu
