@@ -37,7 +37,6 @@ app.post(
 
 // Parsers & middlewares chung
 app.use(express.json({ limit: '1mb' }));
-app.use(cors());
 app.use('/api/inngest', serve({ client: inngest, functions }));
 app.use(clerkMiddleware());
 
