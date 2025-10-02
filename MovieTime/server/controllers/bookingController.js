@@ -30,74 +30,61 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
   }
 };
 
-export const createBooking = async (req, res)=>{
+export const createBooking = async (req, res) => {
   try {
-    const {userId} = req.auth();
-    const {showId, selectedSeats} = req.body;
+    const { userId } = req.auth();
+    const { showId, selectedSeats } = req.body;
     const { origin } = req.headers;
 
-    // Check if the seat is available for the selected show
-    const isAvailable = await checkSeatsAvailability(showId, selectedSeats)
-    
-    if(!isAvailable){
-      return res.json({success: false, message: "Selected Seats are not available."})
+    const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
+
+    if (!isAvailable) {
+      return res.json({ success: false, message: "Selected Seats are not available." });
     }
 
-    // Get the show details
     const showData = await Show.findById(showId).populate('movie');
-    const amount = Number(showData.showPrice) * selectedSeats.length;   // tổng tiền
-
-    // Create a new booking
+    const amount = Number(showData.showPrice) * selectedSeats.length;
 
     const booking = await Booking.create({
       user: userId,
       show: showId,
-      amount: showData.showPrice * selectedSeats.length,
+      amount,
       bookedSeats: selectedSeats,
-      isPaid: false,
+      isPaid: false,  // Đảm bảo ban đầu là false
       status: "HOLD",
     });
 
-        // cập nhật occupiedSeats
+    // Cập nhật occupiedSeats
     if (!showData.occupiedSeats) showData.occupiedSeats = {};
     selectedSeats.forEach(seat => { showData.occupiedSeats[seat] = userId; });
     showData.markModified("occupiedSeats");
     await showData.save();
+
     // FREE BOOKING (amount = 0): confirm ngay, KHÔNG Stripe, KHÔNG checkpayment
     if (amount <= 0) {
       booking.isPaid = true;
       booking.status = "CONFIRMED";
       booking.paymentLink = null;
       await booking.save();
-    await inngest.send({
+      await inngest.send({
         name: "app/show.booked",
         data: { bookingId: booking._id.toString() },
       });
-    return res.json({ success: true, url: `${origin}/loading/my-bookings` });
+      return res.json({ success: true, url: `${origin}/loading/my-bookings` });
     }
 
-    selectedSeats.forEach(seat => {
-    showData.occupiedSeats[seat] = userId;
-    });
+    // Nếu thanh toán qua Stripe, cập nhật trạng thái thanh toán
+    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    showData.markModified('occupiedSeats');
-
-    await showData.save();
-
-    // Stripe Gateway Initialize
-    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY)
-
-    // Creating line items to for Stripe
+    // Tạo line items cho Stripe
     const line_items = [{
       price_data: {
         currency: 'usd',
-        product_data: {
-          name: showData.movie.title
-        },
+        product_data: { name: showData.movie.title },
         unit_amount: showData.showPrice * 100,
       },
       quantity: selectedSeats.length
-    }]
+    }];
 
     const session = await stripeInstance.checkout.sessions.create({
       success_url: `${origin}/loading/my-bookings`,
@@ -105,32 +92,26 @@ export const createBooking = async (req, res)=>{
       line_items: line_items,
       mode: 'payment',
       locale: 'en',
-      metadata: {
-        bookingId: booking._id.toString()
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, //Expires in 30 minutes
-    })
+      metadata: { bookingId: booking._id.toString() },
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expire in 30 minutes
+    });
 
-    booking.paymentLink = session.url
-    await booking.save()
+    booking.paymentLink = session.url;
+    await booking.save();
 
     // Run Inngest Scheduler Function to check payment status after 10 minutes
     await inngest.send({
       name: "app/checkpayment",
-      data: {
-        bookingId: booking._id.toString()
-      }
-    })
+      data: { bookingId: booking._id.toString() }
+    });
 
-    
-
-    res.json({success: true, url: session.url})
-
+    res.json({ success: true, url: session.url });
   } catch (error) {
     console.log(error.message);
-    res.json({success: false, message: error.message})
+    res.json({ success: false, message: error.message });
   }
-}
+};
+
 
 export const getOccupiedSeats = async (req, res) => {
   try {
