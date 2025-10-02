@@ -51,15 +51,10 @@ const MyBookings = () => {
       <h1 className='text-lg font-semibold mb-4'>My Bookings</h1>
 
       {bookings.map((item, index) => {
-  // 👉 TÍNH TOÁN Ở ĐÂY
   const amount = Number(item?.amount) || 0;
-  const isPaid = !!item?.isPaid;
-
-  // Tuỳ BE trả field nào, ưu tiên paymentLink rồi fallback sang payment
+  const isPaid = !!item?.isPaid;  // Kiểm tra xem có thanh toán hay không
   const paymentUrl = item?.paymentLink ?? item?.payment ?? "";
-  const hasLink = typeof paymentUrl === "string" && paymentUrl.length > 0;
-
-  const canPay = amount > 0 && !isPaid && hasLink;
+  const canPay = amount > 0 && !isPaid && paymentUrl;
 
   const movie = item?.show?.movie;
   const poster = movie?.poster_path;
@@ -108,10 +103,7 @@ const MyBookings = () => {
               href={paymentUrl}
               target='_blank'
               rel='noreferrer'
-              className='inline-flex items-center justify-center h-9 min-w-[110px] px-5
-             rounded-full bg-primary text-sm font-medium leading-none
-             text-center whitespace-nowrap'
-            >
+              className='inline-flex items-center justify-center h-9 min-w-[110px] px-5 rounded-full bg-primary text-sm font-medium leading-none text-center whitespace-nowrap'>
               Pay Now
             </a>
           ) : (
@@ -129,6 +121,7 @@ const MyBookings = () => {
     </div>
   );
 })}
+
 
     </div>
   ) : <Loading />

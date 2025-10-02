@@ -36,6 +36,7 @@ export const createBooking = async (req, res) => {
     const { showId, selectedSeats } = req.body;
     const { origin } = req.headers;
 
+    // Check if the seat is available for the selected show
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
 
     if (!isAvailable) {
@@ -73,7 +74,7 @@ export const createBooking = async (req, res) => {
       return res.json({ success: true, url: `${origin}/loading/my-bookings` });
     }
 
-    // Nếu thanh toán qua Stripe, cập nhật trạng thái thanh toán
+    // Thanh toán Stripe: cập nhật trạng thái thanh toán
     const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     // Tạo line items cho Stripe
@@ -96,6 +97,7 @@ export const createBooking = async (req, res) => {
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expire in 30 minutes
     });
 
+    // Cập nhật paymentLink cho Stripe
     booking.paymentLink = session.url;
     await booking.save();
 
@@ -111,6 +113,7 @@ export const createBooking = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
 
 
 export const getOccupiedSeats = async (req, res) => {
