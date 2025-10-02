@@ -31,11 +31,20 @@ const MyBookings = () => {
   }
 
   useEffect(() => {
-    if(user){
-      getMyBookings()
-    }
- 
-  }, [user])
+  if (user) {
+    getMyBookings();
+
+    // Poll thêm 5 giây/lần trong 20 giây để chờ webhook update
+    const interval = setInterval(getMyBookings, 5000);
+    const timeout = setTimeout(() => clearInterval(interval), 20000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }
+}, [user]);
+
   useEffect(() => {
   
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
