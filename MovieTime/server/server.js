@@ -29,7 +29,11 @@ app.use(cors({
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
 // Stripe webhook PHẢI đứng trước body parser
-app.use('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhooks);
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  stripeWebhooks
+);
 
 // Parsers & middlewares chung
 app.use(express.json({ limit: '1mb' }));

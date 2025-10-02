@@ -10,6 +10,12 @@ export const stripeWebhooks = async (request, response)=> {
 
   try {
     event = stripeInstance.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    // Log ngay sau khi Stripe event được xác thực
+    console.log("Received Stripe event:", event.type);
+    
+    if (event.type === "payment_intent.succeeded") {
+      console.log("✅ Payment succeeded:", event.data.object.id);
+    }
   } catch (error) {
     return response.status(400).send(`Webhook Error: ${error.message}`)
   }
@@ -35,6 +41,7 @@ export const stripeWebhooks = async (request, response)=> {
         })
         break;
       }
+      
 
         
 
