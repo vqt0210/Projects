@@ -34,11 +34,11 @@ app.use('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhooks
 // Parsers & middlewares chung
 app.use(express.json({ limit: '1mb' }));
 app.use(cors());
+app.use('/api/inngest', serve({ client: inngest, functions }));
 app.use(clerkMiddleware());
 
 // Routes
 app.get('/', (req, res) => res.send('Server is Live!'));
-app.use('/api/inngest', serve({ client: inngest, functions }));
 app.use('/api/show', showRouter);
 app.use('/api/bookings', bookingRouter);
 app.use('/api/admin', adminRouter);
