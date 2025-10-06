@@ -85,7 +85,6 @@ export const addShow = async( req, res) => {
     await inngest.send({
       name: "app/show.added",
       data: {
-        movieId: movie._id,
         movieTitle: movie.title
       }
     })
