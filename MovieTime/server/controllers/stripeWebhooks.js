@@ -59,7 +59,7 @@ export const stripeWebhooks = async (req, res) => {
         console.warn("[WEBHOOK] PI succeeded but missing bookingId");
       } else {
         const upd = await Booking.updateOne(
-          { _id: bookingId, status: "PENDING_PAYMENT" }, // GUARD
+          { _id: bookingId }, 
           {
             $set: {
               status: "PAID",
