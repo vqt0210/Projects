@@ -87,20 +87,16 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
     //    Đổi trạng thái trước, rồi mới động vào ghế.
     const now = new Date();
     const expiredBooking = await Booking.findOneAndUpdate(
-      {
-        _id: bookingId,
-        // chưa thanh toán/chưa confirm
-        $or: [{ isPaid: { $ne: true } }, { status: { $nin: ["PAID", "CONFIRMED"] } }],
-        // đã quá hạn
-        $or: [
-          { expiresAt: { $lte: now } },
-          { expiresAt: { $exists: false } }, // phòng TH cũ chưa có field
-        ],
-        // chỉ khi vẫn đang pending
-        status: { $in: ["PENDING_PAYMENT", null, undefined] },
-      },
-      { $set: { status: "EXPIRED", expiredAt: now } },
-      { new: true }
+    {
+      _id: bookingId,
+      status: { $in: ["PENDING_PAYMENT", null] },   // chỉ xử lý khi còn pending
+      $and: [
+        { $or: [ { isPaid: { $ne: true } }, { status: { $nin: ["PAID", "CONFIRMED"] } } ] },  // chưa paid
+        { $or: [ { expiresAt: { $lte: now } }, { expiresAt: { $exists: false } } ] }          // đã quá hạn
+      ],
+    },
+    { $set: { status: "EXPIRED", expiredAt: now } },
+    { new: true }
     ).lean();
 
     if (!expiredBooking) {
