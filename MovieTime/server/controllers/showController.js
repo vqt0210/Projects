@@ -84,7 +84,10 @@ export const addShow = async( req, res) => {
     // Trigger Inngest Event
     await inngest.send({
       name: "app/show.added",
-      data: {movieTitle: movie.title}
+      data: {
+        movieId: movie._id,
+        movieTitle: movie.title
+      }
     })
 
     res.json({success: true, message: 'Show Added Successfully'})
