@@ -185,19 +185,24 @@ const sendShowReminders = inngest.createFunction(
 // Inngest Function to send notifications when a new show is added
 const sendNewShowNotifications = inngest.createFunction(
   {id:"send-new-show-notification"}, { event:"app/show.added" },
-  async ({ event }) => {
+  async ({ event, step }) => {
+    const { movieId, movieTitle } = event.data;
     const users = await User.find({});
+    const sentEmails = new Set();
     for(const user of users){
+       if (!user.email || sentEmails.has(user.email)) continue;
       await sendEmail({
         to: user.email,
-        subject:`🎬 New Show Added: ${event.data.movieTitle}`,
+        subject:`🎬 New Show Added: ${movieTitle}`,
         body: newShowNotificationEmail({
           user,
-          movieTitle: event.data.movieTitle,
-          showLink:`https://teasonmike.io.vn/movies/${event.data.movieId}`
+          movieTitle,
+          showLink:`https://teasonmike.io.vn/movies/${movieId}`
         })
       });
+      sentEmails.add(user.email);
     }
+    await step.log(`Sent notifications for movie ${movieTitle} to ${sentEmails.size} users`);
   }
 );
 
