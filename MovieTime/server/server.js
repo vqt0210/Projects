@@ -30,7 +30,7 @@ app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
 // Stripe webhook PHẢI đứng trước body parser
 app.post(
-  '/api/stripe/webhook',
+  '/api/stripe',
   express.raw({ type: 'application/json' }),
   stripeWebhooks
 );
