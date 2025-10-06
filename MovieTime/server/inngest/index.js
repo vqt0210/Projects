@@ -2,7 +2,7 @@ import { Inngest } from "inngest";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
-import sendEmail from "../configs/nodemailer.js";
+import sendEmail from "../configs/resend.js";
 import Movie from "../models/Movie.js";
 
 // Create a client to send and receive events
