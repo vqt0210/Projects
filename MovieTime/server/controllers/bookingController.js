@@ -103,6 +103,7 @@ export const createBooking = async (req, res) => {
 
     // Cập nhật paymentLink cho Stripe
     booking.paymentLink = session.url;
+    booking.checkoutSessionId = session.id; 
     await booking.save();
 
     // Run Inngest Scheduler Function to check payment status after 10 minutes
