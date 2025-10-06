@@ -57,37 +57,89 @@ const syncUserUpdation = inngest.createFunction(
 // Inngest Function to cancel booking and release seats of show after 10 minutes of booking created if payment is not made
 
 const releaseSeatsAndDeleteBooking = inngest.createFunction(
-  {id:'release-seats-delete-booking'},
-  {event: "app/checkpayment"},
-  async ({event, step}) => {
-    if (typeof step?.log !== 'function') step.log = async () => {};
-      const tenMinutesLater = new Date(Date.now() + 10 * 60 *1000);
-      await step.sleepUntil('wait-for-10-minutes', tenMinutesLater);
+  { id: "release-seats-delete-booking" },
+  { event: "app/checkpayment" },
+  async ({ event, step }) => {
+    if (typeof step?.log !== "function") step.log = async () => {};
+    const bookingId = event.data.bookingId;
 
-      await step.run('check-payment-status', async ()=>{
-        const bookingId = event.data.bookingId;
-        const booking = await Booking.findById(bookingId)
-        if (!booking) return;
+    // 1) Lấy booking để xác định đúng thời điểm chờ (ưu tiên expiresAt nếu có)
+    const b0 = await Booking.findById(bookingId).lean();
+    if (!b0) {
+      await step.log(`[RELEASE] booking not found: ${bookingId}`);
+      return;
+    }
 
-        const amount = Number(booking.amount) || 0;
-        // Bỏ qua free/đã trả/đã confirm
-        if (amount <= 0 || booking.isPaid === true || booking.status === "CONFIRMED") {
-          return;
-        }
+    // Nếu đã thanh toán/confirm thì thoát sớm
+    if (b0.isPaid === true || b0.status === "CONFIRMED" || b0.status === "PAID") {
+      await step.log(`[RELEASE] already paid/confirmed, skip: ${bookingId}`);
+      return;
+    }
 
+    const wakeAt =
+      b0.expiresAt instanceof Date
+        ? b0.expiresAt
+        : new Date(new Date(b0.createdAt || Date.now()).getTime() + 10 * 60 * 1000);
 
-        // If payment is not made, release seats and delete booking
-          const show = await Show.findById(booking.show);
-          booking.bookedSeats.forEach((seat) => {
-            delete show.occupiedSeats[seat]
-          });
-          show.markModified('occupiedSeats')
-          await show.save()
-          await Booking.findByIdAndDelete(booking._id)
-        
-      })
+    await step.sleepUntil("wait-until-expire", wakeAt);
+
+    // 2) IDP Guard: chỉ "expire" nếu vẫn còn pending và đã quá hạn
+    //    Đổi trạng thái trước, rồi mới động vào ghế.
+    const now = new Date();
+    const expiredBooking = await Booking.findOneAndUpdate(
+      {
+        _id: bookingId,
+        // chưa thanh toán/chưa confirm
+        $or: [{ isPaid: { $ne: true } }, { status: { $nin: ["PAID", "CONFIRMED"] } }],
+        // đã quá hạn
+        $or: [
+          { expiresAt: { $lte: now } },
+          { expiresAt: { $exists: false } }, // phòng TH cũ chưa có field
+        ],
+        // chỉ khi vẫn đang pending
+        status: { $in: ["PENDING_PAYMENT", null, undefined] },
+      },
+      { $set: { status: "EXPIRED", expiredAt: now } },
+      { new: true }
+    ).lean();
+
+    if (!expiredBooking) {
+      await step.log(`[RELEASE] NO-OP (paid/confirmed/not-expired): ${bookingId}`);
+      return;
+    }
+
+    // 3) Thao tác trả ghế + ghi trạng thái trong cùng 1 transaction
+    await step.run("release-seats-transaction", async () => {
+      const session = await Booking.startSession();
+      try {
+        await session.withTransaction(async () => {
+          const show = await Show.findById(expiredBooking.show).session(session);
+          if (!show) {
+            await step.log(`[RELEASE] show not found for booking ${bookingId}`);
+            return;
+          }
+
+          // occupiedSeats đang là object map: { "A1": true, ... }
+          for (const seat of expiredBooking.bookedSeats || []) {
+            if (show.occupiedSeats && Object.prototype.hasOwnProperty.call(show.occupiedSeats, seat)) {
+              delete show.occupiedSeats[seat];
+            }
+          }
+          show.markModified("occupiedSeats");
+          await show.save({ session });
+
+          // KHÔNG xoá booking để giữ log; chỉ giữ trạng thái EXPIRED
+          // await Booking.deleteOne({ _id: expiredBooking._id }).session(session);
+        });
+      } finally {
+        session.endSession();
+      }
+    });
+
+    await step.log(`[RELEASE] Done, seats freed for booking ${bookingId}`);
   }
-)
+);
+
 
 // Inngest Function to send email when user books a show
 const sendBookingConfirmationEmail = inngest.createFunction(
