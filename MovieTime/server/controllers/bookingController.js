@@ -52,7 +52,8 @@ export const createBooking = async (req, res) => {
       amount,
       bookedSeats: selectedSeats,
       isPaid: false,  // Đảm bảo ban đầu là false
-      status: "HOLD",
+      status: "PENDING_PAYMENT",
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
     // Cập nhật occupiedSeats
