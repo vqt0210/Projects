@@ -94,6 +94,7 @@ export const createBooking = async (req, res) => {
       line_items: line_items,
       mode: 'payment',
       locale: 'en',
+      metadata: { bookingId: booking._id.toString() },
       payment_intent_data: {
       metadata: { bookingId: booking._id.toString() },
       },
