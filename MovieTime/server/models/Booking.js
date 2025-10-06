@@ -7,6 +7,7 @@ const bookingSchema = new mongoose.Schema({
   bookedSeats: {type: Array, required: true},
   isPaid: {type: Boolean, default: false},
   paymentLink: {type: String},
+  checkoutSessionId: { type: String },
   status: { type: String, default: "PENDING_PAYMENT" }, // lưu trạng thái booking
   paidAt: { type: Date },                               // thời gian thanh toán thành công
   expiresAt: { type: Date },                            // thời gian hết hạn (cho job release)
