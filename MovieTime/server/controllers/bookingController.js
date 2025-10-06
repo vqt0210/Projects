@@ -94,7 +94,9 @@ export const createBooking = async (req, res) => {
       line_items: line_items,
       mode: 'payment',
       locale: 'en',
+      payment_intent_data: {
       metadata: { bookingId: booking._id.toString() },
+      },
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expire in 30 minutes
     });
 
