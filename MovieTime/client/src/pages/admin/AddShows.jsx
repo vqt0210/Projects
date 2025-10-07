@@ -20,21 +20,26 @@ const AddShows = () => {
 
   const [addingShow, setAddingShow] = useState(false)
 
-  const fetchNowPlayingMovies = async () => {
-    try {
-
-      const { data } = await axios.get('/api/show/now-playing', {
-            headers: { Authorization: `Bearer ${await getToken()}`}
-      })
-          if(data.success){
-            setNowPlayingMovies(data.movies)
-
-          }
-      
-    } catch (error) {
-      console.error('Error fetching movies: ', error)
+const fetchNowPlayingMovies = async () => {
+  try {
+    const token = (await getToken())?.trim(); // trim khoảng trắng
+    if (!token) {
+      toast.error("Token not found. Please login again.");
+      return;
     }
-  };
+
+    const { data } = await axios.get('/api/show/now-playing', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (data.success) {
+      setNowPlayingMovies(data.movies)
+    }
+  } catch (error) {
+    console.error('Error fetching movies: ', error)
+    toast.error("Failed to fetch now playing movies.");
+  }
+};
 
   const handleDateTimeAdd = () => {
   if (!dateTimeInput) return;
@@ -66,10 +71,20 @@ const AddShows = () => {
         setAddingShow(true)
 
         if(!selectedMovie || Object.keys(dateTimeSelection).length === 0 || !showPrice){
-          return toast('Missing required fields')
+          toast.error('Missing required fields');
+          setAddingShow(false);
+          return
+        }
+        const token = (await getToken())?.trim();
+        if (!token) {
+          toast.error("Token not found. Please login again.");
+          setAddingShow(false);
+          return;
         }
 
-        const showsInput = Object.entries(dateTimeSelection).map(([date, time]) => ({date, time}))
+        const showsInput = Object.entries(dateTimeSelection).map(([date, times]) => 
+          times.map(time => ({ date, time }))
+        ).flat();
 
         const payLoad = {
           movieId: selectedMovie,
@@ -77,7 +92,9 @@ const AddShows = () => {
           showPrice: Number(showPrice)
         }
 
-        const {data } = await axios.post('/api/show/add', payLoad, {headers: {Authorization: `Bearer ${await getToken()}`}})
+        const { data } = await axios.post('/api/show/add', payLoad, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
         if(data.success){
           toast.success(data.message)
@@ -90,8 +107,9 @@ const AddShows = () => {
     } catch (error) {
       console.error("Submission error:", error);
       toast.error('An error occurred. Please try again.')
-    }
+    } finally {
     setAddingShow(false)
+    }
   }
 
   useEffect(() => {
