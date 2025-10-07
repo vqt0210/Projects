@@ -4,7 +4,7 @@ import BlurCircle from '../components/BlurCircle'
 import timeFormat from '../lib/TimeFormat'
 import { dateFormat } from '../lib/dateFormat'
 import { useAppContext } from '../context/AppContext'
-import { useUser } from '@clerk/clerk-react'
+import { SignIn, useUser } from '@clerk/clerk-react'
 
 
 const MyBookings = () => {
