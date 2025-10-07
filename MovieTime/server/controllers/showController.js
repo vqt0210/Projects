@@ -2,6 +2,7 @@ import axios from "axios"
 import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
 import { inngest } from "../inngest/index.js";
+import Booking from "../models/Booking.js"; 
 
 
 // API to get now playing movies from TMDB API
@@ -30,9 +31,6 @@ export const addShow = async( req, res) => {
     const { movieId, showsInput, showPrice} = req.body
 
     let movie = await Movie.findById(String(movieId));
-    console.log("Movie ID type:", typeof movieId);
-    console.log("🔍 Movie found in DB:", movie ? movie._id : "None");
-    console.log("🎬 Current DB trailer value:", movie?.trailer);
 
     if (
       !movie ||
@@ -56,13 +54,6 @@ export const addShow = async( req, res) => {
       const movieApiData = movieDetailsResponse.data;
       const movieCreditsData = movieCreditsResponse.data;
       const movieVideosData = movieVideosResponse.data;
-      console.log("TMDB videos:", movieVideosData.results.map(v => ({
-        name: v.name,
-        site: v.site,
-        type: v.type,
-        key: v.key,
-        official: v.official
-      })));
             // Ưu tiên trailer official từ YouTube, nếu không có thì lấy trailer đầu tiên
       let trailer = movieVideosData.results.find(
         (vid) => vid.type === "Trailer" && vid.site === "YouTube" && vid.official
@@ -99,7 +90,7 @@ export const addShow = async( req, res) => {
           { trailer: movieDetails.trailer },
           { new: true } // trả về document sau khi update
         );
-        console.log("Trailer updated in DB:", updatedMovie?.trailer);
+
         movie = updatedMovie; // cập nhật lại biến movie
       }
     }
@@ -170,7 +161,6 @@ export const getShow = async (req, res) => {
        }
        dateTime[date].push({ time: show.showDateTime, showId: show._id })
       })
-      console.log("Movie trailer in getShow:", movie?.trailer);
 
       res.json({success: true, movie, dateTime})
   } catch (error) {
@@ -178,3 +168,18 @@ export const getShow = async (req, res) => {
     res.json({ success: false, message: error.message});
   }
 }
+
+
+
+export const clearDatabase = async (req, res) => {
+  try {
+    await Booking.deleteMany({});
+    await Show.deleteMany({});
+    await Movie.deleteMany({});
+    console.log("🔥 Cleared all Movies, Shows, and Bookings!");
+    res.json({ success: true, message: "🔥 All movies, shows, and bookings deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: err.message });
+  }
+};
