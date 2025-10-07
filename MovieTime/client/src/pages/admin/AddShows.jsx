@@ -10,8 +10,9 @@ import toast from "react-hot-toast";
 function getCleanToken(token) {
   if (!token) return "";
   return token
-    .replace(/^"|"$/g, "")           // bỏ dấu " đầu/cuối
-    .replace(/[\s\u200B\u00A0]+/g, "") // bỏ khoảng trắng, zero-width space
+    .replace(/^"|"$/g, "")                // bỏ dấu " đầu/cuối
+    .replace(/[\s\u200B\u00A0\uFEFF]+/g, "") // bỏ tất cả khoảng trắng, zero-width, BOM
+    .replace(/\r?\n|\r/g, "")             // loại bỏ newline
     .trim();
 }
 
@@ -33,6 +34,7 @@ const fetchNowPlayingMovies = async () => {
   try {
     const token = (await getToken())?.trim();
     const cleanToken = getCleanToken(token);
+    console.log([...cleanToken].map(c => c.charCodeAt(0)));
     if (!token) {
       toast.error("Token not found. Please login again.");
       return;
@@ -87,6 +89,7 @@ const fetchNowPlayingMovies = async () => {
         }
         const token = (await getToken())?.trim();
         const cleanToken = getCleanToken(token);  
+        console.log([...cleanToken].map(c => c.charCodeAt(0)));
         if (!token) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
