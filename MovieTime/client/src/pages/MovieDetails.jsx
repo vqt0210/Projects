@@ -12,6 +12,8 @@ import toast from 'react-hot-toast'
 const MovieDetails = () => {
 
   const navigate = useNavigate()
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [trailerUrl, setTrailerUrl] = useState('');
   const {id} = useParams()
   const [show, setShow] = useState(null)
   const { shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies, image_base_url, setFavoriteMovies} = useAppContext();
@@ -31,6 +33,14 @@ const MovieDetails = () => {
       console.log('Error fetching show data:', error); // Log lỗi nếu có
     }
   }
+  const handleWatchTrailer = () => {
+    if (!show.movie.trailer) {
+      toast.error("Trailer not available");
+      return;
+    }
+    setTrailerUrl(show.movie.trailer);
+    setShowTrailer(true);
+  };
 
     const handleFavorite = async () => {
     if (!user) return toast.error("Please login to proceed");
@@ -113,9 +123,13 @@ useEffect(() => {
             {timeFormat(show.movie.runtime)} • {show.movie.genres.map(genre => genre.name).join(", ")} • {show.movie.release_date.split("-")[0]} {/*  Hàm split cắt chuỗi thành một mảng, dựa trên ký tự phân cách là "-"; [0]:Lấy phần tử đầu tiên trong mảng vừa tách ra */}
           </p>
           <div className='flex items-center flex-wrap gap-4 mt-4'>
-            <button className='flex items-center gap-2 px-7 py-3 text-sm bg-gray-800 hover:bg-gray-800 transition rounded-md font-medium cursor-pointer active:scale-95'>
-              <PlayCircleIcon className='w-5 h-5'/>
-              Watch Trailer</button>
+            <button
+              onClick={handleWatchTrailer}
+              className='flex items-center gap-2 px-7 py-3 text-sm bg-gray-800 hover:bg-gray-700 transition rounded-md font-medium cursor-pointer active:scale-95'
+            >
+              <PlayCircleIcon className='w-5 h-5' />
+              Watch Trailer
+            </button>
             <a href="#dateSelect" className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer active:scale-95'>Buy Tickets</a>
             <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded full transition cursor-pointer active:scale-95'>
               <Heart 
@@ -164,6 +178,26 @@ useEffect(() => {
 
           </div>
         </div>
+        {showTrailer && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+            <div className="relative w-[90%] md:w-[60%] aspect-video">
+              <iframe
+                src={`${trailerUrl}?autoplay=1`}
+                title="Trailer"
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                className="w-full h-full rounded-lg"
+              />
+              <button
+                onClick={() => setShowTrailer(false)}
+                className="absolute -top-10 right-0 text-white text-2xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     
     
