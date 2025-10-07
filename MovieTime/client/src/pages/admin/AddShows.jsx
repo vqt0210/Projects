@@ -22,7 +22,9 @@ const AddShows = () => {
 
 const fetchNowPlayingMovies = async () => {
   try {
-    const token = (await getToken())?.trim(); // trim khoảng trắng
+    const rawToken = await getToken();
+    const token = rawToken?.replace(/[\r\n]/g, '').trim(); // trim khoảng trắng
+    console.log("TOKEN:", JSON.stringify(token));
     if (!token) {
       toast.error("Token not found. Please login again.");
       return;
@@ -75,7 +77,9 @@ const fetchNowPlayingMovies = async () => {
           setAddingShow(false);
           return
         }
-        const token = (await getToken())?.trim();
+        const rawToken = await getToken();
+        const token = rawToken?.replace(/[\r\n]/g, '').trim();
+        console.log("TOKEN:", JSON.stringify(token));
         if (!token) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
