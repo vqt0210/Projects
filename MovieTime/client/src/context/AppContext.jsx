@@ -80,14 +80,6 @@
       fetchShows()
     }, [])
 
-    useEffect(()=> {
-      if(isLoaded && user){
-          fetchIsAdmin()
-          fetchFavoriteMovies()
-      }
-    
-    }, [isLoaded,user])
-
 
     const value = {
       axios,
