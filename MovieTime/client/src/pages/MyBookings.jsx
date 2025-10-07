@@ -27,7 +27,7 @@ const MyBookings = () => {
           You must{" "}
           <button
             onClick={openSignIn}
-            className="text-primary font-semibold hover:text-primary/80 underline transition-colors"
+            className="text-primary font-semibold hover:underline hover:text-primary/80 cursor-pointer transition"
           >
             login
           </button>{" "}
