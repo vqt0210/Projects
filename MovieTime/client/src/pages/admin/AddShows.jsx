@@ -9,11 +9,23 @@ import toast from "react-hot-toast";
 // --- Tạo hàm clean token ---
 function getCleanToken(token) {
   if (!token) return "";
-  return token
-    .replace(/^"|"$/g, "")                // bỏ dấu " đầu/cuối
-    .replace(/[\s\u200B\u00A0\uFEFF]+/g, "") // bỏ tất cả khoảng trắng, zero-width, BOM
-    .replace(/\r?\n|\r/g, "")             // loại bỏ newline
+
+  // loại bỏ khoảng trắng, BOM, dấu " đầu/cuối, newline
+  let t = token
+    .replace(/^"|"$/g, "")
+    .replace(/[\s\u200B\u00A0\uFEFF]+/g, "")
+    .replace(/\r?\n|\r/g, "")
     .trim();
+
+  // giữ chỉ các ký tự ASCII in được
+  const clean = [...t]
+    .filter(c => {
+      const code = c.charCodeAt(0);
+      return code >= 33 && code <= 126;
+    })
+    .join('');
+
+  return clean;
 }
 
 const AddShows = () => {
@@ -34,8 +46,7 @@ const fetchNowPlayingMovies = async () => {
   try {
     const token = (await getToken())?.trim();
     const cleanToken = getCleanToken(token);
-    console.log([...cleanToken].map(c => c.charCodeAt(0)));
-    if (!token) {
+    if (!cleanToken) {
       toast.error("Token not found. Please login again.");
       return;
     }
@@ -90,7 +101,7 @@ const fetchNowPlayingMovies = async () => {
         const token = (await getToken())?.trim();
         const cleanToken = getCleanToken(token);  
         console.log([...cleanToken].map(c => c.charCodeAt(0)));
-        if (!token) {
+        if (!cleanToken) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
           return;
