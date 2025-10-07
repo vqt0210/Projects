@@ -29,7 +29,8 @@ export const addShow = async( req, res) => {
     console.log("req.body:", req.body);
     const { movieId, showsInput, showPrice} = req.body
 
-    let movie = await Movie.findById(movieId)
+    let movie = await Movie.findById(String(movieId));
+    console.log("Movie ID type:", typeof movieId);
     console.log("🔍 Movie found in DB:", movie ? movie._id : "None");
     console.log("🎬 Current DB trailer value:", movie?.trailer);
 
@@ -88,7 +89,7 @@ export const addShow = async( req, res) => {
         movie = await Movie.create(movieDetails);
       } else if (!movie.trailer) {
         const updatedMovie = await Movie.findByIdAndUpdate(
-          movieId,
+          String(movieId),
           { trailer: movieDetails.trailer },
           { new: true } // trả về document sau khi update
         );
@@ -153,7 +154,7 @@ export const getShow = async (req, res) => {
       // Get all upcoming shows for the movie
       const shows = await Show.find({movie: movieId, showDateTime: { $gte: new Date()}})
 
-      const movie = await Movie.findById(movieId);
+      const movie = await Movie.findById(String(movieId));
       const dateTime = {};
 
       shows.forEach((show) => {
