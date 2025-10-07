@@ -30,8 +30,10 @@ export const addShow = async( req, res) => {
     const { movieId, showsInput, showPrice} = req.body
 
     let movie = await Movie.findById(movieId)
+    console.log("🔍 Movie found in DB:", movie ? movie._id : "None");
+    console.log("🎬 Current DB trailer value:", movie?.trailer);
 
-    if(!movie || !movie.trailer) {
+    if (!movie || !movie.trailer || movie.trailer === "" || movie.trailer === "null") {
       // Fetch movie details and credits from TMDB API
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] = await Promise.all([
         axios.get(`https://api.themoviedb.org/3/movie/${movieId}`,{ 
