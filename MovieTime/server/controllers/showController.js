@@ -34,7 +34,13 @@ export const addShow = async( req, res) => {
     console.log("🔍 Movie found in DB:", movie ? movie._id : "None");
     console.log("🎬 Current DB trailer value:", movie?.trailer);
 
-    if (!movie || !movie.trailer || movie.trailer === "" || movie.trailer === "null") {
+    if (
+      !movie ||
+      movie.trailer == null ||
+      movie.trailer === "" ||
+      movie.trailer === "null" ||
+      typeof movie.trailer === "undefined"
+    )  {
       // Fetch movie details and credits from TMDB API
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] = await Promise.all([
         axios.get(`https://api.themoviedb.org/3/movie/${movieId}`,{ 
@@ -93,8 +99,8 @@ export const addShow = async( req, res) => {
           { trailer: movieDetails.trailer },
           { new: true } // trả về document sau khi update
         );
+        console.log("Trailer updated in DB:", updatedMovie?.trailer);
         movie = updatedMovie; // cập nhật lại biến movie
-        console.log("Updated movie trailer:", movie.trailer);
       }
     }
 
