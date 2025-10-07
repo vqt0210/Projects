@@ -6,6 +6,15 @@ import { kConverter } from "../../lib/kConverter";
 import { useAppContext } from "../../context/AppContext";
 import toast from "react-hot-toast";
 
+// --- Tạo hàm clean token ---
+function getCleanToken(token) {
+  if (!token) return "";
+  return token
+    .replace(/^"|"$/g, "")           // bỏ dấu " đầu/cuối
+    .replace(/[\s\u200B\u00A0]+/g, "") // bỏ khoảng trắng, zero-width space
+    .trim();
+}
+
 const AddShows = () => {
 
   const {axios, getToken, user, image_base_url} = useAppContext()
@@ -23,10 +32,7 @@ const AddShows = () => {
 const fetchNowPlayingMovies = async () => {
   try {
     const token = (await getToken())?.trim();
-    console.log("Raw token:", token);
-    const cleanToken = token.replace(/^"|"$/g, "").replace(/\s+/g, ""); // remove bắt đầu và kết thúc dấu "
-    console.log("Clean token:", cleanToken, cleanToken.length);
-    console.log([...cleanToken].map(c => c.charCodeAt(0)));
+    const cleanToken = getCleanToken(token);
     if (!token) {
       toast.error("Token not found. Please login again.");
       return;
@@ -80,10 +86,7 @@ const fetchNowPlayingMovies = async () => {
           return
         }
         const token = (await getToken())?.trim();
-        console.log("Raw token:", token);
-        const cleanToken = token.replace(/^"|"$/g, "").replace(/\s+/g, "");
-        console.log("Clean token:", cleanToken, cleanToken.length);
-        console.log([...cleanToken].map(c => c.charCodeAt(0)));
+        const cleanToken = getCleanToken(token);  
         if (!token) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
