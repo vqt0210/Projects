@@ -49,10 +49,6 @@ export const stripeWebhooks = async (req, res) => {
         matched: upd.matchedCount,
         modified: upd.modifiedCount,
       });
-
-      if (upd.modifiedCount === 1) {
-        await inngest.send({ name: "app/show.booked", data: { bookingId } });
-      }
     }
 
     else if (event.type === "checkout.session.completed") {
