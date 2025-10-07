@@ -85,8 +85,13 @@ export const addShow = async( req, res) => {
       if (!movie) {
         movie = await Movie.create(movieDetails);
       } else if (!movie.trailer) {
-        await Movie.findByIdAndUpdate(movieId, { trailer: movieDetails.trailer });
-        movie.trailer = movieDetails.trailer; // cập nhật tạm trong biến để gửi về client
+        const updatedMovie = await Movie.findByIdAndUpdate(
+          movieId,
+          { trailer: movieDetails.trailer },
+          { new: true } // trả về document sau khi update
+        );
+        movie = updatedMovie; // cập nhật lại biến movie
+        console.log("Updated movie trailer:", movie.trailer);
       }
     }
 
