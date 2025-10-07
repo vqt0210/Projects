@@ -15,6 +15,8 @@ const MovieDetails = () => {
   const {id} = useParams()
   const [show, setShow] = useState(null)
   const { shows, axios, getToken, user, fetchFavoriteMovies, favoriteMovies, image_base_url, setFavoriteMovies} = useAppContext();
+  // Lọc ra các movie duy nhất
+  const uniqueShows = [...new Map(shows.map(show => [show.movie._id, show])).values()]
   
    const getShow = async () => {
     try {
@@ -151,7 +153,7 @@ useEffect(() => {
 
           <p className='text-lg font-medium mt-20 mb-8'>You May Also Like</p>
           <div className='flex flex-wrap max-sm:justify-center gap-8 '>
-              {shows.slice(0,4).map((movie, index) => (
+              {uniqueShows.slice(0,4).map((movie, index) => (
                 <MovieCard key={index} movie={movie}/>
               ))}
           </div>
