@@ -9,8 +9,6 @@ import { useClerk, useUser } from '@clerk/clerk-react'
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY
-
-  const {axios, getToken, user, image_base_url} = useAppContext()
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const { openSignIn } = useClerk()
@@ -37,7 +35,8 @@ const MyBookings = () => {
     )
   }
 
-
+  // Chỉ gọi AppContext sau khi user đã đăng nhập
+  const {axios, getToken, user, image_base_url} = useAppContext()
   const getMyBookings = async() => {
     try {
       const {data} = await axios.get('/api/user/bookings', {
