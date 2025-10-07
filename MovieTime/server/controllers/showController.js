@@ -74,7 +74,12 @@ export const addShow = async( req, res) => {
       }
 
       // Add movie to the database
-      movie = await Movie.create(movieDetails);
+      if (!movie) {
+        movie = await Movie.create(movieDetails);
+      } else if (!movie.trailer) {
+        await Movie.findByIdAndUpdate(movieId, { trailer: movieDetails.trailer });
+        movie.trailer = movieDetails.trailer; // cập nhật tạm trong biến để gửi về client
+      }
     }
 
     const showsToCreate = [];
