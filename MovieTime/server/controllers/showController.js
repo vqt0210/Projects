@@ -47,6 +47,13 @@ export const addShow = async( req, res) => {
       const movieApiData = movieDetailsResponse.data;
       const movieCreditsData = movieCreditsResponse.data;
       const movieVideosData = movieVideosResponse.data;
+      console.log("TMDB videos:", movieVideosData.results.map(v => ({
+        name: v.name,
+        site: v.site,
+        type: v.type,
+        key: v.key,
+        official: v.official
+      })));
             // Ưu tiên trailer official từ YouTube, nếu không có thì lấy trailer đầu tiên
       let trailer = movieVideosData.results.find(
         (vid) => vid.type === "Trailer" && vid.site === "YouTube" && vid.official
@@ -72,6 +79,7 @@ export const addShow = async( req, res) => {
         runtime: movieApiData.runtime,
         trailer: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
       }
+      console.log("Fetched trailer URL:", movieDetails.trailer);
 
       // Add movie to the database
       if (!movie) {
@@ -148,6 +156,7 @@ export const getShow = async (req, res) => {
        }
        dateTime[date].push({ time: show.showDateTime, showId: show._id })
       })
+      console.log("Movie trailer in getShow:", movie?.trailer);
 
       res.json({success: true, movie, dateTime})
   } catch (error) {
