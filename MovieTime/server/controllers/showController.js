@@ -171,15 +171,3 @@ export const getShow = async (req, res) => {
 
 
 
-export const clearDatabase = async (req, res) => {
-  try {
-    await Booking.deleteMany({});
-    await Show.deleteMany({});
-    await Movie.deleteMany({});
-    console.log("🔥 Cleared all Movies, Shows, and Bookings!");
-    res.json({ success: true, message: "🔥 All movies, shows, and bookings deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: err.message });
-  }
-};
