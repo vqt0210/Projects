@@ -22,6 +22,15 @@
 
     const navigate = useNavigate()
 
+    // Chặn không chạy khi Clerk chưa load
+    useEffect(() => {
+      if (!isLoaded) return;
+      if (user) {
+        fetchIsAdmin();
+        fetchFavoriteMovies();
+      }
+    }, [isLoaded, user]);
+
     
 
     const fetchIsAdmin = async() =>{
