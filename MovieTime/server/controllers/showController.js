@@ -25,6 +25,7 @@ export const getNowPlayingMovies = async (req, res)=> {
 export const addShow = async( req, res) => {
   
   try {
+    console.log("Authorization header:", req.headers.authorization);
     console.log("req.body:", req.body);
     const { movieId, showsInput, showPrice} = req.body
 

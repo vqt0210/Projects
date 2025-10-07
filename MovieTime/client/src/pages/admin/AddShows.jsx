@@ -10,22 +10,11 @@ import toast from "react-hot-toast";
 function getCleanToken(token) {
   if (!token) return "";
 
-  // loại bỏ khoảng trắng, BOM, dấu " đầu/cuối, newline
-  let t = token
-    .replace(/^"|"$/g, "")
-    .replace(/[\s\u200B\u00A0\uFEFF]+/g, "")
-    .replace(/\r?\n|\r/g, "")
+  return token
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // loại ký tự điều khiển
+    .replace(/[\s\u200B\u00A0\uFEFF]+/g, "") // loại bỏ BOM, khoảng trắng, NBSP
+    .replace(/^"|"$/g, "") // loại dấu nháy đầu/cuối
     .trim();
-
-  // giữ chỉ các ký tự ASCII in được
-  const clean = [...t]
-    .filter(c => {
-      const code = c.charCodeAt(0);
-      return code >= 33 && code <= 126;
-    })
-    .join('');
-
-  return clean;
 }
 
 const AddShows = () => {
@@ -100,6 +89,7 @@ const fetchNowPlayingMovies = async () => {
         }
         const token = (await getToken())?.trim();
         const cleanToken = getCleanToken(token);  
+        console.log('CLEAN TOKEN:', JSON.stringify(cleanToken));
         console.log([...cleanToken].map(c => c.charCodeAt(0)));
         if (!cleanToken) {
           toast.error("Token not found. Please login again.");
