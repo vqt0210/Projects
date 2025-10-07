@@ -32,15 +32,31 @@ export const addShow = async( req, res) => {
 
     if(!movie) {
       // Fetch movie details and credits from TMDB API
-      const [movieDetailsResponse, movieCreditsResponse] = await Promise.all([
-        axios.get(`https://api.themoviedb.org/3/movie/${movieId}`,{ headers: {Authorization: `Bearer ${process.env.TMDB_API_KEY}`}}),
+      const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] = await Promise.all([
+        axios.get(`https://api.themoviedb.org/3/movie/${movieId}`,{ 
+          headers: {Authorization: `Bearer ${process.env.TMDB_API_KEY}
+          `}}),
 
         axios.get(`https://api.themoviedb.org/3/movie/${movieId}/credits`,{
-          headers: {Authorization: `Bearer ${process.env.TMDB_API_KEY}`}})
+          headers: {Authorization: `Bearer ${process.env.TMDB_API_KEY}
+          `}}),
+        axios.get(`https://api.themoviedb.org/3/movie/${movieId}/videos`, {
+          headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` },
+        }),
       ]);
 
       const movieApiData = movieDetailsResponse.data;
       const movieCreditsData = movieCreditsResponse.data;
+      const movieVideosData = movieVideosResponse.data;
+            // Ưu tiên trailer official từ YouTube, nếu không có thì lấy trailer đầu tiên
+      let trailer = movieVideosData.results.find(
+        (vid) => vid.type === "Trailer" && vid.site === "YouTube" && vid.official
+      );
+      if (!trailer) {
+        trailer = movieVideosData.results.find(
+          (vid) => vid.type === "Trailer" && vid.site === "YouTube"
+        );
+      }
 
       const movieDetails = {
         _id: movieId,
@@ -55,6 +71,7 @@ export const addShow = async( req, res) => {
         tagline: movieApiData.tagline || "",
         vote_average: movieApiData.vote_average,
         runtime: movieApiData.runtime,
+        trailer: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
       }
 
       // Add movie to the database
