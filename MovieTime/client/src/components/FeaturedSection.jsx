@@ -18,7 +18,7 @@ const FeaturedSection = () => {
       <div className='grid gap-8 mt-8 
                 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
         
-        {shows.slice(0,7).map((show) => (
+        {shows.slice(0,8).map((show) => (
           <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} /> // dùng key để nhận diện phần tử, ko có key sẽ phải render lại từ đầu
         ))}
       </div>

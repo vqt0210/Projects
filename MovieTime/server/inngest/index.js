@@ -146,29 +146,6 @@ const sendShowReminders = inngest.createFunction(
   }
 );
 
-// Inngest Function to send notifications when a new show is added
-const sendNewShowNotifications = inngest.createFunction(
-  {id:"send-new-show-notification"}, { event:"app/show.added" },
-  async ({ event, step }) => {
-    const { movieId, movieTitle } = event.data;
-    const users = await User.find({});
-    const sentEmails = new Set();
-    for(const user of users){
-       if (!user.email || sentEmails.has(user.email)) continue;
-      await sendEmail({
-        to: user.email,
-        subject:`🎬 New Show Added: ${movieTitle}`,
-        body: newShowNotificationEmail({
-          user,
-          movieTitle,
-          showLink:`https://teasonmike.io.vn/movies/${movieId}`
-        })
-      });
-      sentEmails.add(user.email);
-    }
-    await step.log(`Sent notifications for movie ${movieTitle} to ${sentEmails.size} users`);
-  }
-);
 // Inngest Function: Handle payment success → confirm booking & send email
 const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
@@ -223,6 +200,5 @@ export const functions = [
   releaseSeatsAndDeleteBooking,
   sendBookingConfirmationEmail,
   sendShowReminders,
-  sendNewShowNotifications,
   handlePaymentSuccess
 ];
