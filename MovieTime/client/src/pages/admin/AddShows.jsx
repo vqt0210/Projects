@@ -106,8 +106,9 @@ const fetchNowPlayingMovies = async () => {
           showsInput,
           showPrice: Number(showPrice)
         }
+        console.log("📤 Sending payload to addShow:", payLoad);
 
-        const { data } = await axios.post('/api/show/add', payLoad, {
+        const { data } = await axios.post('https://server.teasonmike.io.vn/api/show/add', payLoad, {
           headers: { Authorization: `Bearer ${cleanToken}` }
         });
 
