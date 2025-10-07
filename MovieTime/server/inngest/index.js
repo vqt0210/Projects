@@ -58,81 +58,45 @@ const syncUserUpdation = inngest.createFunction(
 
 const releaseSeatsAndDeleteBooking = inngest.createFunction(
   { id: "release-seats-delete-booking" },
-  { event: "app/checkpayment" },
+  { event: "app/show.booked" },
   async ({ event, step }) => {
-    if (typeof step?.log !== "function") step.log = async () => {};
     const bookingId = event.data.bookingId;
+    const booking = await Booking.findById(bookingId).lean();
+    if (!booking) return;
 
-    // 1) Lấy booking để xác định đúng thời điểm chờ (ưu tiên expiresAt nếu có)
-    const b0 = await Booking.findById(bookingId).lean();
-    if (!b0) {
-      await step.log(`[RELEASE] booking not found: ${bookingId}`);
-      return;
-    }
+    // Chờ đến khi hết hạn
+    const expiresAt =
+      booking.expiresAt instanceof Date
+        ? booking.expiresAt
+        : new Date(Date.now() + 10 * 60 * 1000);
 
-    // Nếu đã thanh toán/confirm thì thoát sớm
-    if (b0.isPaid === true || b0.status === "CONFIRMED" || b0.status === "PAID") {
-      await step.log(`[RELEASE] already paid/confirmed, skip: ${bookingId}`);
-      return;
-    }
+    await step.sleepUntil("wait-until-expire", expiresAt);
 
-    const wakeAt =
-      b0.expiresAt instanceof Date
-        ? b0.expiresAt
-        : new Date(new Date(b0.createdAt || Date.now()).getTime() + 10 * 60 * 1000);
-
-    await step.sleepUntil("wait-until-expire", wakeAt);
-
-    // 2) IDP Guard: chỉ "expire" nếu vẫn còn pending và đã quá hạn
-    //    Đổi trạng thái trước, rồi mới động vào ghế.
+    // Sau khi hết hạn, check nếu vẫn chưa thanh toán
     const now = new Date();
     const expiredBooking = await Booking.findOneAndUpdate(
-    {
-      _id: bookingId,
-      status: { $in: ["PENDING_PAYMENT", null] },   // chỉ xử lý khi còn pending
-      $and: [
-        { $or: [ { isPaid: { $ne: true } }, { status: { $nin: ["PAID", "CONFIRMED"] } } ] },  // chưa paid
-        { $or: [ { expiresAt: { $lte: now } }, { expiresAt: { $exists: false } } ] }          // đã quá hạn
-      ],
-    },
-    { $set: { status: "EXPIRED", expiredAt: now } },
-    { new: true }
+      {
+        _id: bookingId,
+        $or: [{ isPaid: false }, { status: { $in: ["PENDING", "PENDING_PAYMENT"] } }],
+        $or: [{ expiresAt: { $lte: now } }, { expiresAt: { $exists: false } }],
+      },
+      { $set: { status: "EXPIRED", expiredAt: now } },
+      { new: true }
     ).lean();
 
-    if (!expiredBooking) {
-      await step.log(`[RELEASE] NO-OP (paid/confirmed/not-expired): ${bookingId}`);
-      return;
+    if (!expiredBooking) return;
+
+    // Trả ghế
+    const show = await Show.findById(expiredBooking.show);
+    if (show && show.occupiedSeats) {
+      for (const seat of expiredBooking.bookedSeats) {
+        delete show.occupiedSeats[seat];
+      }
+      show.markModified("occupiedSeats");
+      await show.save();
     }
 
-    // 3) Thao tác trả ghế + ghi trạng thái trong cùng 1 transaction
-    await step.run("release-seats-transaction", async () => {
-      const session = await Booking.startSession();
-      try {
-        await session.withTransaction(async () => {
-          const show = await Show.findById(expiredBooking.show).session(session);
-          if (!show) {
-            await step.log(`[RELEASE] show not found for booking ${bookingId}`);
-            return;
-          }
-
-          // occupiedSeats đang là object map: { "A1": true, ... }
-          for (const seat of expiredBooking.bookedSeats || []) {
-            if (show.occupiedSeats && Object.prototype.hasOwnProperty.call(show.occupiedSeats, seat)) {
-              delete show.occupiedSeats[seat];
-            }
-          }
-          show.markModified("occupiedSeats");
-          await show.save({ session });
-
-          // KHÔNG xoá booking để giữ log; chỉ giữ trạng thái EXPIRED
-          // await Booking.deleteOne({ _id: expiredBooking._id }).session(session);
-        });
-      } finally {
-        session.endSession();
-      }
-    });
-
-    await step.log(`[RELEASE] Done, seats freed for booking ${bookingId}`);
+    await step.log(`🟡 Released seats for expired booking: ${bookingId}`);
   }
 );
 
@@ -205,6 +169,49 @@ const sendNewShowNotifications = inngest.createFunction(
     await step.log(`Sent notifications for movie ${movieTitle} to ${sentEmails.size} users`);
   }
 );
+// Inngest Function: Handle payment success → confirm booking & send email
+const handlePaymentSuccess = inngest.createFunction(
+  { id: "payment-success-handler" },
+  { event: "app/payment.success" },
+  async ({ event, step }) => {
+    const bookingId = event.data.bookingId;
+    const booking = await Booking.findById(bookingId)
+      .populate({ path: "show", populate: { path: "movie" } })
+      .populate("user");
+
+    if (!booking) {
+      await step.log(`[PAYMENT] Booking not found: ${bookingId}`);
+      return;
+    }
+
+    // Nếu chưa mark là PAID, cập nhật lại
+    if (booking.status !== "PAID" || !booking.isPaid) {
+      booking.status = "PAID";
+      booking.isPaid = true;
+      booking.paidAt = new Date();
+      await booking.save();
+    }
+
+    // Gửi email xác nhận
+    if (booking?.user?.email) {
+      await sendEmail({
+        to: booking.user.email,
+        subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
+        body: bookingConfirmationEmail({
+          user: booking.user,
+          movieTitle: booking.show.movie.title,
+          showDateTime: booking.show.showDateTime,
+          bookedSeats: booking.bookedSeats,
+          bookingLink: `https://teasonmike.io.vn/my-bookings`,
+          supportLink: `https://teasonmike.io.vn`,
+        }),
+      });
+    }
+
+    await step.log(`[PAYMENT] Confirmed booking + sent email: ${bookingId}`);
+  }
+);
+
 
 export const functions = [
   syncUserCreation,
@@ -213,5 +220,6 @@ export const functions = [
   releaseSeatsAndDeleteBooking,
   sendBookingConfirmationEmail,
   sendShowReminders,
-  sendNewShowNotifications
+  sendNewShowNotifications,
+  handlePaymentSuccess
 ];

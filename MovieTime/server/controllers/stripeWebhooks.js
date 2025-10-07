@@ -93,7 +93,7 @@ export const stripeWebhooks = async (req, res) => {
       });
 
       if (upd.modifiedCount === 1) {
-        await inngest.send({ name: "app/show.booked", data: { bookingId } });
+        await inngest.send({ name: "app/payment.success", data: { bookingId } });
       }
     }
 
