@@ -16,7 +16,7 @@ const Navbar = () => {
   return (
     <div className='fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5'>
       {/* Logo */}
-      <Link to='/' className='max-md:flex-1'>
+      <Link to='/' className='max-md:flex-1' onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
         <img src={assets.title} alt="title" className='w-36 h-auto' />
       </Link>
 
