@@ -4,7 +4,7 @@ import BlurCircle from '../components/BlurCircle'
 import timeFormat from '../lib/TimeFormat'
 import { dateFormat } from '../lib/dateFormat'
 import { useAppContext } from '../context/AppContext'
-import { SignIn, useUser } from '@clerk/clerk-react'
+import { useClerk, useUser } from '@clerk/clerk-react'
 
 
 const MyBookings = () => {
@@ -13,6 +13,7 @@ const MyBookings = () => {
   const {axios, getToken, user, image_base_url} = useAppContext()
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const { openSignIn } = useClerk()
   const { isLoaded, isSignedIn } = useUser() // Clerk hook
 
   // Nếu Clerk chưa load xong
@@ -22,8 +23,16 @@ const MyBookings = () => {
   if (!isSignedIn) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
-        <h2 className="text-xl font-semibold mb-4">You must login to continue</h2>
-        <SignIn routing="path" path="/sign-in" />
+        <h2 className="text-xl font-semibold mb-4">
+          You must{" "}
+          <button
+            onClick={openSignIn}
+            className="text-primary font-semibold hover:text-primary/80 underline transition-colors"
+          >
+            login
+          </button>{" "}
+          to continue
+        </h2>
       </div>
     )
   }
