@@ -22,16 +22,17 @@ const AddShows = () => {
 
 const fetchNowPlayingMovies = async () => {
   try {
-    const rawToken = await getToken();
-    const token = rawToken?.replace(/[\r\n]/g, '').trim(); // trim khoảng trắng
-    console.log("TOKEN:", JSON.stringify(token));
+    const token = (await getToken())?.trim();
+    const cleanToken = token.replace(/^"|"$/g, ""); // remove bắt đầu và kết thúc dấu "
+
+    console.log("TOKEN:", JSON.stringify(cleanToken));
     if (!token) {
       toast.error("Token not found. Please login again.");
       return;
     }
 
     const { data } = await axios.get('/api/show/now-playing', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${cleanToken}` }
     });
 
     if (data.success) {
@@ -77,9 +78,9 @@ const fetchNowPlayingMovies = async () => {
           setAddingShow(false);
           return
         }
-        const rawToken = await getToken();
-        const token = rawToken?.replace(/[\r\n]/g, '').trim();
-        console.log("TOKEN:", JSON.stringify(token));
+        const token = (await getToken())?.trim();
+        const cleanToken = token.replace(/^"|"$/g, "");
+        console.log("TOKEN:", JSON.stringify(cleanToken));
         if (!token) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
@@ -97,7 +98,7 @@ const fetchNowPlayingMovies = async () => {
         }
 
         const { data } = await axios.post('/api/show/add', payLoad, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${cleanToken}` }
         });
 
         if(data.success){
