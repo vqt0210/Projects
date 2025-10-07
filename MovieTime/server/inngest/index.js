@@ -180,8 +180,9 @@ const handlePaymentSuccess = inngest.createFunction(
       .populate("user");
 
     if (!booking) {
-      await step.log(`[PAYMENT] Booking not found: ${bookingId}`);
-      return;
+      await step.run("log booking not found", async () => {
+        console.log(`[PAYMENT] Booking not found: ${bookingId}`);
+      });
     }
 
     // Nếu chưa mark là PAID, cập nhật lại
@@ -208,7 +209,9 @@ const handlePaymentSuccess = inngest.createFunction(
       });
     }
 
-    await step.log(`[PAYMENT] Confirmed booking + sent email: ${bookingId}`);
+    await step.run("log success", async () => {
+      console.log(`[PAYMENT] Confirmed booking + sent email: ${bookingId}`);
+    });
   }
 );
 
