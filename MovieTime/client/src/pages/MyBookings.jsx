@@ -12,7 +12,21 @@ const MyBookings = () => {
   const {axios, getToken, user, image_base_url} = useAppContext()
   const [bookings, setBookings] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  
+  const { isLoaded, isSignedIn } = useUser() // Clerk hook
+
+  // Nếu Clerk chưa load xong
+  if (!isLoaded) return <Loading />
+
+  // Nếu chưa đăng nhập
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] text-center">
+        <h2 className="text-xl font-semibold mb-4">You must login to continue</h2>
+        <SignIn routing="path" path="/sign-in" />
+      </div>
+    )
+  }
+
 
   const getMyBookings = async() => {
     try {
@@ -49,9 +63,10 @@ const MyBookings = () => {
   
   window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
 }, []);
+  if (isLoading) return <Loading />
 
 
-  return !isLoading ? (
+  return (
     <div className='relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]'>
       <BlurCircle top="100px" left="100px" />
       <div>
@@ -133,7 +148,7 @@ const MyBookings = () => {
 
 
     </div>
-  ) : <Loading />
+  )
 }
 
 export default MyBookings
