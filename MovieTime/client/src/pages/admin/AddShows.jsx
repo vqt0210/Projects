@@ -24,8 +24,9 @@ const fetchNowPlayingMovies = async () => {
   try {
     const token = (await getToken())?.trim();
     console.log("Raw token:", token);
-    const cleanToken = token.replace(/^"|"$/g, ""); // remove bắt đầu và kết thúc dấu "
+    const cleanToken = token.replace(/^"|"$/g, "").replace(/\s+/g, ""); // remove bắt đầu và kết thúc dấu "
     console.log("Clean token:", cleanToken, cleanToken.length);
+    console.log([...cleanToken].map(c => c.charCodeAt(0)));
     if (!token) {
       toast.error("Token not found. Please login again.");
       return;
@@ -80,9 +81,9 @@ const fetchNowPlayingMovies = async () => {
         }
         const token = (await getToken())?.trim();
         console.log("Raw token:", token);
-        const cleanToken = token.replace(/^"|"$/g, "");
+        const cleanToken = token.replace(/^"|"$/g, "").replace(/\s+/g, "");
         console.log("Clean token:", cleanToken, cleanToken.length);
-        console.log("TOKEN:", JSON.stringify(cleanToken));
+        console.log([...cleanToken].map(c => c.charCodeAt(0)));
         if (!token) {
           toast.error("Token not found. Please login again.");
           setAddingShow(false);
