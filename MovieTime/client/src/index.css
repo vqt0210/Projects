@@ -73,4 +73,12 @@ input::-webkit-inner-spin-button {
 ::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
+.hero-section {
+  user-select: text;
+}
+
+.hero-section ::selection {
+  background: transparent;
+  color: inherit;
+}
 
