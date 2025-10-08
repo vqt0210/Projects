@@ -2,12 +2,26 @@ import { useState } from 'react'
 import { dummyTrailers } from '../assets/assets';
 import BlurCircle from './BlurCircle';
 import { PlayCircleIcon } from 'lucide-react';
+import { Film } from 'lucide-react'
 const TrailerSection = () => {
 
   const [current, setCurrentTrailer] = useState(dummyTrailers[1])
   return (
     <div className='px-6 md:px-16 lg:px-24 xl:px-44 py-20 overflow-hidden'>
-      <p className='text-gray-300 font-medium text-lg max-w-[960px] mx-auto'>Trailers</p>
+      <div className="max-w-[960px] mx-auto text-center">
+      <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl backdrop-blur-sm bg-white/5">
+        <Film className="w-6 h-6 text-primary" />
+        <h3 className="text-lg md:text-2xl font-semibold text-gray-100">
+          Trailers
+        </h3>
+      </div>
+
+      {/* animated underline */}
+      <div className="mt-3 h-0.5 w-full max-w-[220px] bg-gray-700/40 mx-auto relative">
+        <div className="absolute left-0 top-0 h-0.5 w-0 bg-primary transition-all duration-500 group-hover:w-full" />
+      </div>
+    </div>
+
 
       <div className="relative mt-6 max-w-5xl mx-auto aspect-video">
       <BlurCircle top="-100px" right="-100px" />

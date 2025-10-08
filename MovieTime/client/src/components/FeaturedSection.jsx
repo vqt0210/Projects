@@ -13,10 +13,43 @@ const FeaturedSection = () => {
 
   return (
     <div className='px-6 md:px-16 lg:px-24 xl:px-44 overflow-hidden'> {/*Overflow-hidden dùng để tránh phần tử con tràn ra ngoài */}
-      <div className='relative flex items-center justify-between pt-20 pb-10'>
-        <BlurCircle top='0' right='-80px'/>
-        <p className='text-gray-300 font-medium text-lg'>Now Showing</p>
-        <button onClick={() => navigate('/movies')} className='group flex items-center gap-2 text-sm text-gray-300 cursor-pointer'>View All<ArrowRightIcon className='group-hover:translate-x-0.5 transition w-4.5 h-4.5'/></button>
+      
+      <div className="relative flex items-center justify-between pt-20 pb-6">
+        <BlurCircle top="0" right="-80px" />
+
+        {/* Left: title + subtitle + count */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+            <span className="block">Now Showing</span>
+          </h2>
+
+          {/* small descriptor + pill count */}
+          <div className="flex items-center gap-3 text-sm text-gray-300">
+            <span className="hidden sm:inline">Latest releases &amp; showtimes</span>
+            <span
+              className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/6 text-xs font-medium text-gray-100"
+              aria-hidden="true"
+            >
+              {uniqueShows.length} titles
+            </span>
+          </div>
+        </div>
+
+        {/* Right: view all button */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => { navigate('/movies'); scrollTo(0, 0) }}
+            className="group inline-flex items-center gap-3 px-3.5 py-2 rounded-md bg-white/3 hover:bg-white/6 transition"
+            aria-label="View all movies"
+          >
+            <span className="text-sm md:text-base font-medium text-gray-100 cursor-pointer">View all</span>
+
+            {/* animated arrow */}
+            <span className="transform transition-transform duration-300 group-hover:translate-x-1">
+              <ArrowRightIcon className="w-4 h-4 text-primary" />
+            </span>
+          </button>
+        </div>
       </div>
       <div className='grid gap-8 mt-8 
                 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
