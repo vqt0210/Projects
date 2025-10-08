@@ -47,7 +47,7 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
 
       <p className="font-semibold mt-2 truncate">{flattenedMovie.title}</p>
       <p className="text-sm text-gray-400 mt-2">
-        {releaseDate} • {genres} •{runtime}{" "}
+        {releaseDate} • {genres} • {runtime}{" "}
       </p>
 
       <div className="flex items-center justify-between mt-4 pb-3">
