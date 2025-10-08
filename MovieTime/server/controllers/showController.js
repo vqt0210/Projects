@@ -23,9 +23,7 @@ function ensureTmdbKey() {
   return k.trim();
 }
 
-/* ---------------------------
-   existing endpoints (unchanged logic, just small hardening)
-   --------------------------- */
+
 
 // API to get now playing movies from TMDB API
 export const getNowPlayingMovies = async (req, res) => {

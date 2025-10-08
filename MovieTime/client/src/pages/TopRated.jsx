@@ -11,7 +11,7 @@ export default function TopRated() {
   useEffect(() => {
     const fetchTop = async () => {
       try {
-        const { data } = await axios.get('/api/movies/top-rated?limit=20');
+        const { data } = await axios.get('/api/show/top-rated?limit=20');
         setMovies(data.movies || []);
       } catch (err) {
         console.error(err);

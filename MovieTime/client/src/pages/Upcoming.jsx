@@ -10,7 +10,7 @@ export default function Upcoming() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get('/api/movies/upcoming?limit=20');
+        const { data } = await axios.get('/api/show/upcoming?limit=20');
         setMovies(data.movies || []);
       } catch (err) {
         console.error(err);
