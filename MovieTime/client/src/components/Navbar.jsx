@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react"
-import { NavLink, Link } from "react-router-dom"
-import { assets } from "../assets/assets"
+import { useState, useRef, useEffect } from "react";
+import { NavLink, Link } from "react-router-dom";
+import { assets } from "../assets/assets";
 import {
   MenuIcon,
   SearchIcon,
@@ -9,51 +9,53 @@ import {
   Film,
   Calendar,
   Star,
-} from "lucide-react"
-import UserSection from "./UserSection"
-import { useAppContext } from "../context/AppContext"
+  HeartIcon,
+} from "lucide-react";
+import UserSection from "./UserSection";
+import { useAppContext } from "../context/AppContext";
 
 const navItems = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/movies", label: "Movies", Icon: Film },
-  { to: "/top-rated", label: "Top Rated", Icon: Star },  
+  { to: "/top-rated", label: "Top Rated", Icon: Star },
   { to: "/upcoming", label: "Upcoming", Icon: Calendar },
-]
+];
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false
-  )
+  );
 
-  const { favoriteMovies } = useAppContext()
-  const containerRef = useRef(null)
-  const toggleRef = useRef(null)
-  const mobileRef = useRef(null)
+  const { favoriteMovies } = useAppContext();
+  const containerRef = useRef(null);
+  const toggleRef = useRef(null);
+  const mobileRef = useRef(null);
 
   // update isMobile on resize
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener("resize", onResize)
-    onResize()
-    return () => window.removeEventListener("resize", onResize)
-  }, [])
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    onResize();
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Close menu and restore focus to toggle (a11y)
   const closeMenu = () => {
-    setIsOpen(false)
-    toggleRef.current?.focus()
-  }
+    setIsOpen(false);
+    toggleRef.current?.focus();
+  };
 
   // Attach pointerdown handler only while open
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handler = (e) => {
-      if (!containerRef.current) return
+      if (!containerRef.current) return;
 
       // Shadow DOM friendly path or fallback to target
-      const path = typeof e.composedPath === "function" ? e.composedPath() : [e.target]
+      const path =
+        typeof e.composedPath === "function" ? e.composedPath() : [e.target];
 
       // If click is inside the navbar container (or on the toggle button), do nothing
       if (
@@ -63,26 +65,30 @@ export default function Navbar() {
         containerRef.current.contains(e.target) ||
         (mobileRef.current && mobileRef.current.contains(e.target))
       ) {
-        return
+        return;
       }
 
       // otherwise close
-      closeMenu()
-    }
+      closeMenu();
+    };
 
-    document.addEventListener("pointerdown", handler, { passive: true })
-    return () => document.removeEventListener("pointerdown", handler)
-  }, [isOpen])
+    document.addEventListener("pointerdown", handler, { passive: true });
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [isOpen]);
 
   const navDesktopClass = ({ isActive }) =>
     `relative inline-flex items-center justify-center px-6 py-2 text-sm rounded-full transition duration-200 ${
-      isActive ? "text-primary bg-white/6 font-semibold shadow-sm scale-105" : "text-gray-300 hover:text-white hover:scale-105"
-    }`
+      isActive
+        ? "text-primary bg-white/6 font-semibold shadow-sm scale-105"
+        : "text-gray-300 hover:text-white hover:scale-105"
+    }`;
 
   const navMobileClass = ({ isActive }) =>
     `flex items-center gap-3 px-6 py-3 rounded-md transition text-lg ${
-      isActive ? "text-primary bg-white/6" : "text-gray-200 hover:text-white hover:bg-white/5"
-    }`
+      isActive
+        ? "text-primary bg-white/6"
+        : "text-gray-200 hover:text-white hover:bg-white/5"
+    }`;
 
   return (
     <nav aria-label="Main navigation" className="absolute inset-x-0 top-0 z-50">
@@ -95,8 +101,8 @@ export default function Navbar() {
           to="/"
           className="flex items-center gap-3"
           onClick={() => {
-            setIsOpen(false)
-            window.scrollTo({ top: 0, behavior: "smooth" })
+            setIsOpen(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         >
           <img src={assets.title} alt="Site title" className="h-auto w-36" />
@@ -106,11 +112,22 @@ export default function Navbar() {
         <div className="items-center hidden gap-4 md:flex">
           <div className="inline-flex items-center gap-4 px-2 py-1 border rounded-full bg-black/30 backdrop-blur-md border-white/10">
             {navItems.map(({ to, label, Icon }) => (
-              <NavLink key={to} to={to} end={to === "/"} className={navDesktopClass}>
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "/"}
+                className={navDesktopClass}
+              >
                 <Icon className="w-4 h-4 mr-1 opacity-90" />
                 <span>{label}</span>
               </NavLink>
             ))}
+            {favoriteMovies?.length > 0 && (
+              <NavLink to="/favorite" className={navDesktopClass}>
+                <HeartIcon className="w-4 h-4 mr-1 opacity-90" />
+                <span>Favorites</span>
+              </NavLink>
+            )}
           </div>
         </div>
 
@@ -127,28 +144,42 @@ export default function Navbar() {
             className="inline-flex items-center justify-center p-2 text-gray-200 rounded-md md:hidden bg-white/5"
             onClick={() => setIsOpen((v) => !v)}
           >
-            {isOpen ? <XIcon className="w-6 h-6" /> : <MenuIcon className="w-7 h-7" />}
+            {isOpen ? (
+              <XIcon className="w-6 h-6" />
+            ) : (
+              <MenuIcon className="w-7 h-7" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Mobile menu: lazy mounted only when open AND on mobile view */}
       {isOpen && isMobile && (
-        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          role="dialog"
+          aria-modal="true"
+        >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeMenu} />
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={closeMenu}
+          />
 
           {/* Menu content */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div ref={mobileRef} className="flex flex-col items-center w-full gap-4 px-6 mobile-menu">
+            <div
+              ref={mobileRef}
+              className="flex flex-col items-center w-full gap-4 px-6 mobile-menu"
+            >
               {navItems.map(({ to, label, Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
                   end={to === "/"}
                   onClick={() => {
-                    closeMenu()
-                    window.scrollTo({ top: 0, behavior: "smooth" })
+                    closeMenu();
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   className={navMobileClass}
                 >
@@ -161,16 +192,19 @@ export default function Navbar() {
                 <NavLink
                   to="/favorite"
                   onClick={() => {
-                    closeMenu()
-                    window.scrollTo({ top: 0, behavior: "smooth" })
+                    closeMenu();
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-6 py-3 rounded-md transition ${
-                      isActive ? "text-primary bg-white/6" : "text-gray-200 hover:text-white hover:bg-white/5"
+                      isActive
+                        ? "text-primary bg-white/6"
+                        : "text-gray-200 hover:text-white hover:bg-white/5"
                     }`
                   }
                 >
-                  ❤️ Favorites
+                  <HeartIcon />
+                  Favorites
                 </NavLink>
               )}
             </div>
@@ -178,5 +212,5 @@ export default function Navbar() {
         </div>
       )}
     </nav>
-  )
+  );
 }
