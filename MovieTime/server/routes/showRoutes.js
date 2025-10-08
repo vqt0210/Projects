@@ -6,11 +6,13 @@ import { protectAdmin } from "../middleware/auth.js";
 const showRouter = express.Router();
 
 showRouter.get('/now-playing', protectAdmin, getNowPlayingMovies)
-showRouter.post('/add', protectAdmin,  addShow )
-showRouter.get('/all', getShows)
-showRouter.get('/:movieId', getShow)
 showRouter.get("/top-rated", getTopRatedMovies);   
 showRouter.get("/upcoming", getUpcomingMovies); 
+// Route thêm và lấy danh sách show
+showRouter.post('/add', protectAdmin,  addShow )
+showRouter.get('/all', getShows)
+// Đặt route động ở cuối cùng
+showRouter.get('/:movieId', getShow)
 
 
 

@@ -152,20 +152,32 @@ export const getShows = async (req, res) => {
 export const getShow = async (req, res) => {
   try {
     const { movieId } = req.params;
-    const shows = await Show.find({ movie: movieId, showDateTime: { $gte: new Date() } });
-    const movie = await Movie.findById(String(movieId));
+
+    // Tìm show và movie song song
+    const [shows, movie] = await Promise.all([
+      Show.find({ movie: movieId, showDateTime: { $gte: new Date() } }),
+      Movie.findById(String(movieId))
+    ]);
+
     const dateTime = {};
-    shows.forEach((s) => {
+
+    for (const s of shows) {
       const date = s.showDateTime.toISOString().split("T")[0];
       if (!dateTime[date]) dateTime[date] = [];
       dateTime[date].push({ time: s.showDateTime, showId: s._id });
-    });
-    res.json({ success: true, movie, dateTime });
+    }
+    console.log("movieId", movieId);
+console.log("shows", shows.length);
+console.log("movie", movie ? movie.title : "null");
+
+    return res.json({ success: true, movie, dateTime });
   } catch (error) {
     console.error("getShow error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 
 /* ---------------------------
    New: top-rated & upcoming
