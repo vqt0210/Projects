@@ -1,4 +1,3 @@
-// src/components/Navbar.jsx
 import { useState, useRef, useEffect } from "react"
 import { NavLink, Link } from "react-router-dom"
 import { assets } from "../assets/assets"
@@ -23,15 +22,26 @@ const navItems = [
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  )
+
   const { favoriteMovies } = useAppContext()
   const containerRef = useRef(null)
   const toggleRef = useRef(null)
   const mobileRef = useRef(null)
 
+  // update isMobile on resize
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener("resize", onResize)
+    onResize()
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
+
   // Close menu and restore focus to toggle (a11y)
   const closeMenu = () => {
     setIsOpen(false)
-    // restore focus to toggle so keyboard/screenreader users keep context
     toggleRef.current?.focus()
   }
 
@@ -47,14 +57,14 @@ export default function Navbar() {
 
       // If click is inside the navbar container (or on the toggle button), do nothing
       if (
-      path.includes(containerRef.current) ||
-      (toggleRef.current && path.includes(toggleRef.current)) ||
-      (mobileRef.current && path.includes(mobileRef.current)) ||
-      containerRef.current.contains(e.target) ||
-      (mobileRef.current && mobileRef.current.contains(e.target))
-    ) {
-      return
-    }
+        path.includes(containerRef.current) ||
+        (toggleRef.current && path.includes(toggleRef.current)) ||
+        (mobileRef.current && path.includes(mobileRef.current)) ||
+        containerRef.current.contains(e.target) ||
+        (mobileRef.current && mobileRef.current.contains(e.target))
+      ) {
+        return
+      }
 
       // otherwise close
       closeMenu()
@@ -109,23 +119,24 @@ export default function Navbar() {
           <SearchIcon className="hidden md:block w-5 h-5 text-gray-300 cursor-pointer" />
           <UserSection />
 
-          {/* Mobile toggle */}
+          {/* Mobile toggle - VISIBLE ONLY ON MOBILE (md:hidden) */}
           <button
             ref={toggleRef}
             aria-label="Toggle menu"
             aria-expanded={isOpen}
+            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-200 bg-white/5"
             onClick={() => setIsOpen((v) => !v)}
           >
-            {isOpen ? <XIcon className="w-6 h-6" /> : <MenuIcon className="w-7 h-7 cursor-pointer" />}
+            {isOpen ? <XIcon className="w-6 h-6" /> : <MenuIcon className="w-7 h-7" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu: lazy mounted only when open */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
+      {/* Mobile menu: lazy mounted only when open AND on mobile view */}
+      {isOpen && isMobile && (
+        <div className="md:hidden fixed inset-0 z-40" role="dialog" aria-modal="true">
           {/* Backdrop */}
-          <div  className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeMenu} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeMenu} />
 
           {/* Menu content */}
           <div className="absolute inset-0 flex items-center justify-center">
