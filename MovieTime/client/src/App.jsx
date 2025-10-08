@@ -16,6 +16,7 @@ import ListBookings from './pages/admin/ListBookings'
 import { useAppContext } from './context/AppContext'
 import { SignIn } from '@clerk/clerk-react'
 import Loading from './components/Loading'
+import ScrollToTop from './components/ScrollToTop'
 
 
 const App = () => {
@@ -27,6 +28,7 @@ const App = () => {
     <>
       <Toaster/>
       {!isAdminRoute && <Navbar/>} 
+      <ScrollToTop threshold={300} />
       <Routes>
         <Route path='/' element={<Home/>}/>
         <Route path='/movies' element={<Movies/>}/>
@@ -36,7 +38,7 @@ const App = () => {
         <Route path='/loading/:nextUrl' element={<Loading/>}/>
         <Route path='/favorite' element={<Favorite/>}/>
         <Route path='/admin/*' element={user ? <Layout/> : (
-          <div className='min-h-screen flex justify-center items-center'>
+          <div className='flex items-center justify-center min-h-screen'>
             <SignIn fallbackRedirectUrl={'/admin'}/>
           </div>
         )}>
