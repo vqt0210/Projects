@@ -95,7 +95,6 @@ const MovieDetails = () => {
       fetchFavoriteMovies();
     }
   };
-  console.log('MovieDetails component loaded:', new Date().toISOString())
 
   useEffect(() => {
     if (id) {
@@ -116,14 +115,13 @@ const MovieDetails = () => {
     ? image_base_url + show.movie.poster_path
     : "/assets/backDropPath.jpg";
 
-
   return show ? (
     <div className="px-6 md:px-16 lg:px-40 pt-30 md:pt-50">
-      <div className="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">
+      <div className="flex flex-col max-w-6xl gap-8 mx-auto md:flex-row">
         <img
           src={posterPath}
           alt=""
-          className="max-md:mx-auto rounded-xl h-104 max-w-70 object-cover"
+          className="object-cover max-md:mx-auto rounded-xl h-104 max-w-70"
         />
 
         <div className="relative flex flex-col gap-3">
@@ -137,7 +135,7 @@ const MovieDetails = () => {
             {show.movie.vote_average.toFixed(1)} User Rating
           </div>
 
-          <p className="text-gray-400 mt-2 text-sm leading-tight max-w-xl">
+          <p className="max-w-xl mt-2 text-sm leading-tight text-gray-400">
             {show.movie.overview}
           </p>
           <p>
@@ -146,17 +144,17 @@ const MovieDetails = () => {
             {show.movie.release_date.split("-")[0]}{" "}
             {/*  Hàm split cắt chuỗi thành một mảng, dựa trên ký tự phân cách là "-"; [0]:Lấy phần tử đầu tiên trong mảng vừa tách ra */}
           </p>
-          <div className="flex items-center flex-wrap gap-4 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             <button
               onClick={handleWatchTrailer}
-              className="flex items-center gap-2 px-7 py-3 text-sm bg-gray-800 hover:bg-gray-700 transition rounded-md font-medium cursor-pointer active:scale-95"
+              className="flex items-center gap-2 py-3 text-sm font-medium transition bg-gray-800 rounded-md cursor-pointer px-7 hover:bg-gray-700 active:scale-95"
             >
               <PlayCircleIcon className="w-5 h-5" />
               Watch Trailer
             </button>
             <a
               href="#dateSelect"
-              className="px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer active:scale-95"
+              className="px-10 py-3 text-sm font-medium transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull active:scale-95"
             >
               Buy Tickets
             </a>
@@ -177,9 +175,9 @@ const MovieDetails = () => {
         </div>
       </div>
       <div className="max-w-6xl mx-auto mt-12">
-        <h2 className="text-xl font-semibold mb-4">Movie Cast</h2>
-        <div className="overflow-x-auto no-scrollbar pb-4">
-          <div className="flex items-center gap-6 w-max px-4">
+        <h2 className="mb-4 text-xl font-semibold">Movie Cast</h2>
+        <div className="pb-4 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-6 px-4 w-max">
             {/*.map duyệt qua từng phần tử trong mảng vừa cắt, index là vị trí của phần tử trong mảng */}
             {show.movie.casts.slice(0, 12).map((cast, index) => (
               <div
@@ -189,9 +187,9 @@ const MovieDetails = () => {
                 <img
                   src={image_base_url + cast.profile_path}
                   alt=""
-                  className="rounded-full h-20 w-20 object-cover"
+                  className="object-cover w-20 h-20 rounded-full"
                 />
-                <p className="font-medium text-xs mt-3">{cast.name}</p>
+                <p className="mt-3 text-xs font-medium">{cast.name}</p>
               </div>
             ))}
           </div>
@@ -199,8 +197,8 @@ const MovieDetails = () => {
 
         <DateSelect dateTime={show.dateTime} id={id} />
 
-        <p className="text-lg font-medium mt-20 mb-8">You May Also Like</p>
-        <div className="flex flex-wrap max-sm:justify-center gap-8 ">
+        <p className="mt-20 mb-8 text-lg font-medium">You May Also Like</p>
+        <div className="flex flex-wrap gap-8 max-sm:justify-center ">
           {uniqueShows.slice(0, 4).map((movie, index) => (
             <MovieCard key={index} movie={movie} />
           ))}
@@ -212,20 +210,18 @@ const MovieDetails = () => {
               navigate("/movies");
               scrollTo(0, 0);
             }}
-            className="group inline-flex items-center justify-center gap-3 px-8 py-3 rounded-full text-sm font-semibold text-white
-               bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 shadow-lg
-               hover:brightness-105 active:scale-95 transition transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-400"
+            className="inline-flex items-center justify-center gap-3 px-8 py-3 text-sm font-semibold text-white transition transform rounded-full shadow-lg group bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:brightness-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-400"
             style={{ minWidth: 160 }}
           >
             <span className="select-none">Show more</span>
-            <span className="transform transition-transform duration-300 group-hover:translate-x-1">
+            <span className="transition-transform duration-300 transform group-hover:translate-x-1">
               <ArrowRightIcon className="w-4 h-4 text-white" />
             </span>
           </button>
         </div>
       </div>
       {showTrailer && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
           <div className="relative w-[90%] md:w-[60%] aspect-video">
             <iframe
               src={`${trailerUrl}?autoplay=1`}
@@ -236,7 +232,7 @@ const MovieDetails = () => {
             />
             <button
               onClick={() => setShowTrailer(false)}
-              className="absolute -top-10 right-0 text-white text-2xl font-bold"
+              className="absolute right-0 text-2xl font-bold text-white -top-10"
             >
               ✕
             </button>
