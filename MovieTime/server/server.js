@@ -5,7 +5,6 @@ import connectDB from './configs/db.js';
 import { clerkMiddleware } from '@clerk/express';
 import { serve } from 'inngest/express';
 import { inngest, functions } from './inngest/index.js';
-
 import showRouter from './routes/showRoutes.js';
 import bookingRouter from './routes/bookingRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
@@ -13,8 +12,10 @@ import userRouter from './routes/userRoutes.js';
 import { stripeWebhooks } from './controllers/stripeWebhooks.js';
 
 const app = express();
-
+import helmet from 'helmet';
+import mongoose from 'mongoose';
 app.set('trust proxy', 1);
+app.use(helmet());
 // Render cung cấp PORT; fallback 10000 cho local
 const PORT = process.env.PORT || 10000;
 const HOST = '0.0.0.0';
@@ -46,7 +47,11 @@ app.use('/api/show', showRouter);
 app.use('/api/bookings', bookingRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
-
+app.use((req, res) => res.status(404).json({ success:false, message: 'Not found' }));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ success:false, message: 'Internal server error' });
+});
 // KHỞI ĐỘNG SERVER NGAY, không chờ DB (tránh 502 vì boot chậm)
 const server = app.listen(PORT, HOST, () => {
   console.log(`Server listening at http://${HOST}:${PORT}`);
@@ -65,9 +70,43 @@ const bootDB = async (retry = 0) => {
     console.error('DB connect failed:', err?.message);
     if (retry < 5) {
       const delay = Math.min(1000 * 2 ** retry, 10000);
-      console.log(`⏳ retrying DB in ${delay} ms...`);
+      console.log(`Retrying DB in ${delay} ms...`);
       setTimeout(() => bootDB(retry + 1), delay);
     }
   }
 };
 bootDB();
+
+// after bootDB() call and exports (end of file)
+const shutdown = async (signal) => {
+  try {
+    console.log(`Received ${signal}. Shutting down gracefully...`);
+    // stop accepting new connections
+    server.close(async (err) => {
+      if (err) {
+        console.error('Error closing server', err);
+        process.exit(1);
+      }
+      // close DB connection (mongoose)
+      try {
+        await mongoose.disconnect();
+        console.log('Mongo disconnected');
+      } catch (e) {
+        console.error('Error disconnecting mongo', e);
+      }
+      process.exit(0);
+    });
+
+    // if not closed in X ms, force exit
+    setTimeout(() => {
+      console.warn('Force shutdown');
+      process.exit(1);
+    }, 30 * 1000);
+  } catch (e) {
+    console.error('Shutdown error', e);
+    process.exit(1);
+  }
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
