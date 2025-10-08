@@ -7,8 +7,8 @@ import {
   XIcon,
   Home,
   Film,
-  MapPin,
   Calendar,
+  Star,
 } from "lucide-react"
 import UserSection from "./UserSection"
 import { useAppContext } from "../context/AppContext"
@@ -16,8 +16,8 @@ import { useAppContext } from "../context/AppContext"
 const navItems = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/movies", label: "Movies", Icon: Film },
-  { to: "/theaters", label: "Theaters", Icon: MapPin },
-  { to: "/releases", label: "Releases", Icon: Calendar },
+  { to: "/top-rated", label: "Top Rated", Icon: Star },  
+  { to: "/upcoming", label: "Upcoming", Icon: Calendar },
 ]
 
 export default function Navbar() {
@@ -99,15 +99,15 @@ export default function Navbar() {
             window.scrollTo({ top: 0, behavior: "smooth" })
           }}
         >
-          <img src={assets.title} alt="Site title" className="w-36 h-auto" />
+          <img src={assets.title} alt="Site title" className="h-auto w-36" />
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-4">
-          <div className="inline-flex items-center gap-4 bg-black/30 backdrop-blur-md rounded-full px-2 py-1 border border-white/10">
+        <div className="items-center hidden gap-4 md:flex">
+          <div className="inline-flex items-center gap-4 px-2 py-1 border rounded-full bg-black/30 backdrop-blur-md border-white/10">
             {navItems.map(({ to, label, Icon }) => (
               <NavLink key={to} to={to} end={to === "/"} className={navDesktopClass}>
-                <Icon className="w-4 h-4 opacity-90 mr-1" />
+                <Icon className="w-4 h-4 mr-1 opacity-90" />
                 <span>{label}</span>
               </NavLink>
             ))}
@@ -116,7 +116,7 @@ export default function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-4">
-          <SearchIcon className="hidden md:block w-5 h-5 text-gray-300 cursor-pointer" />
+          <SearchIcon className="hidden w-5 h-5 text-gray-300 cursor-pointer md:block" />
           <UserSection />
 
           {/* Mobile toggle - VISIBLE ONLY ON MOBILE (md:hidden) */}
@@ -124,7 +124,7 @@ export default function Navbar() {
             ref={toggleRef}
             aria-label="Toggle menu"
             aria-expanded={isOpen}
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-200 bg-white/5"
+            className="inline-flex items-center justify-center p-2 text-gray-200 rounded-md md:hidden bg-white/5"
             onClick={() => setIsOpen((v) => !v)}
           >
             {isOpen ? <XIcon className="w-6 h-6" /> : <MenuIcon className="w-7 h-7" />}
@@ -134,13 +134,13 @@ export default function Navbar() {
 
       {/* Mobile menu: lazy mounted only when open AND on mobile view */}
       {isOpen && isMobile && (
-        <div className="md:hidden fixed inset-0 z-40" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeMenu} />
 
           {/* Menu content */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div ref={mobileRef} className="mobile-menu flex flex-col items-center gap-4 w-full px-6">
+            <div ref={mobileRef} className="flex flex-col items-center w-full gap-4 px-6 mobile-menu">
               {navItems.map(({ to, label, Icon }) => (
                 <NavLink
                   key={to}
