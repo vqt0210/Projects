@@ -188,7 +188,7 @@ export const getTopRatedMovies = async (req, res) => {
 
     const payload = { page: data.page, total_pages: data.total_pages, results: data.results };
     cacheSet(cacheKey, payload, 5 * 60 * 1000);
-    res.json({ success: true, ...payload });
+    res.json({ success: true, movies: data.results, page: data.page, total_pages: data.total_pages, results: data.results });
   } catch (error) {
     console.error("getTopRatedMovies error:", error?.response?.data || error?.message || error);
     res.status(502).json({ success: false, message: error?.message || "Failed to fetch TMDB top rated" });
@@ -212,7 +212,7 @@ export const getUpcomingMovies = async (req, res) => {
 
     const payload = { page: data.page, total_pages: data.total_pages, results: data.results };
     cacheSet(cacheKey, payload, 5 * 60 * 1000);
-    res.json({ success: true, ...payload });
+    res.json({ success: true, movies: data.results, page: data.page, total_pages: data.total_pages, results: data.results });
   } catch (error) {
     console.error("getUpcomingMovies error:", error?.response?.data || error?.message || error);
     res.status(502).json({ success: false, message: error?.message || "Failed to fetch TMDB upcoming" });
