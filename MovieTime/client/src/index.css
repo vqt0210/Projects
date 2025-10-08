@@ -83,3 +83,51 @@ input::-webkit-inner-spin-button {
   background: transparent;
   color: inherit;
 }
+
+/* subtle glowing text for dark backgrounds */
+.text-glow {
+  text-shadow: 0 6px 18px rgba(248,69,101,0.12), 0 2px 6px rgba(0,0,0,0.6);
+}
+
+/* gradient text utility */
+.gradient-primary {
+  background-image: linear-gradient(90deg, #ec4899 0%, #fb7185 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* subtle muted meta text */
+.text-muted {
+  color: rgba(255,255,255,0.48);
+}
+
+/* compact uppercase label */
+.meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.18);
+}
+
+/* a nicer rounded rating chip */
+.rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  font-weight: 700;
+  color: var(--color-primary);
+  box-shadow: 0 4px 14px rgba(99,102,241,0.06), inset 0 -2px 6px rgba(0,0,0,0.25);
+  font-size: 0.9rem;
+}
+
+/* responsive clamp for section headings if you want */
+.section-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+}

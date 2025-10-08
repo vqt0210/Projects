@@ -22,7 +22,7 @@ const Movies = () => {
     <BlurCircle key={i} {...pos} />
       ))}
       <h1 className='text-lg font-medium  my-4'>Now Showing</h1>
-      <div className='flex flex-wrap max-sm:justify-center gap-8'>
+      <div className='grid grid-cols-4 gap-8 max-sm:grid-cols-2'>
         {uniqueShows.map((movie) => (
           <MovieCard movie={movie} key={movie._id}/> ))}
       </div>

@@ -185,28 +185,21 @@ console.log("movie", movie ? movie.title : "null");
 
 export const getTopRatedMovies = async (req, res) => {
   try {
-    const apiKey = ensureTmdbKey();
-    const page = Math.max(1, parseInt(req.query.page || "1", 10));
-    const cacheKey = `tmdb:top-rated:page:${page}`;
+    const minRate = parseFloat(req.query.minRate) || 7; 
+    const limit = parseInt(req.query.limit) || 10; // top 10
+    const movies = await Movie.find({ vote_average: { $gte: minRate } })
+      .sort({ vote_average: -1 }) // giảm dần
+      .limit(limit);
 
-    const cached = cacheGet(cacheKey);
-    if (cached) return res.json({ success: true, ...cached });
-
-    const { data } = await axios.get("https://api.themoviedb.org/3/movie/top_rated", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      params: { language: "en-US", page },
-      timeout: AXIOS_DEFAULT.timeout,
-    });
-
-    const payload = { page: data.page, total_pages: data.total_pages, results: data.results };
-    cacheSet(cacheKey, payload, 5 * 60 * 1000);
-    res.json({ success: true, movies: data.results, page: data.page, total_pages: data.total_pages, results: data.results });
-  } catch (error) {
-    console.error("getTopRatedMovies error:", error?.response?.data || error?.message || error);
-    res.status(502).json({ success: false, message: error?.message || "Failed to fetch TMDB top rated" });
+    res.json({ movies });
+  } catch (err) {
+    console.error("getTopRatedMovies error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+
+// API: get upcoming movies (filter out movies already in Now Showing)
 export const getUpcomingMovies = async (req, res) => {
   try {
     const apiKey = ensureTmdbKey();
@@ -216,17 +209,48 @@ export const getUpcomingMovies = async (req, res) => {
     const cached = cacheGet(cacheKey);
     if (cached) return res.json({ success: true, ...cached });
 
-    const { data } = await axios.get("https://api.themoviedb.org/3/movie/upcoming", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      params: { language: "en-US", page },
-      timeout: AXIOS_DEFAULT.timeout,
-    });
+    // Lấy các movie đang showing trong DB
+    const nowShowingMovies = await Show.find({}, "movie");
+    const nowShowingIds = nowShowingMovies.map(s => s.movie.toString());
 
-    const payload = { page: data.page, total_pages: data.total_pages, results: data.results };
+    // Lấy danh sách upcoming từ TMDB
+    const { data } = await axios.get(
+      "https://api.themoviedb.org/3/movie/upcoming",
+      { headers: { Authorization: `Bearer ${apiKey}` }, params: { language: "en-US", page } }
+    );
+
+    // Lọc ra các movie chưa có trong Now Showing
+    let filteredResults = data.results.filter(
+      movie => !nowShowingIds.includes(movie.id.toString())
+    );
+
+    // Fetch chi tiết từng movie để lấy genres, runtime, trailer…
+    const detailedResults = await Promise.all(
+      filteredResults.map(async movie => {
+        try {
+          const { data: detail } = await axios.get(
+            `https://api.themoviedb.org/3/movie/${movie.id}`,
+            { headers: { Authorization: `Bearer ${apiKey}` }, params: { language: "en-US" } }
+          );
+          return { ...movie, genres: detail.genres, runtime: detail.runtime };
+        } catch {
+          return movie; // fallback nếu fetch detail lỗi
+        }
+      })
+    );
+
+    const payload = {
+      page: data.page,
+      total_pages: data.total_pages,
+      results: detailedResults
+    };
+
     cacheSet(cacheKey, payload, 5 * 60 * 1000);
-    res.json({ success: true, movies: data.results, page: data.page, total_pages: data.total_pages, results: data.results });
+
+    res.json({ success: true, movies: detailedResults, page: data.page, total_pages: data.total_pages });
+
   } catch (error) {
-    console.error("getUpcomingMovies error:", error?.response?.data || error?.message || error);
-    res.status(502).json({ success: false, message: error?.message || "Failed to fetch TMDB upcoming" });
+    console.error("getUpcomingMovies error:", error);
+    res.status(502).json({ success: false, message: "Failed to fetch TMDB upcoming" });
   }
 };
