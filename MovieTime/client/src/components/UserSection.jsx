@@ -13,7 +13,7 @@ const UserSection = () => {
     return (
       <button
         onClick={openSignIn}
-        className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium'
+        className='px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer'
       >
         Login
       </button>
