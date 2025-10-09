@@ -41,7 +41,7 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
         <img
           src={backdropPath}
           alt={flattenedMovie.title}
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center cursor-pointer"
         />
       </div>
 

@@ -208,14 +208,20 @@ const MovieDetails = () => {
             {show.movie.casts.slice(0, 12).map((cast, index) => (
               <div
                 key={index}
-                className="flex flex-col items-center text-center"
+                className="flex flex-col items-center text-center cursor-pointer"
+                onClick={() => {
+                  navigate(`/actors/${cast.id}`);
+                  scrollTo(0, 0);
+                }}
               >
                 <img
                   src={image_base_url + cast.profile_path}
-                  alt=""
+                  alt={cast.name}
                   className="object-cover w-20 h-20 rounded-full"
                 />
-                <p className="mt-3 text-xs font-medium">{cast.name}</p>
+                <p className="mt-3 text-xs font-medium hover:text-primary transition">
+                  {cast.name}
+                </p>
               </div>
             ))}
           </div>
