@@ -53,15 +53,20 @@ export default function ActorDetail() {
       {/* Actor info */}
       <div className="flex flex-col md:flex-row items-start gap-8">
         <img
-          src={image_base_url + actor.profile_path}
+          src={
+            actor.profile_path
+              ? `${image_base_url}${actor.profile_path}`
+              : "/assets/defaultprofilepic.jpg"
+          }
+          onError={(e) => (e.target.src = "/assets/defaultprofilepic.jpg")}
           alt={actor.name}
-          className="w-44 h-44 object-cover rounded-xl"
+          className="w-44 h-44 rounded-full object-cover bg-gray-800"
         />
         <div>
           <h1 className="text-3xl font-semibold">{actor.name}</h1>
           <p className="text-gray-400 mt-1">{actor.known_for_department}</p>
           <p className="text-gray-500 text-sm mt-2">
-            Popularity: {actor.popularity}
+            Popularity: {actor.popularity?.toFixed(1)}
           </p>
         </div>
       </div>
