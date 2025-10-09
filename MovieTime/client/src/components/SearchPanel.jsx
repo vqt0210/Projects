@@ -16,7 +16,8 @@ export default function SearchPanel({ isOpen, onClose }) {
     }
     const delayDebounce = setTimeout(async () => {
       setLoading(true);
-      const res = await fetch(`/api/search?q=${query}`);
+      const API_URL = import.meta.env.VITE_BASE_URL
+      const res = await fetch(`${API_URL}/api/search?q=${query}`)
       const data = await res.json();
       setResults(data.results || []);
       setLoading(false);
@@ -55,7 +56,7 @@ export default function SearchPanel({ isOpen, onClose }) {
           />
 
           {/* Loading */}
-          {loading && <p className="mt-4 text-sm text-gray-400">Đang tìm...</p>}
+          {loading && <p className="mt-4 text-sm text-gray-400">Searching...</p>}
 
           {/* Results */}
           <div className="mt-4 flex flex-col gap-3">
