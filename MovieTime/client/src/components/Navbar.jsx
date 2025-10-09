@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import UserSection from "./UserSection";
 import { useAppContext } from "../context/AppContext";
+import SearchPanel from "./SearchPanel";
+
 
 const navItems = [
   { to: "/", label: "Home", Icon: Home },
@@ -45,6 +47,7 @@ export default function Navbar() {
     setIsOpen(false);
     toggleRef.current?.focus();
   };
+  const [isSearchOpen, setSearchOpen] = useState(false);
 
   // Attach pointerdown handler only while open
   useEffect(() => {
@@ -133,7 +136,10 @@ export default function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-4">
-          <SearchIcon className="hidden w-5 h-5 text-gray-300 cursor-pointer md:block" />
+          <SearchIcon
+            className="hidden w-5 h-5 text-gray-300 cursor-pointer md:block hover:text-white transition"
+            onClick={() => setSearchOpen(true)}
+          />
           <UserSection />
 
           {/* Mobile toggle - VISIBLE ONLY ON MOBILE (md:hidden) */}
@@ -211,6 +217,7 @@ export default function Navbar() {
           </div>
         </div>
       )}
+      <SearchPanel isOpen={isSearchOpen} onClose={() => setSearchOpen(false)} />
     </nav>
   );
 }
