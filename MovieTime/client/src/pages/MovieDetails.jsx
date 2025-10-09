@@ -15,6 +15,7 @@ const MovieDetails = () => {
   const [trailerUrl, setTrailerUrl] = useState("");
   const { id } = useParams();
   const [show, setShow] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
   const {
     shows,
     axios,
@@ -144,23 +145,30 @@ const MovieDetails = () => {
             {show.movie.release_date.split("-")[0]}{" "}
             {/*  Hàm split cắt chuỗi thành một mảng, dựa trên ký tự phân cách là "-"; [0]:Lấy phần tử đầu tiên trong mảng vừa tách ra */}
           </p>
-          <div className="flex flex-wrap items-center gap-4 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4 w-full">
             <button
               onClick={handleWatchTrailer}
-              className="flex items-center gap-2 py-3 text-sm font-medium transition bg-gray-800 rounded-md cursor-pointer px-7 hover:bg-gray-700 active:scale-95"
+              className={`flex items-center justify-center gap-2 py-3 text-sm font-medium transition bg-gray-800 rounded-md cursor-pointer hover:bg-gray-700 active:scale-95 ${
+                isExpired ? "px-20 md:px-32" : "px-7"
+              }`}
+              style={{ flex: isExpired ? "1 1 90%" : "unset" }}
             >
               <PlayCircleIcon className="w-5 h-5" />
               Watch Trailer
             </button>
-            <a
-              href="#dateSelect"
-              className="px-10 py-3 text-sm font-medium transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull active:scale-95"
-            >
-              Buy Tickets
-            </a>
+
+            {!isExpired && (
+              <a
+                href="#dateSelect"
+                className="px-10 py-3 text-sm font-medium transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull active:scale-95"
+              >
+                Buy Tickets
+              </a>
+            )}
+
             <button
               onClick={handleFavorite}
-              className="bg-gray-700 p-2.5 rounded full transition cursor-pointer active:scale-95"
+              className="bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95"
             >
               <Heart
                 className={`w-5 h-5 ${
@@ -195,7 +203,7 @@ const MovieDetails = () => {
           </div>
         </div>
 
-        <DateSelect dateTime={show.dateTime} id={id} />
+        <DateSelect dateTime={show.dateTime} id={id} onExpired={setIsExpired} />
 
         <p className="mt-20 mb-8 text-lg font-medium">You May Also Like</p>
         <div className="flex flex-wrap gap-8 max-sm:justify-center ">
@@ -210,7 +218,7 @@ const MovieDetails = () => {
               navigate("/movies");
               scrollTo(0, 0);
             }}
-            className="inline-flex items-center justify-center gap-3 px-8 py-3 text-sm font-semibold text-white transition transform rounded-full shadow-lg group bg-gradient-to-r from-pink-500 via-rose-500 to-indigo-600 hover:brightness-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-400"
+            className="inline-flex items-center justify-center gap-3 px-8 py-3 text-sm font-semibold text-white transition transform rounded-full shadow-lg group bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500 hover:brightness-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-400"
             style={{ minWidth: 160 }}
           >
             <span className="select-none">Show more</span>
@@ -220,6 +228,7 @@ const MovieDetails = () => {
           </button>
         </div>
       </div>
+
       {showTrailer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
           <div className="relative w-[90%] md:w-[60%] aspect-video">
