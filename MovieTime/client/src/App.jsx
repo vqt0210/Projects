@@ -19,6 +19,7 @@ import Loading from "./components/Loading";
 import ScrollToTop from "./components/ScrollToTop";
 import TopRated from './pages/TopRated';
 import Upcoming from './pages/Upcoming';
+import ActorDetail from "./pages/ActorDetail";
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith("/admin"); //Hàm dùng để biết mình đang ở trang nào
@@ -39,6 +40,7 @@ const App = () => {
         <Route path="/favorite" element={<Favorite />} />
         <Route path="/top-rated" element={<TopRated />} />
         <Route path="/upcoming" element={<Upcoming />} />
+        <Route path="/actors/:id" element={<ActorDetail />} />
         <Route
           path="/admin/*"
           element={
