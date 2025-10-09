@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import BlurCircle from "./BlurCircle";
 import MovieCard from "./MovieCard";
 import { useAppContext } from "../context/AppContext";
-import { motion } from "framer-motion";
 
 const FeaturedSection = () => {
   const navigate = useNavigate();
