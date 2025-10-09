@@ -18,15 +18,22 @@ export default function Upcoming() {
   ];
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+    setLoading(false);
+    setMovies([]);
+  }, 7000);
     (async () => {
       try {
-        const { data } = await axios.get("/api/show/upcoming?page=1");
+        const { data } = await axios.get("/api/show/upcoming?page=1", {
+          timeout: 5000
+        });
         const list = data?.results ?? data?.movies ?? [];
         setMovies(list);
       } catch (err) {
         console.error("Upcoming fetch error", err);
         setMovies([]);
       } finally {
+        clearTimeout(timer);
         setLoading(false);
       }
     })();
