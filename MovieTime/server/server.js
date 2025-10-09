@@ -11,6 +11,9 @@ import adminRouter from './routes/adminRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import { stripeWebhooks } from './controllers/stripeWebhooks.js';
 import searchRoutes from "./routes/searchRoutes.js"
+import actorRoutes from "./routes/actorRoutes.js"
+
+
 
 const app = express();
 import helmet from 'helmet';
@@ -49,6 +52,7 @@ app.use('/api/bookings', bookingRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
 app.use("/api/search", searchRoutes)
+app.use("/api/actors", actorRoutes)
 app.use((req, res) => res.status(404).json({ success:false, message: 'Not found' }));
 app.use((err, req, res, next) => {
   console.error(err);
