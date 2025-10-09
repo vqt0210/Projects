@@ -28,14 +28,18 @@ export const searchMoviesAndActors = async (req, res) => {
         "title poster_path release_date casts genres runtime vote_average"
       );
 
-    // Nếu là diễn viên, gom thêm info diễn viên (profile)
-    let actorProfile = null;
+    // Tìm tất cả diễn viên trùng tên từ các phim khớp
+    let matchedActors = [];
     if (actorMovies.length > 0) {
-      const matchedMovie = actorMovies.find((m) =>
-        m.casts.some((c) => regex.test(c.name))
-      );
-      const matchedActor = matchedMovie?.casts.find((c) => regex.test(c.name));
-      actorProfile = matchedActor || null;
+      const seenIds = new Set();
+      actorMovies.forEach((movie) => {
+        movie.casts.forEach((actor) => {
+          if (regex.test(actor.name) && !seenIds.has(actor.id)) {
+            seenIds.add(actor.id);
+            matchedActors.push(actor);
+          }
+        });
+      });
     }
 
     // Nếu tìm thấy phim → type=movie
@@ -47,7 +51,7 @@ export const searchMoviesAndActors = async (req, res) => {
       return res.json({
         type: "actor",
         keyword: q,
-        profile: actorProfile,
+        profiles: matchedActors,
         results: actorMovies,
       });
 
