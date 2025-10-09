@@ -9,7 +9,7 @@ export const searchMoviesAndActors = async (req, res) => {
     if (!q || q.trim() === "") {
       return res.json({ type: "none", results: [] });
     }
-    if (q.trim().length < 2) return res.json({ type: "none", results: [] })
+    if (q.trim().length < 2) return res.json({ type: "none", results: [] });
 
     // Regex không phân biệt hoa thường, tìm từ đầu hoặc giữa chuỗi
     const regex = new RegExp(q, "i");
@@ -20,21 +20,38 @@ export const searchMoviesAndActors = async (req, res) => {
       .select("title poster_path release_date casts genres");
 
     // Tìm theo tên diễn viên (trong mảng casts)
-    const actors = await Movie.find({
+    const actorMovies = await Movie.find({
       "casts.name": { $regex: regex },
     })
       .limit(8)
-      .select("title poster_path release_date casts genres");
+      .select(
+        "title poster_path release_date casts genres runtime vote_average"
+      );
+
+    // Nếu là diễn viên, gom thêm info diễn viên (profile)
+    let actorProfile = null;
+    if (actorMovies.length > 0) {
+      const matchedMovie = actorMovies.find((m) =>
+        m.casts.some((c) => regex.test(c.name))
+      );
+      const matchedActor = matchedMovie?.casts.find((c) => regex.test(c.name));
+      actorProfile = matchedActor || null;
+    }
 
     // Nếu tìm thấy phim → type=movie
     if (movies.length > 0)
       return res.json({ type: "movie", keyword: q, results: movies });
 
     // Nếu không có phim mà có diễn viên → type=actor
-    if (actors.length > 0)
-      return res.json({ type: "actor", keyword: q, results: actors });
+    if (actorMovies.length > 0)
+      return res.json({
+        type: "actor",
+        keyword: q,
+        profile: actorProfile,
+        results: actorMovies,
+      });
 
-    // Không có gì
+    // Không có kết quả
     return res.json({ type: "none", keyword: q, results: [] });
   } catch (err) {
     console.error("Search error:", err);
