@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BlurCircle from "../components/BlurCircle";
-import { ArrowRightIcon, Heart, PlayCircleIcon, StarIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  Heart,
+  PlayCircleIcon,
+  StarIcon,
+  XIcon,
+} from "lucide-react";
 import timeFormat from "../lib/TimeFormat";
 import DateSelect from "../components/DateSelect";
 import MovieCard from "../components/MovieCard";
@@ -30,6 +36,18 @@ const MovieDetails = () => {
   const uniqueShows = [
     ...new Map(shows.map((show) => [show.movie._id, show])).values(),
   ];
+  useEffect(() => {
+    if (showTrailer) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+
+    // cleanup khi component unmount
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showTrailer]);
 
   const getShow = async () => {
     try {
@@ -206,10 +224,19 @@ const MovieDetails = () => {
         <DateSelect dateTime={show.dateTime} id={id} onExpired={setIsExpired} />
 
         <p className="mt-20 mb-8 text-lg font-medium">You May Also Like</p>
-        <div className="flex flex-wrap gap-8 max-sm:justify-center ">
-          {uniqueShows.slice(0, 4).map((movie, index) => (
-            <MovieCard key={index} movie={movie} />
-          ))}
+        <div className="flex flex-wrap gap-8 max-sm:justify-center">
+          {uniqueShows
+            .filter(
+              (s) =>
+                s.movie._id !== show.movie._id && // loại phim hiện tại
+                s.movie.genres.some((g) =>
+                  show.movie.genres.some((cg) => cg.name === g.name)
+                )
+            )
+            .slice(0, 4) // chỉ lấy 4 phim đầu tiên sau khi lọc
+            .map((movie, index) => (
+              <MovieCard key={index} movie={movie} />
+            ))}
         </div>
         <div className="flex justify-center mt-20">
           <button
@@ -241,9 +268,9 @@ const MovieDetails = () => {
             />
             <button
               onClick={() => setShowTrailer(false)}
-              className="absolute right-0 text-2xl font-bold text-white -top-10"
+              className="absolute right-0 text-2xl font-bold text-white -top-10 cursor-pointer"
             >
-              ✕
+              <XIcon />
             </button>
           </div>
         </div>
