@@ -4,7 +4,7 @@ export const assets = {
     appStore: "/assets/appStore.svg",
     screenImage: "/assets/screenImage.svg",
     profile: "/assets/profile.png",
-    profile_pic:"/assets/giga.jpg",
+    profile_pic:"/assets/profile_pic.jpg",
     title: "/assets/title.svg",
     demonIcon: "/assets/demonIcon.svg",
 }

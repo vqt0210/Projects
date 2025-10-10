@@ -4,6 +4,7 @@
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import User from "../models/User.js";
+import { clerkClient } from "@clerk/express";
 
 export const isAdmin = async(req, res) => {
   res.json({success: true, isAdmin: true})
@@ -56,3 +57,44 @@ export const getAllBookings = async (req,res) => {
       res.json({success: false, message: error.message})
   }
 }
+
+// Get User List
+export const getUsers = async (req, res) => {
+  try {
+    const { data } = await clerkClient.users.getUserList({ limit: 100 });
+    const mapped = data.map(u => ({
+      id: u.id,
+      name: u.firstName ? `${u.firstName} ${u.lastName || ""}`.trim() : u.username,
+      email: u.emailAddresses?.[0]?.emailAddress,
+      image: u.imageUrl,
+      role: u.privateMetadata?.role || "user",
+      createdAt: u.createdAt,
+    }));
+
+    res.json({ success: true, users: mapped });
+  } catch (err) {
+    console.error("Get users error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch users" });
+  }
+};
+
+// Update role for user
+export const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!["admin", "user"].includes(role)) {
+      return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    await clerkClient.users.updateUserMetadata(id, {
+      privateMetadata: { role },
+    });
+
+    res.json({ success: true, message: `Role updated to ${role}` });
+  } catch (err) {
+    console.error("Update role error:", err);
+    res.status(500).json({ success: false, message: "Failed to update role" });
+  }
+};
