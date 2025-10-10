@@ -1,35 +1,34 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import { dateFormat } from "../../lib/dateFormat";
 import { useAppContext } from "../../context/AppContext";
+import { authorizedApi } from "../../utils/api";
 
 const ListShows = () => {
+  const currency = import.meta.env.VITE_CURRENCY;
 
-  const currency = import.meta.env.VITE_CURRENCY
-
-  const {axios, getToken, user} = useAppContext()
+  const { getToken, user } = useAppContext();
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const getAllShows = async () => {
     try {
-      const {data} = await axios.get('/api/admin/all-shows', {
-        headers: {Authorization: `Bearer ${await getToken()}`}
-      });
-      setShows(data.shows)
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.get("/api/admin/all-shows");
+      setShows(data.shows || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
       setLoading(false);
-    } catch (error){
-        console.error(error);
     }
-  }
+  };
 
   useEffect(() => {
-    if(user){
-        getAllShows();
+    if (user) {
+      getAllShows();
     }
-    
-},[user]);
+  }, [user]);
   return !loading ? (
     <>
       <Title text1="List" text2="Shows" />
@@ -41,27 +40,49 @@ const ListShows = () => {
               <th className="p-2 font-medium pl-5">Show Time</th>
               <th className="p-2 font-medium pl-5">Total Bookings</th>
               <th className="p-2 font-medium pl-5">Earnings</th>
-
+              <th className="p-2 font-medium pl-5">Status</th>
             </tr>
           </thead>
           <tbody className="text-sm font-light">
-            {shows.map((show, index) => (
-              <tr key={index} className="border-b border-primary/10 bg-primary/5 even:bg-primary/10">
-                <td className="p-2 min-w-45 pl-5">{show.movie.title}</td>
-                <td className="p-2">{dateFormat(show.showDateTime)}</td>
-                <td className="p-2">{Object.keys(show.occupiedSeats || {}).length}</td>
-                <td className="p-2">
-                    {currency} {(Object.keys(show.occupiedSeats || {}).length) * show.showPrice}
+            {shows.length > 0 ? (
+              shows.map((show, index) => {
+                const totalBookings = Object.keys(
+                  show.occupiedSeats || {}
+                ).length;
+                const earnings = totalBookings * show.showPrice;
+                const isPast = new Date(show.showDateTime) < new Date();
+                return (
+                  <tr
+                    key={index}
+                    className="border-b border-primary/10 bg-primary/5 even:bg-primary/10"
+                  >
+                    <td className="p-2 min-w-45 pl-5">
+                      {show.movie?.title || "N/A"}
+                    </td>
+                    <td className="p-2">{dateFormat(show.showDateTime)}</td>
+                    <td className="p-2">{totalBookings}</td>
+                    <td className="p-2">
+                      {currency} {earnings}
+                    </td>
+                    <td className="p-2">{isPast ? "Past" : "Upcoming"}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={5} className="text-center p-4 text-gray-500">
+                  No shows available
                 </td>
-
               </tr>
-            ))}
-
+            )}
           </tbody>
         </table>
       </div>
     </>
-  ) : <Loading/>
-}
+  ) : (
+    <Loading />
+  );
+};
 
-export default ListShows
+export default ListShows;
+

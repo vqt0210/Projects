@@ -1,12 +1,17 @@
-import { ChartLineIcon, CircleDollarSignIcon, PlayCircleIcon, StarIcon, UsersIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import Loading from '../../components/Loading';
-import Title from '../../components/admin/Title';
-import BlurCircle from '../../components/BlurCircle';
-import { dateFormat } from '../../lib/dateFormat';
-import { useAppContext } from '../../context/AppContext';
-import toast from 'react-hot-toast';
-import { authorizedApi } from '../../utils/api';
+import {
+  ChartLineIcon,
+  CircleDollarSignIcon,
+  PlayCircleIcon,
+  StarIcon,
+  UsersIcon,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import Loading from "../../components/Loading";
+import Title from "../../components/admin/Title";
+import BlurCircle from "../../components/BlurCircle";
+import { dateFormat } from "../../lib/dateFormat";
+import { useAppContext } from "../../context/AppContext";
+import { authorizedApi } from "../../utils/api";
 
 const Dashboard = () => {
   const { getToken, user, image_base_url } = useAppContext();
@@ -16,23 +21,23 @@ const Dashboard = () => {
     totalBookings: 0,
     totalRevenue: 0,
     activeShows: [],
-    totalUser: 0
+    totalUser: 0,
   });
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
     try {
       const authApi = await authorizedApi(getToken);
-      const { data } = await authApi.get('/api/admin/dashboard');
-
+      const { data } = await authApi.get("/api/admin/dashboard");
       if (data.success) {
-        setDashboardData(data.dashboardData);
-      } else {
-        toast.error(data.message || "Failed to fetch dashboard data");
+        // Lọc active/upcoming shows
+        const upcomingShows = data.dashboardData.activeShows.filter(
+          (show) => new Date(show.showDateTime) >= new Date()
+        );
+        setDashboardData({ ...data.dashboardData, activeShows: upcomingShows });
       }
     } catch (error) {
-      console.error(error);
-      toast.error("Error fetching dashboard data");
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -43,10 +48,26 @@ const Dashboard = () => {
   }, [user]);
 
   const dashboardCards = [
-    { title: "Total Bookings", value: dashboardData.totalBookings || 0, icon: ChartLineIcon },
-    { title: "Total Revenue", value: currency + (dashboardData.totalRevenue || 0), icon: CircleDollarSignIcon },
-    { title: "Active Shows", value: dashboardData.activeShows.length || 0, icon: PlayCircleIcon },
-    { title: "Total Users", value: dashboardData.totalUser || 0, icon: UsersIcon }
+    {
+      title: "Total Bookings",
+      value: dashboardData.totalBookings || "0",
+      icon: ChartLineIcon,
+    },
+    {
+      title: "Total Revenue",
+      value: currency + (dashboardData.totalRevenue || 0),
+      icon: CircleDollarSignIcon,
+    },
+    {
+      title: "Active Shows",
+      value: dashboardData.activeShows.length || "0",
+      icon: PlayCircleIcon,
+    },
+    {
+      title: "Total Users",
+      value: dashboardData.totalUser || "0",
+      icon: UsersIcon,
+    },
   ];
 
   if (loading) return <Loading />;
@@ -54,40 +75,53 @@ const Dashboard = () => {
   return (
     <>
       <Title text1="Admin" text2="Dashboard" />
-      <div className='relative flex flex-wrap gap-4 mt-6'>
+      <div className="relative flex flex-wrap gap-4 mt-6">
         <BlurCircle top="-100px" left="0" />
-        <div className='flex flex-wrap gap-4 w-full'>
+        <div className="flex flex-wrap gap-4 w-full">
           {dashboardCards.map((card, index) => (
-            <div key={index} className='flex items-center justify-between px-4 py-3 bg-primary/10 border border-primary/20 rounded-md max-w-50 w-full'>
+            <div
+              key={index}
+              className="flex items-center justify-between px-4 py-3 bg-primary/10 border border-primary/20 rounded-md max-w-50 w-full"
+            >
               <div>
-                <h1 className='text-sm'>{card.title}</h1>
-                <p className='text-xl font-medium mt-1'>{card.value}</p>
+                <h1 className="text-sm">{card.title}</h1>
+                <p className="text-xl font-medium mt-1">{card.value}</p>
               </div>
-              <card.icon className='w-6 h-6' />
+              <card.icon className="w-6 h-6" />
             </div>
           ))}
         </div>
       </div>
 
-      <p className='mt-10 text-lg font-medium'>Active Shows</p>
-      <div className='relative flex flex-wrap gap-6 mt-4 max-w-5xl'>
-        <BlurCircle top="100px" left='0' />
+      <p className="mt-10 text-lg font-medium">Active Shows</p>
+      <div className="relative flex flex-wrap gap-6 mt-4 max-w-5xl">
+        <BlurCircle top="100px" left="0" />
         {dashboardData.activeShows.map((show) => (
-          <div key={show._id} className='w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 transition duration-300 will-change-transform'>
+          <div
+            key={show._id}
+            className="w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 transition duration-300 will-change-transform"
+          >
             <img
               src={image_base_url + show.movie.poster_path}
-              alt={show.movie.title}
+              alt=""
               loading="lazy"
-              className='h-60 w-full object-cover'
+              className="h-60 w-full object-cover"
             />
-            <p className='font-medium p-2 truncate'>{show.movie.title}</p>
-            <div className='flex items-center justify-between px-2'>
-              <p className='text-lg font-medium'>{currency} {show.showPrice}</p>
-              <p className='flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1'>
-                <StarIcon className='w-4 h-4 text-primary fill-primary' /> {show.movie.vote_average ? show.movie.vote_average.toFixed(1) : "0.0"}
+            <p className="font-medium p-2 truncate">{show.movie.title}</p>
+            <div className="flex items-center justify-between px-2">
+              <p className="text-lg font-medium">
+                {currency} {show.showPrice}
+              </p>
+              <p className="flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1">
+                <StarIcon className="w-4 h-4 text-primary fill-primary" />{" "}
+                {show.movie.vote_average
+                  ? show.movie.vote_average.toFixed(1)
+                  : "0.0"}
               </p>
             </div>
-            <p className='px-2 pt-2 text-sm text-gray-500'>{dateFormat(show.showDateTime)}</p>
+            <p className="px-2 pt-2 text-sm text-gray-500">
+              {dateFormat(show.showDateTime)}
+            </p>
           </div>
         ))}
       </div>
