@@ -33,6 +33,10 @@ export const AppProvider = ({ children }) => {
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.get("/api/admin/is-admin");
 
+      if (!data || typeof data.isAdmin !== "boolean") {
+        throw new Error("Invalid response from server");
+      }
+
       setIsAdmin(data.isAdmin);
 
       if (!data.isAdmin && location.pathname.startsWith("/admin")) {
@@ -44,6 +48,11 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("fetchIsAdmin error:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch admin status"
+      );
     }
   };
 
@@ -88,7 +97,9 @@ export const AppProvider = ({ children }) => {
   const toggleFavorite = async (movieId) => {
     try {
       const authApi = await authorizedApi(getToken);
-      const { data } = await authApi.post("/api/user/update-favorite", { movieId });
+      const { data } = await authApi.post("/api/user/update-favorite", {
+        movieId,
+      });
 
       toast.success(
         data.message.includes("added")
