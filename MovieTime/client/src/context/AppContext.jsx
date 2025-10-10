@@ -3,8 +3,7 @@ import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
-axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+import api, { authorizedApi } from "../utils/api.js";
 
 export const AppContext = createContext();
 
@@ -31,10 +30,8 @@ export const AppProvider = ({ children }) => {
 
   const fetchIsAdmin = async () => {
     try {
-      const token = await getToken({ skipCache: true });
-      const { data } = await axios.get("/api/admin/is-admin", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.get("/api/admin/is-admin");
 
       setIsAdmin(data.isAdmin);
 
@@ -53,7 +50,7 @@ export const AppProvider = ({ children }) => {
   // ================== MOVIES ==================
   const fetchShows = async () => {
     try {
-      const { data } = await axios.get("/api/show/all");
+      const { data } = await api.get("/api/show/all");
       if (data.success) setShows(data.shows);
       else toast.error(data.message);
     } catch (error) {
@@ -68,10 +65,8 @@ export const AppProvider = ({ children }) => {
   // ================== FAVORITES ==================
   const fetchFavoriteMovies = async () => {
     try {
-      const token = await getToken({ skipCache: true });
-      const { data } = await axios.get("/api/user/favorites", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.get("/api/user/favorites");
 
       if (data.success) setFavoriteMovies(data.movies);
       else console.warn(data.message);
@@ -80,38 +75,26 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Đồng bộ favorites giữa Clerk & MongoDB
   const syncFavorites = async () => {
     try {
-      const token = await getToken({ skipCache: true });
-      if (!token) return;
-
-      const { data } = await axios.post("/api/user/sync-favorites", {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (data.success) setFavoriteMovies(data.movies)
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.post("/api/user/sync-favorites");
+      if (data.success) setFavoriteMovies(data.movies);
     } catch (error) {
       console.error("syncFavorites error:", error);
     }
   };
 
-  // Thêm / Xóa movie khỏi favorites
   const toggleFavorite = async (movieId) => {
     try {
-      const token = await getToken({ skipCache: true });
-      if (!token) return;
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.post("/api/user/update-favorite", { movieId });
 
-      const { data } = await axios.post("/api/user/update-favorite", { movieId }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("Favorite update:", data.message);
-      if (data.message.includes("added")) {
-      toast.success("Added to favorites ❤️");
-    } else if (data.message.includes("removed")) {
-      toast.success("Removed from favorites ");
-    }
+      toast.success(
+        data.message.includes("added")
+          ? "❤️ Added to favorites"
+          : "💔 Removed from favorites"
+      );
       await syncFavorites();
     } catch (error) {
       console.error("toggleFavorite error:", error);
@@ -133,12 +116,11 @@ export const AppProvider = ({ children }) => {
     fetchFavoriteMovies,
     syncFavorites,
     toggleFavorite,
-    fetchIsAdmin
+    fetchIsAdmin,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-const useAppContext = () => useContext(AppContext);
-export { useAppContext };
+export const useAppContext = () => useContext(AppContext);
 export default AppProvider;

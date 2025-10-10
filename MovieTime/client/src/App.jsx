@@ -20,7 +20,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import TopRated from './pages/TopRated';
 import Upcoming from './pages/Upcoming';
 import ActorDetail from "./pages/ActorDetail";
-import AdminPanel from "./components/admin/AdminPanel";
+import AdminPanel from "./pages/admin/AdminPanel";
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith("/admin"); //Hàm dùng để biết mình đang ở trang nào
