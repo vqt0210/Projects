@@ -133,6 +133,7 @@ export const AppProvider = ({ children }) => {
     fetchFavoriteMovies,
     syncFavorites,
     toggleFavorite,
+    fetchIsAdmin
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

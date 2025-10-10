@@ -20,6 +20,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import TopRated from './pages/TopRated';
 import Upcoming from './pages/Upcoming';
 import ActorDetail from "./pages/ActorDetail";
+import AdminPanel from "./components/admin/AdminPanel";
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith("/admin"); //Hàm dùng để biết mình đang ở trang nào
@@ -57,6 +58,7 @@ const App = () => {
           <Route path="add-shows" element={<AddShows />} />
           <Route path="list-shows" element={<ListShows />} />
           <Route path="list-bookings" element={<ListBookings />} />
+          <Route path="users" element={<AdminPanel />} />
         </Route>
       </Routes>
       {!isAdminRoute && <Footer />}

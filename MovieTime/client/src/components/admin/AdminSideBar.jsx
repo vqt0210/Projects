@@ -1,27 +1,44 @@
+import { useUser } from "@clerk/clerk-react";
 import { assets } from '../../assets/assets'
-import { LayoutDashboardIcon, ListCollapseIcon, ListIcon, PlusSquareIcon } from 'lucide-react'
+import { LayoutDashboardIcon, ListCollapseIcon, ListIcon, PlusSquareIcon, UsersIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const AdminSideBar = () => {
 
-  const user = {
-    firstName: 'Admin',
-    lastName: 'User',
-    imageUrl: assets.profile_pic,
-  }
+  const { user, isLoaded } = useUser();
 
   const adminNavLinks = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboardIcon },
     { name: 'Add Shows', path: '/admin/add-shows', icon: PlusSquareIcon },
     { name: 'List Shows', path: '/admin/list-shows', icon: ListIcon },
     { name: 'List Bookings', path: '/admin/list-bookings', icon: ListCollapseIcon },
+    { name: 'Users', path: '/admin/users', icon: UsersIcon },
 
   ]
 
+  if (!isLoaded) {
+    return (
+      <div className="flex justify-center items-center h-full text-gray-400">
+        Loading sidebar...
+      </div>
+    );
+  }
+   // Kiểm tra user có tồn tại
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-full text-red-400">
+        User not found
+      </div>
+    );
+  }
 
   return (
     <div className='h-[calc(100vh-64px)] md:flex flex flex-col items-center pt-8 max-w-13 md:max-w-60 w-full border-r border-gray-300/20 text-sm'>
-      <img className='h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto' src={user.imageUrl} alt="sidebar" />
+      <img
+        className="h-9 md:h-14 w-9 md:w-14 rounded-full mx-auto"
+        src={user?.imageUrl || assets.profile_pic}
+        alt="sidebar"
+      />
       <p className='mt-2 text-base max-md:hidden'>{user.firstName} {user.lastName}</p>
       <div className='w-full'>
         {adminNavLinks.map(link => (
