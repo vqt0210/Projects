@@ -1,4 +1,4 @@
-import { clerkClient } from "@clerk/express";
+import { clerkClient, verifyToken } from "@clerk/express";
 import Booking from "../models/Booking.js";
 import Movie from "../models/Movie.js";
 
@@ -7,7 +7,7 @@ import Movie from "../models/Movie.js";
 // API Controller Function to Get User Bookings
 export const getUserBookings = async (req, res) => {
   try {
-    const userId = req.auth().userId;
+    const { userId } = req.auth();
 
     const bookings = await Booking.find({ user: userId })
       .populate({
@@ -29,7 +29,7 @@ export const getUserBookings = async (req, res) => {
 export const updateFavorite = async (req, res) => {
   try {
     const { movieId } = req.body;
-    const userId = req.auth().userId;
+    const { userId } = req.auth();
 
     const user = await clerkClient.users.getUser(userId);
 
@@ -66,7 +66,7 @@ export const updateFavorite = async (req, res) => {
 // Get All Favorite Movies of a User
 export const getFavorites = async (req, res) => {
   try {
-    const userId = req.auth().userId;
+    const { userId } = req.auth();
     const user = await clerkClient.users.getUser(userId);
 
     const favorites = user.privateMetadata.favorites || [];
@@ -80,3 +80,44 @@ export const getFavorites = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+// =============== FAVORITES SYNC ===============
+
+export const syncFavorites = async (req, res) => {
+  try {
+    // Lấy token từ header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ success: false, message: "Missing Authorization header" });
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    // Xác thực token
+    const { sub: userId } = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
+
+    console.log("[SYNC FAVORITES] User:", userId);
+
+    const user = await clerkClient.users.getUser(userId);
+    const favorites = user.privateMetadata.favorites || [];
+
+    const movies = await Movie.find({ _id: { $in: favorites } });
+    const validIds = movies.map((m) => m._id.toString());
+    const invalidIds = favorites.filter((id) => !validIds.includes(id));
+
+    if (invalidIds.length > 0) {
+      console.log("Removing invalid favorites:", invalidIds);
+      user.privateMetadata.favorites = validIds;
+      await clerkClient.users.updateUserMetadata(userId, {
+        privateMetadata: user.privateMetadata,
+      });
+    }
+
+    res.json({ success: true, movies });
+  } catch (error) {
+    console.error("[SYNC FAVORITES ERROR]:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
