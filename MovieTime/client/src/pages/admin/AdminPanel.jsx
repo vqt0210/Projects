@@ -29,7 +29,7 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+   if(user) fetchUsers();
   }, [getToken]);
 
   // Update role (promote/revoke)
@@ -77,7 +77,7 @@ const AdminPanel = () => {
       console.error(err);
       toast.error("Error deleting user");
     } finally {
-      setLoadingUserId(null); // Reset loading sau khi xong
+      setPageLoading(false);
     }
   };
 
