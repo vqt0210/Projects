@@ -1,6 +1,4 @@
-
 // API to check if user is admin
-
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import User from "../models/User.js";
@@ -80,17 +78,31 @@ export const getUsers = async (req, res) => {
 
 // Update role for user
 export const updateUserRole = async (req, res) => {
+  const ROLES = ["super-admin", "admin", "user"];
   try {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!["admin", "user"].includes(role)) {
+    if (!ROLES.includes(role)) {
       return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+    const targetUser = await clerkClient.users.getUser(id);
+    const targetRole = targetUser.privateMetadata?.role || "user";
+
+    // Lấy user hiện tại từ session (cần middleware hoặc req.currentUser)
+    const currentUserRole = req.currentUser?.role || "user";
+
+    // Chặn admin thường thao tác trên super-admin
+    if (currentUserRole !== "super-admin" && targetRole === "super-admin") {
+      return res.status(403).json({ success: false, message: "Cannot modify super-admin" });
     }
 
     await clerkClient.users.updateUserMetadata(id, {
       privateMetadata: { role },
     });
+    if (role === "user") {
+      await clerkClient.users.revokeSessions(id);
+    }
 
     res.json({ success: true, message: `Role updated to ${role}` });
   } catch (err) {
@@ -102,6 +114,16 @@ export const updateUserRole = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    const targetUser = await clerkClient.users.getUser(userId);
+    const targetRole = targetUser.privateMetadata?.role || "user";
+
+    const currentUserRole = req.currentUser?.role || "user";
+
+    if (targetRole === "super-admin") {
+      return res.status(403).json({ success: false, message: "Cannot delete super-admin" });
+    }
+
     await clerkClient.users.deleteUser(userId);
     res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
@@ -109,3 +131,6 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to delete user" });
   }
 };
+
+
+

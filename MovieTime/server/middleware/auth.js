@@ -1,17 +1,16 @@
-import { clerkClient } from "@clerk/express";
-
-export const protectAdmin = async(req,res,next)=> {
+// Middleware kiểm tra admin hoặc super-admin
+export const protectAdmin = async (req, res, next) => {
   try {
-    const { userId } = req.auth();
-    const user = await clerkClient.users.getUser(userId)
+    // Nếu đã attachCurrentUser
+    const user = req.currentUser;
 
-    if(user.privateMetadata.role !== 'admin') {
-      return res.json({success: false, message: "not authorized"})
+    if (!user || (user.role !== "admin" && user.role !== "super-admin")) {
+      return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
     next();
-
   } catch (error) {
-    return res.json({ success: false, message: "not authorized"});
+    console.error(error);
+    return res.status(403).json({ success: false, message: "Not authorized" });
   }
-}
+};
