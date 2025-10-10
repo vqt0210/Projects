@@ -1,4 +1,3 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { authorizedApi } from "../../utils/api";
 import { Shield, ShieldOff, Trash2 } from "lucide-react";
@@ -6,14 +5,14 @@ import Title from "../../components/admin/Title";
 import BlurCircle from "../../components/BlurCircle";
 import Loading from "../../components/Loading";
 import { toast } from "react-hot-toast";
+import { useAppContext } from "../../context/AppContext";
 
 const AdminPanel = () => {
-  const { getToken, user } = useAuth();
+  const { getToken, user: currentUser } = useAppContext();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false); // loading khi navigate
   const [error, setError] = useState(null);
-  const { user: currentUser } = useUser();
   const [loadingUserId, setLoadingUserId] = useState(null); // Trạng thái loading cho từng user
 
   const fetchUsers = async () => {
@@ -29,8 +28,11 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-   if(user) fetchUsers();
-  }, [getToken]);
+    // Chỉ fetch khi user đã load
+    if (currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser, getToken]);
 
   // Update role (promote/revoke)
   const handleRoleChange = async (userId, newRole) => {
@@ -95,14 +97,16 @@ const AdminPanel = () => {
           <p className="text-gray-500 text-center py-6">No users found.</p>
         ) : (
           <div className="space-y-4">
-            {users.map((user) => (
+            {users.map((user) => {
+              const isCurrentUser = user.id === currentUser?.id;
+              return(
               <div
                 key={user.id}
                 className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/80 rounded-lg shadow-sm hover:shadow-md transition"
               >
                 <div className="flex items-center gap-4">
                   <img
-                    src={user.image || "/assets/default-avatar.png"}
+                    src={user.image || "/assets/profile_pic.png"}
                     alt={user.name}
                     className="w-12 h-12 rounded-full object-cover border"
                   />
@@ -125,7 +129,7 @@ const AdminPanel = () => {
                     {user.role}
                   </span>
                   <button
-                    disabled={loadingUserId === user.id}
+                    disabled={loadingUserId === user.id || isCurrentUser}
                     onClick={() =>
                       handleRoleChange(
                         user.id,
@@ -165,7 +169,8 @@ const AdminPanel = () => {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
