@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { authorizedApi } from "../../utils/api";
-import { Shield, ShieldOff, Trash2 } from "lucide-react";
+import { Shield, ShieldOff, Star, Trash2 } from "lucide-react";
 import Title from "../../components/admin/Title";
 import BlurCircle from "../../components/BlurCircle";
 import Loading from "../../components/Loading";
 import { toast } from "react-hot-toast";
 import { useAppContext } from "../../context/AppContext";
+import { CopyTokenButton } from "../../components/admin/CopyToken";
 
 const AdminPanel = () => {
   const { getToken, user: currentUser } = useAppContext();
@@ -14,6 +15,7 @@ const AdminPanel = () => {
   const [pageLoading, setPageLoading] = useState(false); // loading khi navigate
   const [error, setError] = useState(null);
   const [loadingUserId, setLoadingUserId] = useState(null); // Trạng thái loading cho từng user
+  const [currentUserWithRole, setCurrentUserWithRole] = useState(null);
 
   const fetchUsers = async () => {
     try {
@@ -33,6 +35,19 @@ const AdminPanel = () => {
       fetchUsers();
     }
   }, [currentUser, getToken]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch("/api/me");
+        const data = await res.json();
+        setCurrentUserWithRole(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   // Update role (promote/revoke)
   const handleRoleChange = async (userId, newRole) => {
@@ -84,11 +99,17 @@ const AdminPanel = () => {
   };
 
   if (loading) return <Loading text="Loading users..." />;
+  const currentUserRole = currentUserWithRole?.role;
+  const isSuperAdmin = currentUserRole === "super-admin";
+  const canManageRoles = isSuperAdmin || currentUserRole === "admin";
 
   return (
     <>
       {pageLoading && <Loading text="Updating role..." />}
       <Title text1="Admin" text2="User Management" />
+      <div className="my-4">
+        <CopyTokenButton />
+      </div>
       <div className="relative flex flex-col mt-6 bg-primary/10 border border-primary/20 rounded-lg p-6">
         <BlurCircle top="-100px" left="0" />
         {error ? (
@@ -98,77 +119,108 @@ const AdminPanel = () => {
         ) : (
           <div className="space-y-4">
             {users.map((user) => {
-              const isCurrentUser = user.id === currentUser?.id;
-              return(
-              <div
-                key={user.id}
-                className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/80 rounded-lg shadow-sm hover:shadow-md transition"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={user.image || "/assets/profile_pic.png"}
-                    alt={user.name}
-                    className="w-12 h-12 rounded-full object-cover border"
-                  />
-                  <div>
-                    <p className="font-semibold text-gray-800">
-                      {user.name || "Unnamed"}
-                    </p>
-                    <p className="text-sm text-gray-500">{user.email}</p>
+              const isCurrentUser = user.id === currentUserWithRole?.id;
+              return (
+                <div
+                  key={user.id}
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/80 rounded-lg shadow-sm hover:shadow-md transition"
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={user.image || "/assets/profile_pic.png"}
+                      alt={user.name}
+                      className="w-12 h-12 rounded-full object-cover border"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {user.name || "Unnamed"}
+                      </p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3 mt-3 md:mt-0">
-                  <span
-                    className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      user.role === "admin"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {user.role}
-                  </span>
-                  <button
-                    disabled={loadingUserId === user.id || isCurrentUser}
-                    onClick={() =>
-                      handleRoleChange(
-                        user.id,
-                        user.role === "admin" ? "user" : "admin"
-                      )
-                    }
-                    className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
-                      user.role === "admin"
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-blue-500 hover:bg-blue-600"
-                    } text-white disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {loadingUserId === user.id ? (
-                      <span className="animate-pulse">Processing...</span>
-                    ) : user.role === "admin" ? (
-                      <>
-                        <ShieldOff size={16} />
-                        Revoke
-                      </>
-                    ) : (
-                      <>
-                        <Shield size={16} />
-                        Promote
-                      </>
+                  <div className="flex items-center gap-3 mt-3 md:mt-0">
+                    {/* Role badge */}
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        user.role === "super-admin"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : user.role === "admin"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600"
+                      } flex items-center gap-1`}
+                    >
+                      {user.role === "super-admin" && <Star size={12} />}
+                      {user.role}
+                    </span>
+
+                    {/* Role button */}
+                    {canManageRoles && (
+                      <button
+                        disabled={
+                          isCurrentUser || // không thao tác bản thân
+                          user.role === "super-admin" || // không thao tác super-admin khác
+                          (currentUserRole !== "super-admin" &&
+                            user.role === "admin") // admin bình thường không thao tác admin khác
+                        }
+                        onClick={() =>
+                          handleRoleChange(
+                            user.id,
+                            user.role === "admin" ? "user" : "admin"
+                          )
+                        }
+                        className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                          user.role === "admin"
+                            ? "bg-red-500 hover:bg-red-600"
+                            : "bg-blue-500 hover:bg-blue-600"
+                        } text-white ${
+                          isCurrentUser ||
+                          user.role === "super-admin" ||
+                          (currentUserRole !== "super-admin" &&
+                            user.role === "admin")
+                            ? "opacity-50 cursor-not-allowed"
+                            : "cursor-pointer"
+                        }`}
+                      >
+                        {loadingUserId === user.id ? (
+                          <span className="animate-pulse">Processing...</span>
+                        ) : user.role === "admin" ? (
+                          <>
+                            <ShieldOff size={16} />
+                            Revoke
+                          </>
+                        ) : (
+                          <>
+                            <Shield size={16} />
+                            Promote
+                          </>
+                        )}
+                      </button>
                     )}
-                  </button>
 
-                  {/* Delete */}
-                  {user.id !== currentUser?.id && (
+                    {/* Delete button */}
                     <button
+                      disabled={
+                        !isSuperAdmin || // chỉ super-admin được delete
+                        isCurrentUser || // không delete bản thân
+                        (currentUserRole !== "super-admin" &&
+                          user.role === "admin") // admin bình thường không delete admin khác
+                      }
                       onClick={() => handleDeleteUser(user.id)}
-                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 hover:bg-gray-400 text-gray-800 transition-all duration-200"
+                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 ${
+                        !isSuperAdmin ||
+                        isCurrentUser ||
+                        (currentUserRole !== "super-admin" &&
+                          user.role === "admin")
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-gray-400"
+                      }`}
                     >
                       <Trash2 size={16} />
                       Delete
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
               );
             })}
           </div>

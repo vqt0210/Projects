@@ -12,6 +12,7 @@ import userRouter from './routes/userRoutes.js';
 import { stripeWebhooks } from './controllers/stripeWebhooks.js';
 import searchRoutes from "./routes/searchRoutes.js"
 import actorRoutes from "./routes/actorRoutes.js"
+import meRouter from './routes/me.js';
 
 
 
@@ -53,6 +54,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
 app.use("/api/search", searchRoutes)
 app.use("/api/actors", actorRoutes)
+app.use('/api/me', meRouter);
 app.use((req, res) => res.status(404).json({ success:false, message: 'Not found' }));
 app.use((err, req, res, next) => {
   console.error(err);
