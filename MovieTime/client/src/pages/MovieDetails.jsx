@@ -31,6 +31,7 @@ const MovieDetails = () => {
     favoriteMovies,
     image_base_url,
     setFavoriteMovies,
+    toggleFavorite,
   } = useAppContext();
   // Lọc ra các movie duy nhất
   const uniqueShows = [
@@ -72,48 +73,9 @@ const MovieDetails = () => {
   };
 
   const handleFavorite = async () => {
-    if (!user) return toast.error("Please login to proceed");
-
-    // kiểm tra hiện tại có trong favorites chưa
-    const isAlreadyFavorite =
-      Array.isArray(favoriteMovies) &&
-      favoriteMovies.some((movie) => movie._id === id);
-
-    // cập nhật UI trước (optimistic update)
-    let updatedFavorites;
-    if (isAlreadyFavorite) {
-      updatedFavorites = favoriteMovies.filter((movie) => movie._id !== id);
-      setFavoriteMovies(updatedFavorites);
-      toast.success("Removed from favorites "); // hiện ngay
-    } else {
-      updatedFavorites = [...favoriteMovies, { _id: id }];
-      setFavoriteMovies(updatedFavorites);
-      toast.success("Added to favorites ");
-    }
-    setFavoriteMovies(updatedFavorites);
-
-    try {
-      const { data } = await axios.post(
-        "/api/user/update-favorite",
-        { movieId: id },
-        { headers: { Authorization: `Bearer ${await getToken()}` } }
-      );
-
-      if (!data.success) {
-        toast.error("Something went wrong!");
-        // rollback lại từ server nếu fail
-        fetchFavoriteMovies();
-      } else {
-        // sync lại với server cho chắc
-        fetchFavoriteMovies();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update favorite");
-      // rollback nếu fail
-      fetchFavoriteMovies();
-    }
-  };
+  if (!user) return toast.error("Please login to proceed");
+  await toggleFavorite(id);
+};
 
   useEffect(() => {
     if (id) {
