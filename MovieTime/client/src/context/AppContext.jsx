@@ -9,6 +9,7 @@ export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [shows, setShows] = useState([]);
   const [favoriteMovies, setFavoriteMovies] = useState([]);
 
@@ -29,6 +30,7 @@ export const AppProvider = ({ children }) => {
   }, [isLoaded, user]);
 
   const fetchIsAdmin = async () => {
+    setIsCheckingAdmin(true);
     try {
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.get("/api/admin/is-admin");
@@ -47,12 +49,21 @@ export const AppProvider = ({ children }) => {
         });
       }
     } catch (error) {
+      // 👉 Nếu lỗi 403 (người dùng thường) thì chỉ coi như isAdmin = false, không log, không toast
+      if (error.response?.status === 403) {
+        setIsAdmin(false);
+        return;
+      }
+
+      // 👉 Nếu là lỗi khác (token hết hạn, lỗi mạng, server chết, v.v.)
       console.error("fetchIsAdmin error:", error);
       toast.error(
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch admin status"
       );
+    } finally {
+      setIsCheckingAdmin(false);
     }
   };
 
@@ -119,6 +130,7 @@ export const AppProvider = ({ children }) => {
     getToken,
     navigate,
     isAdmin,
+    isCheckingAdmin,
     shows,
     fetchShows,
     image_base_url,

@@ -9,14 +9,29 @@ import { useAppContext } from "../../context/AppContext";
 import { CopyTokenButton } from "../../components/admin/CopyToken";
 
 const AdminPanel = () => {
-  const { getToken, user: currentUser } = useAppContext();
+  const { getToken, user: currentUser, isAdmin, isCheckingAdmin, navigate } =
+    useAppContext();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pageLoading, setPageLoading] = useState(false); // loading khi navigate
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [loadingUserId, setLoadingUserId] = useState(null); // Trạng thái loading cho từng user
+  const [loadingUserId, setLoadingUserId] = useState(null);
   const [currentUserWithRole, setCurrentUserWithRole] = useState(null);
 
+  // Chờ Clerk & kiểm tra quyền admin xong
+  if (isCheckingAdmin) return <Loading text="Checking permission..." />;
+
+  // Nếu không phải admin → quay về trang chủ (tránh 403)
+  useEffect(() => {
+    if (!isCheckingAdmin && !isAdmin) {
+      toast.dismiss();
+      toast.error("You are not allowed to access admin dashboard");
+      navigate("/");
+    }
+  }, [isCheckingAdmin, isAdmin, navigate]);
+
+  // Fetch danh sách user (chỉ khi đã xác định là admin)
   const fetchUsers = async () => {
     try {
       const authApi = await authorizedApi(getToken);
@@ -30,61 +45,51 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    // Chỉ fetch khi user đã load
-    if (currentUser) {
+    if (currentUser && isAdmin) {
       fetchUsers();
     }
-  }, [currentUser, getToken]);
+  }, [currentUser, getToken, isAdmin]);
 
+  // Fetch thông tin current user (để biết role)
   useEffect(() => {
-  const fetchCurrentUser = async () => {
-    try {
-      const authApi = await authorizedApi(getToken);
-      const { data } = await authApi.get("/api/me");
-      setCurrentUserWithRole(data);
-    } catch (err) {
-      console.error("Error fetching current user:", err);
-    }
-  };
+    const fetchCurrentUser = async () => {
+      try {
+        const authApi = await authorizedApi(getToken);
+        const { data } = await authApi.get("/api/me");
+        setCurrentUserWithRole(data);
+      } catch (err) {
+        console.error("Error fetching current user:", err);
+      }
+    };
+    if (isAdmin) fetchCurrentUser();
+  }, [getToken, isAdmin]);
 
-  fetchCurrentUser();
-}, [getToken]);
-
-  // Update role (promote/revoke)
+  // Update role
   const handleRoleChange = async (userId, newRole) => {
-    setLoadingUserId(userId); // Đánh dấu user đang cập nhật
+    setLoadingUserId(userId);
     try {
       const authApi = await authorizedApi(getToken);
-      await authApi.patch(`/api/admin/update-role/${userId}`, {
-        role: newRole,
-      });
-
-      // Cập nhật lại danh sách người dùng
+      await authApi.patch(`/api/admin/update-role/${userId}`, { role: newRole });
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
       );
       toast.success(
         `User ${newRole === "admin" ? "promoted" : "revoked"} successfully`
       );
-    } catch (err) {
+    } catch {
       toast.error("Failed to update role");
     } finally {
-      setLoadingUserId(null); // Reset loading sau khi xong
+      setLoadingUserId(null);
     }
   };
 
   // Delete user
   const handleDeleteUser = async (userId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this user?"
-    );
-    if (!confirmDelete) return;
-
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
     setPageLoading(true);
     try {
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.delete(`/api/admin/delete-user/${userId}`);
-
       if (data.success) {
         toast.success("User deleted successfully");
         setUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -100,6 +105,7 @@ const AdminPanel = () => {
   };
 
   if (loading) return <Loading text="Loading users..." />;
+
   const currentUserRole = currentUserWithRole?.role;
   const isSuperAdmin = currentUserRole === "super-admin";
   const canManageRoles = isSuperAdmin || currentUserRole === "admin";
@@ -141,7 +147,6 @@ const AdminPanel = () => {
                   </div>
 
                   <div className="flex items-center gap-3 mt-3 md:mt-0">
-                    {/* Role badge */}
                     <span
                       className={`px-3 py-1 text-xs font-medium rounded-full ${
                         user.role === "super-admin"
@@ -155,14 +160,13 @@ const AdminPanel = () => {
                       {user.role}
                     </span>
 
-                    {/* Role button */}
                     {canManageRoles && (
                       <button
                         disabled={
-                          isCurrentUser || // không thao tác bản thân
-                          user.role === "super-admin" || // không thao tác super-admin khác
+                          isCurrentUser ||
+                          user.role === "super-admin" ||
                           (currentUserRole !== "super-admin" &&
-                            user.role === "admin") // admin bình thường không thao tác admin khác
+                            user.role === "admin")
                         }
                         onClick={() =>
                           handleRoleChange(
@@ -199,13 +203,12 @@ const AdminPanel = () => {
                       </button>
                     )}
 
-                    {/* Delete button */}
                     <button
                       disabled={
-                        !isSuperAdmin || // chỉ super-admin được delete
-                        isCurrentUser || // không delete bản thân
+                        !isSuperAdmin ||
+                        isCurrentUser ||
                         (currentUserRole !== "super-admin" &&
-                          user.role === "admin") // admin bình thường không delete admin khác
+                          user.role === "admin")
                       }
                       onClick={() => handleDeleteUser(user.id)}
                       className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 ${
