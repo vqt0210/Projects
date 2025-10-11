@@ -31,6 +31,8 @@ export const AppProvider = ({ children }) => {
 
 const fetchIsAdmin = async () => {
   try {
+    setIsCheckingAdmin(true); // bắt đầu check
+
     const authApi = await authorizedApi(getToken);
     const { data } = await authApi.get("/api/admin/is-admin");
 
@@ -48,7 +50,6 @@ const fetchIsAdmin = async () => {
       });
     }
   } catch (error) {
-    // Nếu lỗi 403 thì chỉ coi là user thường, nhưng nếu đang ở /admin thì redirect về /
     if (error.response?.status === 403) {
       setIsAdmin(false);
       if (location.pathname.startsWith("/admin")) {
@@ -58,17 +59,20 @@ const fetchIsAdmin = async () => {
           id: "admin-error",
         });
       }
-      return;
+    } else {
+      console.error("fetchIsAdmin error:", error);
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch admin status"
+      );
     }
-
-    console.error("fetchIsAdmin error:", error);
-    toast.error(
-      error.response?.data?.message ||
-        error.message ||
-        "Failed to fetch admin status"
-    );
+  } finally {
+    // Quan trọng: đảm bảo luôn dừng loading
+    setIsCheckingAdmin(false);
   }
 };
+
 
 
   // ================== MOVIES ==================
@@ -150,4 +154,4 @@ const fetchIsAdmin = async () => {
 };
 
 export const useAppContext = () => useContext(AppContext);
-export default AppProvider;
+
