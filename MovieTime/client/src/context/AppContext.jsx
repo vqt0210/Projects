@@ -29,43 +29,47 @@ export const AppProvider = ({ children }) => {
     }
   }, [isLoaded, user]);
 
-  const fetchIsAdmin = async () => {
-    setIsCheckingAdmin(true);
-    try {
-      const authApi = await authorizedApi(getToken);
-      const { data } = await authApi.get("/api/admin/is-admin");
+const fetchIsAdmin = async () => {
+  try {
+    const authApi = await authorizedApi(getToken);
+    const { data } = await authApi.get("/api/admin/is-admin");
 
-      if (!data || typeof data.isAdmin !== "boolean") {
-        throw new Error("Invalid response from server");
-      }
+    if (!data || typeof data.isAdmin !== "boolean") {
+      throw new Error("Invalid response from server");
+    }
 
-      setIsAdmin(data.isAdmin);
+    setIsAdmin(data.isAdmin);
 
-      if (!data.isAdmin && location.pathname.startsWith("/admin")) {
+    if (!data.isAdmin && location.pathname.startsWith("/admin")) {
+      navigate("/");
+      toast.dismiss();
+      toast.error("You are not allowed to access admin dashboard", {
+        id: "admin-error",
+      });
+    }
+  } catch (error) {
+    // Nếu lỗi 403 thì chỉ coi là user thường, nhưng nếu đang ở /admin thì redirect về /
+    if (error.response?.status === 403) {
+      setIsAdmin(false);
+      if (location.pathname.startsWith("/admin")) {
         navigate("/");
         toast.dismiss();
         toast.error("You are not allowed to access admin dashboard", {
           id: "admin-error",
         });
       }
-    } catch (error) {
-      // 👉 Nếu lỗi 403 (người dùng thường) thì chỉ coi như isAdmin = false, không log, không toast
-      if (error.response?.status === 403) {
-        setIsAdmin(false);
-        return;
-      }
-
-      // 👉 Nếu là lỗi khác (token hết hạn, lỗi mạng, server chết, v.v.)
-      console.error("fetchIsAdmin error:", error);
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch admin status"
-      );
-    } finally {
-      setIsCheckingAdmin(false);
+      return;
     }
-  };
+
+    console.error("fetchIsAdmin error:", error);
+    toast.error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch admin status"
+    );
+  }
+};
+
 
   // ================== MOVIES ==================
   const fetchShows = async () => {
