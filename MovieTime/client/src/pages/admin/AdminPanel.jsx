@@ -37,17 +37,18 @@ const AdminPanel = () => {
   }, [currentUser, getToken]);
 
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const res = await fetch("/api/me");
-        const data = await res.json();
-        setCurrentUserWithRole(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchCurrentUser();
-  }, []);
+  const fetchCurrentUser = async () => {
+    try {
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.get("/api/me");
+      setCurrentUserWithRole(data);
+    } catch (err) {
+      console.error("Error fetching current user:", err);
+    }
+  };
+
+  fetchCurrentUser();
+}, [getToken]);
 
   // Update role (promote/revoke)
   const handleRoleChange = async (userId, newRole) => {
