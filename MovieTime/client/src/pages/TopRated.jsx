@@ -13,10 +13,28 @@ export default function TopRated() {
     { top: "1200px", left: "100px" },
   ];
 
-  const uniqueShows = [...new Map(shows.map(show => [show.movie._id, show])).values()];
-  const movies = uniqueShows.map(show => show.movie);
+  // Nếu shows chưa có hoặc rỗng
+  if (!Array.isArray(shows) || shows.length === 0)
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <h1 className="text-3xl font-bold text-center">No movies available</h1>
+      </div>
+    );
 
+  // Lọc trùng movie theo _id
+  const uniqueShows = [
+    ...new Map(
+      shows
+        .filter((show) => show.movie?._id)
+        .map((show) => [show.movie._id, show])
+    ).values(),
+  ];
+
+  const movies = uniqueShows.map((show) => show.movie);
+
+  // Sort top rated (lọc các movie có vote_average hợp lệ)
   const topRatedMovies = movies
+    .filter((m) => typeof m.vote_average === "number")
     .sort((a, b) => b.vote_average - a.vote_average)
     .slice(0, 10);
 
@@ -28,9 +46,19 @@ export default function TopRated() {
 
       <h1 className="text-lg font-medium my-4">Top Rated</h1>
 
-      <div className="grid grid-cols-4 gap-8 max-sm:grid-cols-2">
-        {topRatedMovies.map(movie => (
-          <MovieCard movie={movie} key={movie._id} />
+      <div className="grid grid-cols-4 gap-8 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
+        {topRatedMovies.map((movie, i) => (
+          <div key={movie._id || i} className="relative group">
+            {/* Badge Top 1-10 */}
+            <span className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-md z-10">
+              ⭐ Top {i + 1}
+            </span>
+
+            {/* MovieCard với hover effect */}
+            <div className="transition-all duration-300 transform group-hover:scale-105 group-hover:border-primary border-2 border-transparent rounded-lg overflow-hidden">
+              <MovieCard movie={movie} />
+            </div>
+          </div>
         ))}
       </div>
     </div>

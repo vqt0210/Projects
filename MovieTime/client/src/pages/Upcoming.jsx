@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
-import { useAppContext } from "../context/AppContext";
 import BlurCircle from "../components/BlurCircle";
+import api from "../utils/api";
 
 export default function Upcoming() {
-  const { axios } = useAppContext();
-  const [movies, setMovies] = useState([]); 
+  const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const positions = [
@@ -18,30 +17,28 @@ export default function Upcoming() {
   ];
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-    setLoading(false);
-    setMovies([]);
-  }, 7000);
-    (async () => {
+    const fetchMovies = async () => {
       try {
-        const { data } = await axios.get("/api/show/upcoming?page=1", {
-          timeout: 5000
+        const { data } = await api.get("/api/show/upcoming?page=1", {
+          timeout: 5000,
         });
         const list = data?.results ?? data?.movies ?? [];
         setMovies(list);
       } catch (err) {
-        console.error("Upcoming fetch error", err);
+        console.error("Upcoming fetch error:", err);
         setMovies([]);
       } finally {
-        clearTimeout(timer);
         setLoading(false);
       }
-    })();
-  }, [axios]);
+    };
+    fetchMovies();
+  }, []);
 
   if (loading) return <Loading />;
 
-  const uniqueMovies = [...new Map(movies.map((movie) => [movie._id || movie.id, movie])).values()];
+  const uniqueMovies = [
+    ...new Map(movies.map((movie) => [movie._id || movie.id, movie])).values(),
+  ];
 
   return uniqueMovies.length > 0 ? (
     <div className="relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh] pt-8">
@@ -50,9 +47,19 @@ export default function Upcoming() {
       ))}
 
       <h1 className="text-lg font-medium my-4">Upcoming</h1>
-      <div className="grid grid-cols-4 gap-8 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
+      <div
+        className="grid 
+  grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 
+  gap-6 md:gap-8 
+  justify-items-center 
+  max-w-7xl mx-auto"
+      >
         {uniqueMovies.map((movie, i) => (
-          <MovieCard movie={movie} isUpcoming={true} key={movie._id || movie.id || i} />
+          <MovieCard
+            movie={movie}
+            isUpcoming={true}
+            key={movie._id || movie.id || i}
+          />
         ))}
       </div>
     </div>

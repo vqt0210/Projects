@@ -30,47 +30,62 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
     : "Runtime Not Available";
 
   return (
-    <div className="flex flex-col justify-between p-3 bg-gray-800 rounded-2xl hover:-translate-y-1 transition duration-300 w-66">
-      <div
-        onClick={() => {
-          navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
-          scrollTo(0, 0);
-        }}
-        className="relative w-full aspect-[4/3] overflow-hidden rounded-xl"
-      >
+    <div
+      className="
+        group flex flex-col justify-between bg-gray-800 
+        rounded-2xl p-3 
+        w-full max-w-[270px] md:max-w-[280px] xl:max-w-[300px]
+        transition-transform duration-300 hover:scale-[1.05] hover:-translate-y-1
+        shadow-md hover:shadow-primary/30
+      "
+      onClick={() => {
+        if (isUpcoming) return;
+        navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
+        scrollTo(0, 0);
+      }}
+    >
+      {/* Poster */}
+      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-xl">
         <img
           src={backdropPath}
           alt={flattenedMovie.title}
-          className="absolute inset-0 w-full h-full object-cover object-center cursor-pointer"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
         />
       </div>
 
-      <p className="font-semibold mt-2 truncate">{flattenedMovie.title}</p>
-      <p className="text-sm text-gray-400 mt-2">
-        {releaseDate} • {genres} • {runtime}{" "}
-      </p>
+      {/* Thông tin */}
+      <div className="flex flex-col flex-grow mt-3">
+        <p className="font-semibold truncate text-base">
+          {flattenedMovie.title}
+        </p>
+        <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+          {releaseDate} • {genres} {runtime && `• ${runtime}`}
+        </p>
+      </div>
 
-      <div className="flex items-center justify-between mt-4 pb-3">
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-4 pb-2">
         {isUpcoming ? (
-          <span className="block w-full text-center px-4 py-2 bg-gray-500 rounded-full font-medium">
+          <span className="w-full text-center px-4 py-2 bg-gray-600 rounded-full font-medium text-sm">
             Coming Soon
           </span>
         ) : (
-          <button
-            onClick={() => {
-              navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
-              scrollTo(0, 0);
-            }}
-            className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
-          >
-            Buy Tickets
-          </button>
-        )}
-        {!isUpcoming && (
-          <p className="flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1">
-            <StarIcon className="w-4 h-4 text-primary fill-primary" />
-            {flattenedMovie.vote_average?.toFixed(1) ?? "N/A"}
-          </p>
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // tránh bị trigger onClick toàn card
+                navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
+                scrollTo(0, 0);
+              }}
+              className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium"
+            >
+              Buy Tickets
+            </button>
+            <p className="flex items-center gap-1 text-sm text-gray-300">
+              <StarIcon className="w-4 h-4 text-primary fill-primary" />
+              {flattenedMovie.vote_average?.toFixed(1) ?? "N/A"}
+            </p>
+          </>
         )}
       </div>
     </div>
