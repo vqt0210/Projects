@@ -39,27 +39,46 @@ export default function TopRated() {
     .slice(0, 10);
 
   return topRatedMovies.length > 0 ? (
-    <div className="relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh] pt-8">
+    <div className="relative py-16 px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden min-h-[80vh]">
+      {/* Hiệu ứng Blur background */}
       {positions.map((pos, i) => (
         <BlurCircle key={i} {...pos} />
       ))}
 
-      <h1 className="text-lg font-medium my-4">Top Rated</h1>
+      <div className="max-w-screen-xl mx-auto">
+        {/* Tiêu đề section */}
+        <h1 className="text-2xl font-semibold my-6 text-center md:text-left">
+          Top Rated
+        </h1>
 
-      <div className="grid grid-cols-4 gap-8 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1">
-        {topRatedMovies.map((movie, i) => (
-          <div key={movie._id || i} className="relative group">
-            {/* Badge Top 1-10 */}
-            <span className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-md z-10">
-              ⭐ Top {i + 1}
-            </span>
+        {/* Danh sách phim */}
+        <div
+          className="
+          grid gap-8
+          sm:grid-cols-2 
+          md:grid-cols-3 
+          lg:grid-cols-4 
+          xl:grid-cols-5
+          justify-items-center
+        "
+        >
+          {topRatedMovies.map((movie, i) => (
+            <div
+              key={movie._id || i}
+              className="relative group w-full max-w-[280px]"
+            >
+              {/* Badge Top 1–10 */}
+              <span className="absolute top-2 left-2 bg-primary text-white text-xs font-bold px-2 py-1 rounded-md z-10">
+                ⭐ Top {i + 1}
+              </span>
 
-            {/* MovieCard với hover effect */}
-            <div className="transition-all duration-300 transform group-hover:scale-105 group-hover:border-primary border-2 border-transparent rounded-lg overflow-hidden">
-              <MovieCard movie={movie} />
+              {/* MovieCard với hover effect */}
+              <div className="transition-all duration-300 transform group-hover:scale-105 group-hover:border-primary border-2 border-transparent rounded-lg overflow-hidden">
+                <MovieCard movie={movie} />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   ) : (

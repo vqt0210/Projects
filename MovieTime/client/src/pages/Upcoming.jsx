@@ -41,26 +41,25 @@ export default function Upcoming() {
   ];
 
   return uniqueMovies.length > 0 ? (
-    <div className="relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh] pt-8">
+    <div className="relative px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden min-h-[80vh] py-12">
       {positions.map((pos, i) => (
         <BlurCircle key={i} {...pos} />
       ))}
 
-      <h1 className="text-lg font-medium my-4">Upcoming</h1>
-      <div
-        className="grid 
-  grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 
-  gap-6 md:gap-8 
-  justify-items-center 
-  max-w-7xl mx-auto"
-      >
-        {uniqueMovies.map((movie, i) => (
-          <MovieCard
-            movie={movie}
-            isUpcoming={true}
-            key={movie._id || movie.id || i}
-          />
-        ))}
+      <div className="max-w-screen-xl mx-auto">
+        <h1 className="text-2xl font-semibold my-6 text-center md:text-left">
+          Upcoming
+        </h1>
+
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 justify-items-center">
+          {uniqueMovies.map((movie, i) => (
+            <MovieCard
+              movie={movie}
+              isUpcoming={true}
+              key={movie._id || movie.id || i}
+            />
+          ))}
+        </div>
       </div>
     </div>
   ) : (

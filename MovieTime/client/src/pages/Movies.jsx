@@ -17,21 +17,27 @@ const Movies = () => {
         ...new Map(
           shows
             .filter((show) => show.movie?._id)
-            .map((show) => [show.movie._id, show])
+            .map((show) => [show.movie._id, show.movie])
         ).values(),
       ]
     : [];
 
   return uniqueShows.length > 0 ? (
-    <div className="relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]">
+    <div className="relative px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden min-h-[80vh] py-16">
       {positions.map((pos, i) => (
         <BlurCircle key={i} {...pos} />
       ))}
-      <h1 className="text-lg font-medium  my-4">Now Showing</h1>
-      <div className="grid grid-cols-4 gap-8 max-sm:grid-cols-2">
-        {uniqueShows.map((movie) => (
-          <MovieCard movie={movie} key={movie._id} />
-        ))}
+
+      <div className="max-w-screen-xl mx-auto">
+        <h1 className="text-2xl font-semibold my-6 text-center md:text-left">
+          Now Showing
+        </h1>
+
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 justify-items-center">
+          {uniqueShows.map((movie) => (
+            <MovieCard movie={movie} key={movie._id} />
+          ))}
+        </div>
       </div>
     </div>
   ) : (
