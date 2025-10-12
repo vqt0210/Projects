@@ -10,7 +10,7 @@ const Favorite = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await syncFavorites(); 
+      await syncFavorites();
       setLoading(false);
     };
     fetchData();
@@ -18,30 +18,39 @@ const Favorite = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <h1 className="text-2xl font-medium text-gray-300">Loading favorites...</h1>
+      <div className="flex flex-col items-center justify-center h-screen text-gray-300">
+        <h1 className="text-2xl font-medium animate-pulse">Loading favorites...</h1>
       </div>
     );
   }
 
   return favoriteMovies.length > 0 ? (
-    <div className="relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]">
+    <div className="relative pt-32 md:pt-36 pb-40 px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden min-h-[80vh]">
+      {/* Hiệu ứng nền */}
       <BlurCircle top="150px" left="0px" />
       <BlurCircle top="400px" right="100px" />
       <BlurCircle bottom="100px" left="200px" />
       <BlurCircle bottom="300px" right="50px" />
       <BlurCircle top="800px" left="50%" />
-      <h1 className="text-lg font-medium my-4">Your Favorite Movies</h1>
 
-      <div className="flex flex-wrap max-sm:justify-center gap-8">
-        {favoriteMovies.map((movie, index) => (
-          <MovieCard movie={movie} key={`${movie._id}-${index}`} />
-        ))}
+      {/* Tiêu đề */}
+      <div className="max-w-screen-xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-semibold mb-10 text-white text-center md:text-left">
+          Your Favorite Movies
+        </h1>
+
+        {/* Lưới phim */}
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-items-center">
+          {favoriteMovies.map((movie, index) => (
+            <MovieCard movie={movie} key={`${movie._id}-${index}`} />
+          ))}
+        </div>
       </div>
     </div>
   ) : (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <h1 className="text-3xl font-bold text-center">No movies available</h1>
+    <div className="flex flex-col items-center justify-center h-screen text-gray-300">
+      <h1 className="text-3xl font-bold mb-4">No favorites yet</h1>
+      <p className="text-sm opacity-80">Add some movies to your list ❤️</p>
     </div>
   );
 };

@@ -39,7 +39,7 @@ export default function TopRated() {
     .slice(0, 10);
 
   return topRatedMovies.length > 0 ? (
-    <div className="relative py-16 px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden min-h-[80vh]">
+    <div className="relative pt-32 md:pt-36 pb-40 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]">
       {/* Hiệu ứng Blur background */}
       {positions.map((pos, i) => (
         <BlurCircle key={i} {...pos} />
@@ -58,7 +58,6 @@ export default function TopRated() {
           sm:grid-cols-2 
           md:grid-cols-3 
           lg:grid-cols-4 
-          xl:grid-cols-5
           justify-items-center
         "
         >

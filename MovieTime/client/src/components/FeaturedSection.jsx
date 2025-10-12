@@ -59,7 +59,7 @@ const FeaturedSection = () => {
         {/* Grid các phim */}
         <div
           className="grid gap-8 mt-8 
-          grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 
+          grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4  
           justify-items-center"
         >
           {uniqueShows.slice(0, 8).map((show) => (
