@@ -7,7 +7,10 @@ const cache = new Map();
 function cacheGet(key) {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() > entry.expires) { cache.delete(key); return null; }
+  if (Date.now() > entry.expires) {
+    cache.delete(key);
+    return null;
+  }
   return entry.value;
 }
 function cacheSet(key, value, ttl = 5 * 60 * 1000) {
@@ -23,22 +26,31 @@ function ensureTmdbKey() {
   return k.trim();
 }
 
-
-
 // API to get now playing movies from TMDB API
 export const getNowPlayingMovies = async (req, res) => {
   try {
     const apiKey = ensureTmdbKey();
-    const { data } = await axios.get('https://api.themoviedb.org/3/movie/now_playing', {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      timeout: AXIOS_DEFAULT.timeout,
-      params: { language: "en-US" }
-    });
+    const { data } = await axios.get(
+      "https://api.themoviedb.org/3/movie/now_playing",
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        timeout: AXIOS_DEFAULT.timeout,
+        params: { language: "en-US" },
+      }
+    );
 
     res.json({ success: true, movies: data.results });
   } catch (error) {
-    console.error("getNowPlayingMovies error:", error?.response?.data || error?.message || error);
-    res.status(502).json({ success: false, message: error?.message || "Failed to fetch TMDB now_playing" });
+    console.error(
+      "getNowPlayingMovies error:",
+      error?.response?.data || error?.message || error
+    );
+    res
+      .status(502)
+      .json({
+        success: false,
+        message: error?.message || "Failed to fetch TMDB now_playing",
+      });
   }
 };
 
@@ -46,7 +58,10 @@ export const getNowPlayingMovies = async (req, res) => {
 export const addShow = async (req, res) => {
   try {
     const { movieId, showsInput, showPrice } = req.body;
-    if (!movieId) return res.status(400).json({ success: false, message: "movieId required" });
+    if (!movieId)
+      return res
+        .status(400)
+        .json({ success: false, message: "movieId required" });
 
     let movie = await Movie.findById(String(movieId));
 
@@ -61,30 +76,34 @@ export const addShow = async (req, res) => {
       const apiKey = ensureTmdbKey();
 
       // Fetch details, credits, videos in parallel
-      const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] = await Promise.all([
-        axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          timeout: AXIOS_DEFAULT.timeout,
-        }),
-        axios.get(`https://api.themoviedb.org/3/movie/${movieId}/credits`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          timeout: AXIOS_DEFAULT.timeout,
-        }),
-        axios.get(`https://api.themoviedb.org/3/movie/${movieId}/videos`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-          timeout: AXIOS_DEFAULT.timeout,
-        }),
-      ]);
+      const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] =
+        await Promise.all([
+          axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            timeout: AXIOS_DEFAULT.timeout,
+          }),
+          axios.get(`https://api.themoviedb.org/3/movie/${movieId}/credits`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            timeout: AXIOS_DEFAULT.timeout,
+          }),
+          axios.get(`https://api.themoviedb.org/3/movie/${movieId}/videos`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            timeout: AXIOS_DEFAULT.timeout,
+          }),
+        ]);
 
       const movieApiData = movieDetailsResponse.data;
       const movieCreditsData = movieCreditsResponse.data;
       const movieVideosData = movieVideosResponse.data;
 
       let trailer = movieVideosData.results.find(
-        (vid) => vid.type === "Trailer" && vid.site === "YouTube" && vid.official
+        (vid) =>
+          vid.type === "Trailer" && vid.site === "YouTube" && vid.official
       );
       if (!trailer) {
-        trailer = movieVideosData.results.find((vid) => vid.type === "Trailer" && vid.site === "YouTube");
+        trailer = movieVideosData.results.find(
+          (vid) => vid.type === "Trailer" && vid.site === "YouTube"
+        );
       }
 
       const movieDetails = {
@@ -100,14 +119,20 @@ export const addShow = async (req, res) => {
         tagline: movieApiData.tagline || "",
         vote_average: movieApiData.vote_average,
         runtime: movieApiData.runtime,
-        trailer: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
+        trailer: trailer
+          ? `https://www.youtube.com/embed/${trailer.key}`
+          : null,
       };
 
       // Add or update movie
       if (!movie) {
         movie = await Movie.create(movieDetails);
       } else if (!movie.trailer) {
-        movie = await Movie.findByIdAndUpdate(String(movieId), { trailer: movieDetails.trailer }, { new: true });
+        movie = await Movie.findByIdAndUpdate(
+          String(movieId),
+          { trailer: movieDetails.trailer },
+          { new: true }
+        );
       }
     }
 
@@ -128,19 +153,32 @@ export const addShow = async (req, res) => {
       await Show.insertMany(showsToCreate);
     }
 
-    await inngest.send({ name: "app/show.added", data: { movieTitle: movie.title } });
+    await inngest.send({
+      name: "app/show.added",
+      data: { movieTitle: movie.title },
+    });
 
     res.json({ success: true, message: "Show Added Successfully" });
   } catch (error) {
-    console.error("addShow error:", error?.response?.data || error?.message || error);
-    res.status(500).json({ success: false, message: error?.message || "Internal server error" });
+    console.error(
+      "addShow error:",
+      error?.response?.data || error?.message || error
+    );
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: error?.message || "Internal server error",
+      });
   }
 };
 
 // API to get all shows from the database
 export const getShows = async (req, res) => {
   try {
-    const shows = await Show.find({ showDateTime: { $gte: new Date() } }).populate("movie").sort({ showDateTime: 1 });
+    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+      .populate("movie")
+      .sort({ showDateTime: 1 });
     res.json({ success: true, shows });
   } catch (error) {
     console.error("getShows error:", error);
@@ -154,10 +192,21 @@ export const getShow = async (req, res) => {
     const { movieId } = req.params;
 
     // Tìm show và movie song song
-    const [shows, movie] = await Promise.all([
-      Show.find({ movie: movieId, showDateTime: { $gte: new Date() } }),
-      Movie.findById(String(movieId))
-    ]);
+    const movie =
+      (await Movie.findById(String(movieId))) ||
+      (await Movie.findOne({ _id: movieId })) ||
+      (await Movie.findOne({ id: Number(movieId) }));
+
+    if (!movie) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Movie not found in database" });
+    }
+
+    const shows = await Show.find({
+      movie: movie._id,
+      showDateTime: { $gte: new Date() },
+    });
 
     const dateTime = {};
 
@@ -167,8 +216,8 @@ export const getShow = async (req, res) => {
       dateTime[date].push({ time: s.showDateTime, showId: s._id });
     }
     console.log("movieId", movieId);
-console.log("shows", shows.length);
-console.log("movie", movie ? movie.title : "null");
+    console.log("shows", shows.length);
+    console.log("movie", movie ? movie.title : "null");
 
     return res.json({ success: true, movie, dateTime });
   } catch (error) {
@@ -177,15 +226,13 @@ console.log("movie", movie ? movie.title : "null");
   }
 };
 
-
-
 /* ---------------------------
    New: top-rated & upcoming
    --------------------------- */
 
 export const getTopRatedMovies = async (req, res) => {
   try {
-    const minRate = parseFloat(req.query.minRate) || 7; 
+    const minRate = parseFloat(req.query.minRate) || 7;
     const limit = parseInt(req.query.limit) || 10; // top 10
     const movies = await Movie.find({ vote_average: { $gte: minRate } })
       .sort({ vote_average: -1 }) // giảm dần
@@ -197,7 +244,6 @@ export const getTopRatedMovies = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // API: get upcoming movies (filter out movies already in Now Showing)
 export const getUpcomingMovies = async (req, res) => {
@@ -211,26 +257,32 @@ export const getUpcomingMovies = async (req, res) => {
 
     // Lấy các movie đang showing trong DB
     const nowShowingMovies = await Show.find({}, "movie");
-    const nowShowingIds = nowShowingMovies.map(s => s.movie.toString());
+    const nowShowingIds = nowShowingMovies.map((s) => s.movie.toString());
 
     // Lấy danh sách upcoming từ TMDB
     const { data } = await axios.get(
       "https://api.themoviedb.org/3/movie/upcoming",
-      { headers: { Authorization: `Bearer ${apiKey}` }, params: { language: "en-US", page } }
+      {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        params: { language: "en-US", page },
+      }
     );
 
     // Lọc ra các movie chưa có trong Now Showing
     let filteredResults = data.results.filter(
-      movie => !nowShowingIds.includes(movie.id.toString())
+      (movie) => !nowShowingIds.includes(movie.id.toString())
     );
 
     // Fetch chi tiết từng movie để lấy genres, runtime, trailer…
     const detailedResults = await Promise.all(
-      filteredResults.map(async movie => {
+      filteredResults.map(async (movie) => {
         try {
           const { data: detail } = await axios.get(
             `https://api.themoviedb.org/3/movie/${movie.id}`,
-            { headers: { Authorization: `Bearer ${apiKey}` }, params: { language: "en-US" } }
+            {
+              headers: { Authorization: `Bearer ${apiKey}` },
+              params: { language: "en-US" },
+            }
           );
           return { ...movie, genres: detail.genres, runtime: detail.runtime };
         } catch {
@@ -242,15 +294,21 @@ export const getUpcomingMovies = async (req, res) => {
     const payload = {
       page: data.page,
       total_pages: data.total_pages,
-      results: detailedResults
+      results: detailedResults,
     };
 
     cacheSet(cacheKey, payload, 5 * 60 * 1000);
 
-    res.json({ success: true, movies: detailedResults, page: data.page, total_pages: data.total_pages });
-
+    res.json({
+      success: true,
+      movies: detailedResults,
+      page: data.page,
+      total_pages: data.total_pages,
+    });
   } catch (error) {
     console.error("getUpcomingMovies error:", error);
-    res.status(502).json({ success: false, message: "Failed to fetch TMDB upcoming" });
+    res
+      .status(502)
+      .json({ success: false, message: "Failed to fetch TMDB upcoming" });
   }
 };
