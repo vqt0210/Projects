@@ -14,6 +14,7 @@ import MovieCard from "../components/MovieCard";
 import Loading from "../components/Loading";
 import { useAppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
+import api from "../utils/api";
 
 const MovieDetails = () => {
   const navigate = useNavigate();
@@ -24,10 +25,7 @@ const MovieDetails = () => {
   const [isExpired, setIsExpired] = useState(false);
   const {
     shows,
-    axios,
-    getToken,
     user,
-    fetchFavoriteMovies,
     favoriteMovies,
     image_base_url,
     setFavoriteMovies,
@@ -52,7 +50,7 @@ const MovieDetails = () => {
 
   const getShow = async () => {
     try {
-      const { data } = await axios.get(`/api/show/${id}`);
+      const { data } = await api.get(`/api/show/${id}`);
       console.log("API Response:", data); // Log dữ liệu API trả về
       if (data.success) {
         setShow(data);

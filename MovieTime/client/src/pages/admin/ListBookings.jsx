@@ -9,22 +9,22 @@ const ListBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { axios, getToken, user } = useAppContext();
+  const { getToken, user } = useAppContext();
 
   const getAllBookings = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const token = getToken ? await getToken() : null;
-      const { data } = await axios.get('/api/admin/all-bookings', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const authAxios = await authorizedApi(getToken);
+      const { data } = await authAxios.get("/api/user/bookings");
       // defensive: ensure array and remove nulls
-      const list = Array.isArray(data?.bookings) ? data.bookings.filter(Boolean) : [];
+      const list = Array.isArray(data?.bookings)
+        ? data.bookings.filter(Boolean)
+        : [];
       setBookings(list);
     } catch (err) {
-      console.error('getAllBookings error', err);
-      setError(err?.response?.data || err.message || 'Failed to fetch');
+      console.error("getAllBookings error", err);
+      setError(err?.response?.data || err.message || "Failed to fetch");
       setBookings([]);
     } finally {
       setIsLoading(false);
@@ -48,7 +48,7 @@ const ListBookings = () => {
       <Title text1="List" text2="Booking" />
       {error && (
         <div className="mt-4 p-3 bg-red-600/20 text-red-300 rounded">
-          Error: {typeof error === 'string' ? error : JSON.stringify(error)}
+          Error: {typeof error === "string" ? error : JSON.stringify(error)}
         </div>
       )}
       <div className="max-w-4xl mt-6 overflow-x-auto">
@@ -65,30 +65,41 @@ const ListBookings = () => {
           <tbody className="text-sm font-light">
             {bookings.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-300">No bookings</td>
+                <td colSpan={5} className="p-4 text-center text-gray-300">
+                  No bookings
+                </td>
               </tr>
             ) : (
               bookings.map((item) => {
                 // defensive getters
-                const id = item?._id ?? item?.id ?? Math.random().toString(36).slice(2);
-                const userName = item?.user?.name ?? item?.user?.email ?? 'Unknown user';
-                const movieTitle = item?.show?.movie?.title ?? 'Unknown movie';
-                const showTime = item?.show?.showDateTime ? dateFormat(item.show.showDateTime) : 'N/A';
+                const id =
+                  item?._id ?? item?.id ?? Math.random().toString(36).slice(2);
+                const userName =
+                  item?.user?.name ?? item?.user?.email ?? "Unknown user";
+                const movieTitle = item?.show?.movie?.title ?? "Unknown movie";
+                const showTime = item?.show?.showDateTime
+                  ? dateFormat(item.show.showDateTime)
+                  : "N/A";
                 const seats = item?.bookedSeats
                   ? // handle both array or object
-                    (Array.isArray(item.bookedSeats)
-                      ? item.bookedSeats.join(', ')
-                      : Object.values(item.bookedSeats).join(', '))
-                  : '—';
+                    Array.isArray(item.bookedSeats)
+                    ? item.bookedSeats.join(", ")
+                    : Object.values(item.bookedSeats).join(", ")
+                  : "—";
                 const amount = item?.amount ?? 0;
 
                 return (
-                  <tr key={id} className="border-b border-primary/20 bg-primary/5 even:bg-primary/10">
+                  <tr
+                    key={id}
+                    className="border-b border-primary/20 bg-primary/5 even:bg-primary/10"
+                  >
                     <td className="p-2 min-w-45 pl-5">{userName}</td>
                     <td className="p-2 min-w-45 pl-5">{movieTitle}</td>
                     <td className="p-2">{showTime}</td>
                     <td className="p-2">{seats}</td>
-                    <td className="p-2">{currency} {amount}</td>
+                    <td className="p-2">
+                      {currency} {amount}
+                    </td>
                   </tr>
                 );
               })
