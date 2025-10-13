@@ -9,7 +9,7 @@ export const getUserBookings = async (req, res) => {
   try {
     const { userId } = req.auth();
 
-    const bookings = await Booking.find({ user: userId })
+    const bookings = await Booking.find({ userId: req.auth().userId })
       .populate({
         path: "show",
         populate: { path: "movie" },

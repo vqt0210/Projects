@@ -3,6 +3,7 @@ import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import { dateFormat } from "../../lib/dateFormat";
 import { useAppContext } from "../../context/AppContext";
+import { authorizedApi } from "../../utils/api";
 
 const ListBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY;
@@ -16,7 +17,7 @@ const ListBookings = () => {
     setError(null);
     try {
       const authAxios = await authorizedApi(getToken);
-      const { data } = await authAxios.get("/api/user/bookings");
+      const { data } = await authAxios.get("/api/admin/all-bookings");
       // defensive: ensure array and remove nulls
       const list = Array.isArray(data?.bookings)
         ? data.bookings.filter(Boolean)

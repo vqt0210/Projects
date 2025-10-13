@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const userId = req.auth.userId; // Clerk middleware phải được sử dụng
+    const userId = req.auth().userId; // Clerk middleware phải được sử dụng
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await clerkClient.users.getUser(userId);

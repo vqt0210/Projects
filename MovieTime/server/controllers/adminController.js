@@ -4,65 +4,106 @@ import Show from "../models/Show.js";
 import User from "../models/User.js";
 import { clerkClient } from "@clerk/express";
 
-export const isAdmin = async(req, res) => {
-  res.json({success: true, isAdmin: true})
-}
+export const isAdmin = async (req, res) => {
+  res.json({ success: true, isAdmin: true });
+};
 
 // API to get dashboard data
 
-export const getDashboardData = async (req, res)=> {
+export const getDashboardData = async (req, res) => {
   try {
-    const bookings = await Booking.find({isPaid: true});
-    const activeShows = await Show.find({showDateTime: {$gte: new Date()}}).populate('movie');
+    const bookings = await Booking.find({ isPaid: true });
+    const activeShows = await Show.find({
+      showDateTime: { $gte: new Date() },
+    }).populate("movie");
     const totalUser = await User.countDocuments();
 
     const dashboardData = {
       totalBookings: bookings.length,
-      totalRevenue: bookings.reduce((acc, booking)=> acc + booking.amount, 0),
+      totalRevenue: bookings.reduce((acc, booking) => acc + booking.amount, 0),
       activeShows,
-      totalUser
-    }
+      totalUser,
+    };
 
-    res.json({success: true, dashboardData})
+    res.json({ success: true, dashboardData });
   } catch (error) {
-      console.error(error);
-      res.json({success: false, message: error.message})
+    console.error(error);
+    res.json({ success: false, message: error.message });
   }
-}
+};
 
 // API to get all shows
-export const getAllShows = async(req, res) => {
+export const getAllShows = async (req, res) => {
   try {
-      const shows = await Show.find({showDateTime: { $gte: new Date()}}).populate('movie').sort({ showDateTime: 1})
-      res.json({success: true, shows})
+    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+      .populate("movie")
+      .sort({ showDateTime: 1 });
+    res.json({ success: true, shows });
   } catch (error) {
-      console.error(error);
-      res.json({success: false, message: error.message})
+    console.error(error);
+    res.json({ success: false, message: error.message });
   }
-}
-
+};
 
 // API to get all bookings
-export const getAllBookings = async (req,res) => {
+export const getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({}).populate('user').populate({
-      path: "show",
-      populate: {path: "movie"}
-    }).sort({ createdAt: -1 })
-    res.json({success: true, bookings })
+    const bookings = await Booking.find({})
+      .populate({
+        path: "show",
+        populate: { path: "movie" },
+      })
+      .sort({ createdAt: -1 });
+
+    const enrichedBookings = await Promise.all(
+      bookings.map(async (booking) => {
+        const userId = booking.userId?.toString();
+        console.log("🧩 Booking userId:", booking.userId); 
+        if (!userId) {
+          return { ...booking.toObject(), user: { name: "Unknown user", email: "" } };
+        }
+        try {
+          console.log("🧩 Booking ID:", booking._id.toString(), "→ userId:", booking.userId);
+          const clerkUser = await clerkClient.users.getUser(booking.userId);
+
+          const userInfo = {
+            name:
+              (clerkUser.firstName && clerkUser.lastName
+                ? `${clerkUser.firstName} ${clerkUser.lastName}`
+                : clerkUser.username) || "Unnamed",
+            email: clerkUser.emailAddresses?.[0]?.emailAddress || "No email",
+            image: clerkUser.imageUrl,
+          };
+
+          return { ...booking.toObject(), user: userInfo };
+        } catch (err) {
+          console.warn(`⚠️ Missing or deleted user for booking ${booking._id}`);
+          return {
+            ...booking.toObject(),
+            user: { name: "Unknown user", email: "" },
+          };
+        }
+      })
+    );
+
+    res.json({ success: true, bookings: enrichedBookings });
   } catch (error) {
-      console.error(error);
-      res.json({success: false, message: error.message})
+    console.error("getAllBookings error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch bookings" });
   }
-}
+};
 
 // Get User List
 export const getUsers = async (req, res) => {
   try {
     const { data } = await clerkClient.users.getUserList({ limit: 100 });
-    const mapped = data.map(u => ({
+    const mapped = data.map((u) => ({
       id: u.id,
-      name: u.firstName ? `${u.firstName} ${u.lastName || ""}`.trim() : u.username,
+      name: u.firstName
+        ? `${u.firstName} ${u.lastName || ""}`.trim()
+        : u.username,
       email: u.emailAddresses?.[0]?.emailAddress,
       image: u.imageUrl,
       role: u.privateMetadata?.role || "user",
@@ -94,7 +135,9 @@ export const updateUserRole = async (req, res) => {
 
     // Chặn admin thường thao tác trên super-admin
     if (currentUserRole !== "super-admin" && targetRole === "super-admin") {
-      return res.status(403).json({ success: false, message: "Cannot modify super-admin" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Cannot modify super-admin" });
     }
 
     await clerkClient.users.updateUserMetadata(id, {
@@ -121,7 +164,9 @@ export const deleteUser = async (req, res) => {
     const currentUserRole = req.currentUser?.role || "user";
 
     if (targetRole === "super-admin") {
-      return res.status(403).json({ success: false, message: "Cannot delete super-admin" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Cannot delete super-admin" });
     }
 
     await clerkClient.users.deleteUser(userId);
@@ -131,6 +176,3 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to delete user" });
   }
 };
-
-
-
