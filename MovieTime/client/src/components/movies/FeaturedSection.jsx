@@ -44,7 +44,7 @@ const FeaturedSection = () => {
               navigate("/movies");
               scrollTo(0, 0);
             }}
-            className="group inline-flex items-center gap-3 px-3.5 py-2 rounded-md bg-white/5 hover:bg-white/10 transition"
+            className="group inline-flex items-center gap-3 px-3.5 py-2 rounded-md bg-white/5 hover:bg-white/10 transition cursor-pointer"
             aria-label="View all movies"
           >
             <span className="text-sm md:text-base font-medium text-gray-100 cursor-pointer">
