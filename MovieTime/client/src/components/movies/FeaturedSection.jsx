@@ -1,8 +1,8 @@
 import { ArrowRightIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import BlurCircle from "./BlurCircle";
-import MovieCard from "./MovieCard";
-import { useAppContext } from "../context/AppContext";
+import BlurCircle from "@/components/common/BlurCircle";
+import MovieCard from "@/components/movies/MovieCard";
+import { useAppContext } from "@/context/AppContext";
 
 const FeaturedSection = () => {
   const navigate = useNavigate();

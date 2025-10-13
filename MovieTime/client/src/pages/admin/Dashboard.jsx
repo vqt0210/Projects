@@ -6,12 +6,12 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import Loading from "../../components/Loading";
-import Title from "../../components/admin/Title";
-import BlurCircle from "../../components/BlurCircle";
-import { dateFormat } from "../../lib/dateFormat";
-import { useAppContext } from "../../context/AppContext";
-import { authorizedApi } from "../../utils/api";
+import Loading from "@/components/common/Loading";
+import Title from "@/components/admin/layout/Title";
+import BlurCircle from "@/components/common/BlurCircle";
+import { dateFormat } from "@/lib/dateFormat";
+import { useAppContext } from "@/context/AppContext";
+import { authorizedApi } from "@/utils/api";
 
 const Dashboard = () => {
   const { getToken, user, image_base_url } = useAppContext();

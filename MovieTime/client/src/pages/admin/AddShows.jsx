@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import Loading from "../../components/Loading";
-import Title from "../../components/admin/Title";
+import Loading from "@/components/common/Loading";
+import Title from "@/components/admin/layout/Title";
 import { CheckIcon, DeleteIcon, StarIcon } from "lucide-react";
-import { kConverter } from "../../lib/kConverter";
-import { useAppContext } from "../../context/AppContext";
-import { authorizedApi } from "../../utils/api";
+import { kConverter } from "@/lib/kConverter";
+import { useAppContext } from "@/context/AppContext";
+import { authorizedApi } from "@/utils/api";
 import toast from "react-hot-toast";
 
 const AddShows = () => {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import MovieCard from "../components/MovieCard";
-import Loading from "../components/Loading";
-import BlurCircle from "../components/BlurCircle";
-import api from "../utils/api";
+import MovieCard from "@/components/movies/MovieCard";
+import BlurCircle from "@/components/common/BlurCircle";
+import Loading from "@/components/common/Loading";   // nếu cần
+import api from "@/utils/api";
 
 export default function Upcoming() {
   const [movies, setMovies] = useState([]);

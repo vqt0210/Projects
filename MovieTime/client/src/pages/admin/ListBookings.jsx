@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Loading from "../../components/Loading";
-import Title from "../../components/admin/Title";
+import Loading from "../../components/common/Loading";
+import Title from "../../components/admin/layout/Title";
 import { dateFormat } from "../../lib/dateFormat";
 import { useAppContext } from "../../context/AppContext";
 import { authorizedApi } from "../../utils/api";

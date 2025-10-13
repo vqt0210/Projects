@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import BlurCircle from "../components/BlurCircle";
+import BlurCircle from "@/components/common/BlurCircle";
 import {
   ArrowRightIcon,
   Heart,
@@ -8,13 +8,13 @@ import {
   StarIcon,
   XIcon,
 } from "lucide-react";
-import timeFormat from "../lib/TimeFormat";
-import DateSelect from "../components/DateSelect";
-import MovieCard from "../components/MovieCard";
-import Loading from "../components/Loading";
-import { useAppContext } from "../context/AppContext";
+import MovieCard from "@/components/movies/MovieCard";
+import Loading from "@/components/common/Loading";
+import DateSelect from "@/components/admin/utils/DateSelect";
+import timeFormat from "@/lib/timeFormat";
+import { useAppContext } from "@/context/AppContext";
 import toast from "react-hot-toast";
-import api from "../utils/api";
+import api from "@/utils/api";
 
 const MovieDetails = () => {
   const navigate = useNavigate();

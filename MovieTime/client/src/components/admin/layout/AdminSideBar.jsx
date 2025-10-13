@@ -1,5 +1,5 @@
 import { useUser } from "@clerk/clerk-react";
-import { assets } from '../../assets/assets'
+import { assets } from '@/assets/assets'
 import { LayoutDashboardIcon, ListCollapseIcon, ListIcon, PlusSquareIcon, UsersIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 

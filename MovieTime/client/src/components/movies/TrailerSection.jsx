@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { dummyTrailers } from '../assets/assets';
-import BlurCircle from './BlurCircle';
+import { dummyTrailers } from '@/assets/assets';
+import BlurCircle from '@/components/common/BlurCircle';
 import { PlayCircleIcon } from 'lucide-react';
 import { Film } from 'lucide-react'
 const TrailerSection = () => {

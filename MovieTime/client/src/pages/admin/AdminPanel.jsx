@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { authorizedApi } from "../../utils/api";
 import { Shield, ShieldOff, Star, Trash2 } from "lucide-react";
-import Title from "../../components/admin/Title";
-import BlurCircle from "../../components/BlurCircle";
-import Loading from "../../components/Loading";
+import Title from "@/components/admin/layout/Title";
+import BlurCircle from "@/components/common/BlurCircle";
+import Loading from "@/components/common/Loading";
 import { toast } from "react-hot-toast";
-import { useAppContext } from "../../context/AppContext";
-import { CopyTokenButton } from "../../components/admin/CopyToken";
+import { useAppContext } from "@/context/AppContext";
+import { CopyTokenButton } from "@/components/admin/utils/CopyToken";
 
 const AdminPanel = () => {
   const { getToken, user: currentUser, isAdmin, isCheckingAdmin, navigate } =

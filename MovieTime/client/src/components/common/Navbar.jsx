@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { assets } from "../assets/assets";
+import { assets } from "@/assets/assets";
 import {
   MenuIcon,
   SearchIcon,
@@ -11,9 +11,9 @@ import {
   Star,
   HeartIcon,
 } from "lucide-react";
-import UserSection from "./UserSection";
-import { useAppContext } from "../context/AppContext";
-import SearchPanel from "./SearchPanel";
+import UserSection from "@/components/user/UserSection";
+import { useAppContext } from "@/context/AppContext";
+import SearchPanel from "@/components/user/SearchPanel";
 
 
 const navItems = [

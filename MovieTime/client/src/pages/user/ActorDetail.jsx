@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useAppContext } from "../context/AppContext";
-import Loading from "../components/Loading";
-import MovieCard from "../components/MovieCard";
+import MovieCard from "@/components/movies/MovieCard";
+import Loading from "@/components/common/Loading";
+import { useAppContext } from "@/context/AppContext";
 
 export default function ActorDetail() {
   const { id } = useParams();
