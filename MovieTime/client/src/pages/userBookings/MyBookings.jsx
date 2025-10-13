@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Loading from "@/components/common/Loading";
 import BlurCircle from "@/components/common/BlurCircle";
-import timeFormat from "@/lib/TimeFormat";
+import timeFormat from "@/lib/timeFormat";
 import { dateFormat } from "@/lib/dateFormat";
 import { useAppContext } from "@/context/AppContext";
 import { useClerk, useUser } from "@clerk/clerk-react";
