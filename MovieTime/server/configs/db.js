@@ -1,16 +1,15 @@
 import mongoose from "mongoose";
 
-const connectDB = async () =>{
+const connectDB = async () => {
   try {
-    // Khi kết nối thành công thì mongoose phát ra event 'connected'
-    mongoose.connection.on('connected', ()=> console.log('Database connected'));
+    if (mongoose.connection.readyState >= 1) return;
 
-    // Thực hiện kết nối tới MongoDB
-    await mongoose.connect(`${process.env.MONGODB_URI}/movietime`)
+    await mongoose.connect(`${process.env.MONGODB_URI}/movietime`);
+    console.log("MongoDB connected successfully");
   } catch (error) {
-    // Nếu có lỗi khi kết nối thì in ra
-    console.log(error.message);
+    console.error("MongoDB connection error:", error.message);
+    throw error;
   }
-}
+};
 
 export default connectDB;
