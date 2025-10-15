@@ -425,55 +425,53 @@ export const updateShow = async (req, res) => {
 export const deleteShow = async (req, res) => {
   try {
     const { id } = req.params;
+    const forceDelete = Boolean(req.body.force); // thêm flag force
     const show = await Show.findById(id).populate("movie");
+
     if (!show) {
       return res
         .status(404)
         .json({ success: false, message: "Show not found" });
     }
 
-    // Kiểm tra xem có người đặt chưa
     const bookings = await Booking.find({ show: id, isPaid: true });
 
-    if (bookings.length > 0) {
-      // Gửi email thông báo hủy suất chiếu
-      for (const booking of bookings) {
-        try {
-          const user = await clerkClient.users.getUser(booking.userId);
-          const email = user.emailAddresses?.[0]?.emailAddress;
-          if (!email) continue;
-
-          await sendEmail({
-            to: email,
-            subject: `Your movie show has been canceled `,
-            body: cancelShowEmail({
-              user: {
-                name: user.firstName || user.username || "Movie lover",
-              },
-              movieTitle: show.movie.title,
-              showDateTime: show.showDateTime,
-              supportLink: "https://www.teasonmike.io.vn",
-            }),
-          });
-
-          console.log(`Canceled show email sent to ${email}`);
-        } catch (err) {
-          console.warn(
-            `Failed to email user ${booking.userId}:`,
-            err.message
-          );
-        }
-      }
-
+    // Nếu có người đặt mà không bật force
+    if (bookings.length > 0 && !forceDelete) {
       return res.status(400).json({
         success: false,
-        message:
-          "Cannot delete show — users already booked. Emails sent to affected users.",
+        message: "Cannot delete show — users already booked",
       });
     }
 
+    // Nếu force=true, gửi email hủy cho người dùng
+    if (bookings.length > 0 && force) {
+      for (const booking of bookings) {
+        const user = await User.findById(booking.user);
+        if (!user?.email) continue;
+
+        await sendEmail({
+          to: user.email,
+          subject: `Show Cancelled: ${show.movie.title}`,
+          body: cancelShowEmail({
+            user,
+            movieTitle: show.movie.title,
+            showDateTime: show.showDateTime,
+            supportLink: "https://www.teasonmike.io.vn",
+          }),
+        });
+        console.log(`Email sent to ${user.email} for cancelled show ${show.movie.title}`);
+      }
+    }
+
+    // Xoá show sau khi thông báo
     await show.deleteOne();
-    res.json({ success: true, message: "Show deleted successfully" });
+    res.json({
+      success: true,
+      message: bookings.length
+        ? "Show deleted and users notified."
+        : "Show deleted successfully.",
+    });
   } catch (error) {
     console.error("deleteShow error:", error);
     res.status(500).json({ success: false, message: error.message });
