@@ -9,8 +9,13 @@ import { useAppContext } from "@/context/AppContext";
 import { CopyTokenButton } from "@/components/admin/utils/CopyToken";
 
 const AdminPanel = () => {
-  const { getToken, user: currentUser, isAdmin, isCheckingAdmin, navigate } =
-    useAppContext();
+  const {
+    getToken,
+    user: currentUser,
+    isAdmin,
+    isCheckingAdmin,
+    navigate,
+  } = useAppContext();
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +24,6 @@ const AdminPanel = () => {
   const [loadingUserId, setLoadingUserId] = useState(null);
   const [currentUserWithRole, setCurrentUserWithRole] = useState(null);
 
-  // Chờ Clerk & kiểm tra quyền admin xong
-  if (isCheckingAdmin) return <Loading text="Checking permission..." />;
-
-  // Nếu không phải admin → quay về trang chủ (tránh 403)
   useEffect(() => {
     if (!isCheckingAdmin && !isAdmin) {
       toast.dismiss();
@@ -31,13 +32,13 @@ const AdminPanel = () => {
     }
   }, [isCheckingAdmin, isAdmin, navigate]);
 
-  // Fetch danh sách user (chỉ khi đã xác định là admin)
+  // Fetch danh sách user
   const fetchUsers = async () => {
     try {
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.get("/api/admin/users");
       setUsers(data.users || []);
-    } catch (err) {
+    } catch {
       setError("Failed to fetch users");
     } finally {
       setLoading(false);
@@ -45,12 +46,10 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    if (currentUser && isAdmin) {
-      fetchUsers();
-    }
+    if (currentUser && isAdmin) fetchUsers();
   }, [currentUser, getToken, isAdmin]);
 
-  // Fetch thông tin current user (để biết role)
+  // Fetch thông tin current user (để xác định vai trò)
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -64,12 +63,13 @@ const AdminPanel = () => {
     if (isAdmin) fetchCurrentUser();
   }, [getToken, isAdmin]);
 
-  // Update role
   const handleRoleChange = async (userId, newRole) => {
     setLoadingUserId(userId);
     try {
       const authApi = await authorizedApi(getToken);
-      await authApi.patch(`/api/admin/update-role/${userId}`, { role: newRole });
+      await authApi.patch(`/api/admin/update-role/${userId}`, {
+        role: newRole,
+      });
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
       );
@@ -83,7 +83,6 @@ const AdminPanel = () => {
     }
   };
 
-  // Delete user
   const handleDeleteUser = async (userId) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     setPageLoading(true);
@@ -93,16 +92,16 @@ const AdminPanel = () => {
       if (data.success) {
         toast.success("User deleted successfully");
         setUsers((prev) => prev.filter((u) => u.id !== userId));
-      } else {
-        toast.error(data.message || "Failed to delete user");
-      }
-    } catch (err) {
-      console.error(err);
+      } else toast.error(data.message || "Failed to delete user");
+    } catch {
       toast.error("Error deleting user");
     } finally {
       setPageLoading(false);
     }
   };
+  if (isCheckingAdmin) {
+    return <Loading text="Checking permission..." />;
+  }
 
   if (loading) return <Loading text="Loading users..." />;
 
@@ -114,9 +113,20 @@ const AdminPanel = () => {
     <>
       {pageLoading && <Loading text="Updating role..." />}
       <Title text1="Admin" text2="User Management" />
-      <div className="my-4">
-        <CopyTokenButton />
-      </div>
+
+      {/* ==== Admin Access Card (DEV only) ==== */}
+      {import.meta.env.MODE === "development" && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 text-white">
+          <h2 className="text-lg font-semibold mb-2">Admin Access</h2>
+          <p className="text-sm mb-3 opacity-80">
+            Use this token for <strong>development</strong> and API testing
+            only.
+          </p>
+          <CopyTokenButton />
+        </div>
+      )}
+
+      {/* ==== Users List ==== */}
       <div className="relative flex flex-col mt-6 bg-primary/10 border border-primary/20 rounded-lg p-6">
         <BlurCircle top="-100px" left="0" />
         {error ? (
@@ -146,6 +156,7 @@ const AdminPanel = () => {
                     </div>
                   </div>
 
+                  {/* Role badges + actions */}
                   <div className="flex items-center gap-3 mt-3 md:mt-0">
                     <span
                       className={`px-3 py-1 text-xs font-medium rounded-full ${
