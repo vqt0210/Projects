@@ -13,7 +13,7 @@ export const isAdmin = async (req, res) => {
 
 // API to get dashboard data
 
-// === API: Get Admin Dashboard Data ===
+// API: Get Admin Dashboard Data
 export const getDashboardData = async (req, res) => {
   try {
     const bookings = await Booking.find({ isPaid: true });
@@ -280,7 +280,11 @@ export const updateUserRole = async (req, res) => {
       privateMetadata: { role },
     });
     if (role === "user") {
-      await clerkClient.users.revokeSessions(id);
+      try {
+        await revokeAllUserSessions(id);
+      } catch (err) {
+        console.warn("Failed to revoke Clerk sessions:", err.message);
+      }
     }
 
     res.json({ success: true, message: `Role updated to ${role}` });
@@ -445,7 +449,7 @@ export const deleteShow = async (req, res) => {
     }
 
     // Nếu force=true, gửi email hủy cho người dùng
-    if (bookings.length > 0 && force) {
+    if (bookings.length > 0 && forceDelete) {
       for (const booking of bookings) {
         const user = await User.findById(booking.user);
         if (!user?.email) continue;
@@ -460,7 +464,9 @@ export const deleteShow = async (req, res) => {
             supportLink: "https://www.teasonmike.io.vn",
           }),
         });
-        console.log(`Email sent to ${user.email} for cancelled show ${show.movie.title}`);
+        console.log(
+          `Email sent to ${user.email} for cancelled show ${show.movie.title}`
+        );
       }
     }
 
@@ -477,3 +483,26 @@ export const deleteShow = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+async function revokeAllUserSessions(userId) {
+  try {
+    const sessionsResponse = await clerkClient.sessions.getSessionList({ userId });
+    const sessions = sessionsResponse.data || []; 
+    
+    if (!sessions.length) {
+      console.log(`No active sessions found for user ${userId}`);
+      return;
+    }
+
+    for (const sess of sessions) {
+      try {
+        await clerkClient.sessions.revokeSession(sess.id);
+        console.log(`Revoked session ${sess.id} for user ${userId}`);
+      } catch (err) {
+        console.warn("Failed to revoke session", sess.id, err.message);
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching sessions for user:", userId, err.message);
+  }
+}
