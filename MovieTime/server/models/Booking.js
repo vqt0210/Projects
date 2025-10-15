@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema({
   userId: {type: String, required: true, ref: 'User'},
-  show: {type: String, required: true, ref: 'Show'},
+  show: { type: mongoose.Schema.Types.ObjectId, ref: "Show", required: true },
   amount: {type: Number, required: true},
   bookedSeats: {type: Array, required: true},
   isPaid: {type: Boolean, default: false},
