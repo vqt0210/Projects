@@ -1,30 +1,46 @@
-// src/components/admin/CopyTokenButton.jsx
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useState } from "react";
+import { ClipboardIcon, CheckIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
-export const CopyTokenButton = () => {
-  const { getToken } = useAuth(); // useAuth provides getToken
-  const { user } = useUser(); // optional, only if you need user info
+export const CopyTokenButton = ({ token }) => {
+  const [copied, setCopied] = useState(false);
 
   const handleCopyToken = async () => {
-    if (!user) return alert("Not logged in");
-
     try {
-      const token = await getToken({ skipCache: true });
+      if (!document.hasFocus()) {
+        window.focus(); // 🔧 focus lại document nếu bị mất
+      }
+
       await navigator.clipboard.writeText(token);
+      setCopied(true);
       toast.success("Token copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to get token");
+      console.error("Clipboard copy failed:", err);
+
+      // fallback: dùng cách cũ nếu Clipboard API fail
+      const textArea = document.createElement("textarea");
+      textArea.value = token;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        toast.success("Token copied (fallback)");
+      } catch (fallbackErr) {
+        toast.error("Clipboard unavailable");
+      } finally {
+        document.body.removeChild(textArea);
+      }
     }
   };
 
   return (
     <button
       onClick={handleCopyToken}
-      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition cursor-pointer"
+      className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition cursor-pointer"
     >
-      Get Admin Token
+      {copied ? <CheckIcon size={16} /> : <ClipboardIcon size={16} />}
+      {copied ? "Copied!" : "Copy Token"}
     </button>
   );
 };
