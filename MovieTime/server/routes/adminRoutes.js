@@ -1,6 +1,6 @@
 import express from "express";
 import { protectAdmin } from "../middleware/auth.js";
-import { getAllBookings, getAllShows, getDashboardData, isAdmin, getUsers, updateUserRole, deleteUser, deleteShow } from "../controllers/adminController.js";
+import { getAllBookings, getAllShows, getDashboardData, isAdmin, getUsers, updateUserRole, deleteUser, deleteShow, updateShow } from "../controllers/adminController.js";
 
 const adminRouter = express.Router();
 
@@ -14,6 +14,7 @@ adminRouter.get("/users", getUsers);
 adminRouter.patch("/update-role/:id", updateUserRole);
 adminRouter.delete("/delete-user/:userId", deleteUser);
 adminRouter.delete("/delete-show/:id", deleteShow);
+adminRouter.patch("/update-show/:id", updateShow);
 
 
 export default adminRouter;
