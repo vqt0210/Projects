@@ -20,7 +20,14 @@ export const getDashboardData = async (req, res) => {
     const activeShows = await Show.find({
       showDateTime: { $gte: new Date() },
     }).populate("movie");
-    const totalUser = await User.countDocuments();
+    const { data: clerkUsers } = await clerkClient.users.getUserList({
+      limit: 500,
+    });
+    const totalUser = clerkUsers.length;
+    const thisMonth = new Date().getMonth();
+    const newUsersThisMonth = clerkUsers.filter(
+      (u) => new Date(u.createdAt).getMonth() === thisMonth
+    ).length;
 
     const totalBookings = bookings.length;
     const totalRevenue = bookings.reduce((acc, b) => acc + (b.amount || 0), 0);
@@ -154,6 +161,7 @@ export const getDashboardData = async (req, res) => {
       totalRevenue,
       activeShows,
       totalUser,
+      newUsersThisMonth,
       revenueByMonth: formattedRevenueByMonth,
       ticketsByMovie,
       revenueByGenre,
@@ -347,13 +355,16 @@ export const updateShow = async (req, res) => {
     // Tìm show
     const show = await Show.findById(id).populate("movie");
     if (!show)
-      return res.status(404).json({ success: false, message: "Show not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Show not found" });
 
     // Không set giờ quá khứ
     if (showDateTime && new Date(showDateTime) < new Date()) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Show time cannot be set in the past" });
+      return res.status(400).json({
+        success: false,
+        message: "Show time cannot be set in the past",
+      });
     }
 
     // Kiểm tra booking
@@ -499,9 +510,11 @@ export const deleteShow = async (req, res) => {
 
 async function revokeAllUserSessions(userId) {
   try {
-    const sessionsResponse = await clerkClient.sessions.getSessionList({ userId });
-    const sessions = sessionsResponse.data || []; 
-    
+    const sessionsResponse = await clerkClient.sessions.getSessionList({
+      userId,
+    });
+    const sessions = sessionsResponse.data || [];
+
     if (!sessions.length) {
       console.log(`No active sessions found for user ${userId}`);
       return;

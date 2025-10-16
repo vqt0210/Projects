@@ -28,19 +28,14 @@ import {
   Line,
   LabelList,
 } from "recharts";
-import toast from "react-hot-toast";
 import EditShows from "./EditShows";
 
 const Dashboard = () => {
-  const { getToken, user, image_base_url } = useAppContext();
+  const { getToken, user } = useAppContext();
   const currency = import.meta.env.VITE_CURRENCY;
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editingShow, setEditingShow] = useState(null);
-  const [deletingShow, setDeletingShow] = useState(null);
-  const [newTime, setNewTime] = useState("");
-  const [newPrice, setNewPrice] = useState("");
 
   const fetchDashboardData = async () => {
     try {
@@ -87,6 +82,11 @@ const Dashboard = () => {
       icon: PlayCircleIcon,
     },
     { title: "Total Users", value: totalUser || 0, icon: UsersIcon },
+    {
+      title: "New Users (This Month)",
+      value: dashboardData.newUsersThisMonth || 0,
+      icon: UsersIcon,
+    },
   ];
 
   return (

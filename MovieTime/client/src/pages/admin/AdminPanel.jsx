@@ -222,7 +222,7 @@ const AdminPanel = () => {
                           user.role === "admin")
                       }
                       onClick={() => handleDeleteUser(user.id)}
-                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 ${
+                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 cursor-pointer ${
                         !isSuperAdmin ||
                         isCurrentUser ||
                         (currentUserRole !== "super-admin" &&
