@@ -7,6 +7,10 @@ export const assets = {
     profile_pic:"/assets/profile_pic.jpg",
     title: "/assets/title.svg",
     demonIcon: "/assets/demonIcon.svg",
+    aotIcon: "/assets/aotIcon.png",
+    jujutsuIcon: "/assets/jujutsuIcon.png",
+    spiderIcon: "/assets/spiderIcon.png",
+    marvelLogo: "/assets/marvelLogo.svg"
 }
 
 export const dummyTrailers = [

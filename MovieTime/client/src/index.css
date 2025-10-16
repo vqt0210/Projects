@@ -27,29 +27,50 @@ body {
 @font-face {
   font-family: 'BloodCrow';
   src: url('/fonts/bloodcrow.ttf') format('truetype');
-  font-weight: normal;
+  font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'BloodCrow';
   src: url('/fonts/bloodcrows.ttf') format('truetype');
-  font-weight: bold;
+  font-weight: 700;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'BloodCrow';
   src: url('/fonts/bloodcrowi.ttf') format('truetype');
-  font-weight: normal;
+  font-weight: 400;
   font-style: italic;
 }
 
 @font-face {
   font-family: 'BloodCrow';
   src: url('/fonts/bloodcrowsi.ttf') format('truetype');
-  font-weight: bold;
+  font-weight: 700;
   font-style: italic;
+}
+@font-face {
+  font-family: 'BloodCrow';
+  src: url('/fonts/BloodCrow-GdXg.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'JJKFont';
+  src: url('/fonts/JujutsuKaisen.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'AOTFont';
+  src: url('/fonts/Aot.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'SpiderFont';
+  src: url('/fonts/SpiderMan.ttf') format('truetype');
 }
 
 
@@ -131,3 +152,9 @@ input::-webkit-inner-spin-button {
   letter-spacing: -0.01em;
   font-size: clamp(1.05rem, 2vw, 1.25rem);
 }
+
+
+
+
+
+
