@@ -30,6 +30,7 @@ export const searchMoviesAndActors = async (req, res) => {
 
     // Tìm tất cả diễn viên trùng tên từ các phim khớp
     let matchedActors = [];
+    
     if (actorMovies.length > 0) {
       const seenIds = new Set();
       actorMovies.forEach((movie) => {
@@ -39,6 +40,21 @@ export const searchMoviesAndActors = async (req, res) => {
             matchedActors.push(actor);
           }
         });
+      });
+    }
+    
+    matchedActors = matchedActors.slice(0, 5);
+    console.log({
+      movies: movies.length,
+      actorMovies: actorMovies.length,
+      matchedActors: matchedActors.length,
+    });
+    if (movies.length > 0 && actorMovies.length > 0) {
+      return res.json({
+        type: "both",
+        keyword: q,
+        movies,
+        profiles: matchedActors,
       });
     }
 
