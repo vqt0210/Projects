@@ -27,7 +27,7 @@ export default function EditShows({ shows, refreshDashboard }) {
         payload
       );
       if (data.success) {
-        toast.success("✅ Show updated successfully!");
+        toast.success("Show updated successfully!");
         refreshDashboard();
         setEditingShow(null);
       } else toast.error(data.message);

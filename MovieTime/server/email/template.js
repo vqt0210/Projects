@@ -1,9 +1,13 @@
 // ==== 🎬 Shared Base Layout ==== //
-const BASE_HEADER = (logoUrl = "https://www.teasonmike.io.vn/assets/clock.svg") => `
-  <div style="background: linear-gradient(90deg, #0b1220, #1e1b4b); padding: 24px; text-align: center;">
-    <img src="${logoUrl}" alt="MovieTime" style="width: 50px; height: 50px; margin-bottom: 10px;" />
-    <h1 style="margin: 0; color: #F84565; font-size: 24px;">🎬 MovieTime</h1>
-    <p style="color: #e5e7eb; font-size: 14px;">Your Movie Booking Platform</p>
+const BASE_HEADER = () => `
+  <div style="background: linear-gradient(90deg, #0b1220, #1e1b4b); 
+              padding: 24px; text-align: center;">
+    <h1 style="margin: 0; color: #F84565; font-size: 24px;">
+      🎬 MovieTime
+    </h1>
+    <p style="color: #e5e7eb; font-size: 14px;">
+      Your Movie Booking Platform
+    </p>
   </div>
 `;
 
@@ -30,8 +34,14 @@ export const bookingConfirmationEmail = ({
   <div style="padding: 24px; color: #111827; line-height: 1.7;">
     <h2 style="color: #F84565;">Hi ${user.name},</h2>
     <p>Your booking for <strong>${movieTitle}</strong> is confirmed! 🎬</p>
-    <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</p>
-    <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</p>
+    <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</p>
+    <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</p>
     <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
     <div style="margin: 20px 0; text-align: center;">
       <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Booking</a>
@@ -55,8 +65,13 @@ export const showReminderEmail = ({
     <h2 style="color: #F84565;">Hello ${user.name},</h2>
     <p>This is a friendly reminder that your movie:</p>
     <h3 style="color: #F84565;">"${movieTitle}"</h3>
-    <p>is scheduled for <strong>${new Date(showDateTime).toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</strong> 
-    at <strong>${new Date(showDateTime).toLocaleTimeString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</strong>.</p>
+    <p>is scheduled for <strong>${new Date(showDateTime).toLocaleDateString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</strong> 
+    at <strong>${new Date(showDateTime).toLocaleTimeString("en-US", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    })}</strong>.</p>
     <p>Get ready and enjoy the show! 🍿</p>
   </div>
   ${BASE_FOOTER(supportLink)}
@@ -88,15 +103,21 @@ export const showTimeChangedEmail = ({
     <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
       <p><strong style="color: #6b7280;">Old Showtime:</strong><br>
         <span style="text-decoration: line-through; color: #9ca3af;">
-          ${new Date(oldShowDateTime).toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}
+          ${new Date(oldShowDateTime).toLocaleString("en-US", {
+            timeZone: "Asia/Ho_Chi_Minh",
+          })}
         </span></p>
       <p><strong style="color: #F84565;">New Showtime:</strong><br>
         <span style="font-size: 17px; color: #16a34a; font-weight: bold;">
-          ${new Date(newShowDateTime).toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}
+          ${new Date(newShowDateTime).toLocaleString("en-US", {
+            timeZone: "Asia/Ho_Chi_Minh",
+          })}
         </span></p>
     </div>
 
-    <p>We apologize for any inconvenience and appreciate your understanding 💜</p>
+    <p>We apologize for any inconvenience and appreciate your understanding 
+      <span style="color:#F84565;">❤️</span>
+    </p>
   </div>
   ${BASE_FOOTER(supportLink)}
 </div>
@@ -114,7 +135,10 @@ export const cancelShowEmail = ({
   <div style="padding: 24px; color: #111827; line-height: 1.7;">
     <h2 style="color: #F84565;">Hello ${user.name || "Movie lover"},</h2>
     <p>We regret to inform you that your show for <strong>${movieTitle}</strong> has been <strong>canceled</strong>.</p>
-    <p><strong>Original Time:</strong> ${new Date(showDateTime).toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</p>
+    <p><strong>Original Time:</strong> ${new Date(showDateTime).toLocaleString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</p>
     <p>We sincerely apologize for the inconvenience. Refunds will be processed automatically within 1–3 business days.</p>
     <p>If you have any questions, please <a href="${supportLink}" style="color: #F84565; text-decoration: none;">contact support</a>.</p>
   </div>

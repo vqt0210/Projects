@@ -213,7 +213,7 @@ export const getAllBookings = async (req, res) => {
 
           return { ...booking.toObject(), user: userInfo };
         } catch (err) {
-          console.warn(`⚠️ Missing or deleted user for booking ${booking._id}`);
+          console.warn(`Missing or deleted user for booking ${booking._id}`);
           return {
             ...booking.toObject(),
             user: { name: "Unknown user", email: "" },
@@ -344,27 +344,23 @@ export const updateShow = async (req, res) => {
     const { id } = req.params;
     const { showDateTime, showPrice } = req.body;
 
-    // Lấy show cần cập nhật
+    // Tìm show
     const show = await Show.findById(id).populate("movie");
-    if (!show) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Show not found" });
-    }
+    if (!show)
+      return res.status(404).json({ success: false, message: "Show not found" });
 
-    // Kiểm tra thời gian hợp lệ (không set về quá khứ)
+    // Không set giờ quá khứ
     if (showDateTime && new Date(showDateTime) < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: "Show time cannot be set in the past",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Show time cannot be set in the past" });
     }
 
-    // Lấy danh sách bookings để kiểm tra
+    // Kiểm tra booking
     const bookings = await Booking.find({ show: id });
     const oldShowDateTime = show.showDateTime;
 
-    // Không cho đổi giá nếu đã có người đặt
+    // Không đổi giá khi có người đặt
     if (bookings.length > 0 && showPrice) {
       return res.status(400).json({
         success: false,
@@ -372,24 +368,45 @@ export const updateShow = async (req, res) => {
       });
     }
 
-    // Cập nhật dữ liệu
+    // Cập nhật
     if (showPrice) show.showPrice = showPrice;
     if (showDateTime) show.showDateTime = new Date(showDateTime);
     await show.save();
 
-    // Nếu có người đặt và đổi giờ => gửi email thông báo qua Resend
-    if (bookings.length > 0 && showDateTime) {
-      console.log(
-        `Sending showtime update emails for "${show.movie.title}"...`
-      );
+    // Xác định môi trường
+    const isLocal = process.env.NODE_ENV !== "production";
+    const imageBase = "https://image.tmdb.org/t/p/w500";
+    const fallbackPoster = isLocal
+      ? "http://localhost:5173/assets/fallBack.jpg"
+      : "https://www.teasonmike.io.vn/assets/fallBack.jpg";
 
+    //Lấy posterUrl
+    let posterUrl = fallbackPoster;
+    if (show.movie.poster_path) {
+      posterUrl = `${imageBase}${show.movie.poster_path}`;
+    } else if (show.movie.tmdb_id) {
+      try {
+        const resTMDB = await fetch(
+          `https://api.themoviedb.org/3/movie/${show.movie.tmdb_id}?api_key=YOUR_TMDB_API_KEY`
+        );
+        const data = await resTMDB.json();
+        if (data.poster_path) {
+          posterUrl = `${imageBase}${data.poster_path}`;
+        }
+      } catch {
+        console.warn("Could not fetch poster from TMDB");
+      }
+    }
+
+    // Gửi email nếu có người đặt và đổi giờ
+    if (bookings.length > 0 && showDateTime) {
+      console.log(`Sending update emails for "${show.movie.title}"...`);
       await Promise.all(
         bookings.map(async (booking) => {
           try {
             const user = await clerkClient.users.getUser(booking.userId);
             const email = user.emailAddresses?.[0]?.emailAddress;
-            if (!email)
-              return console.warn(`User ${booking.userId} has no email`);
+            if (!email) return;
 
             await sendEmail({
               to: email,
@@ -401,24 +418,20 @@ export const updateShow = async (req, res) => {
                 movieTitle: show.movie.title,
                 oldShowDateTime,
                 newShowDateTime: showDateTime,
-                posterUrl: show.movie.poster_path
-                  ? `${process.env.IMAGE_BASE_URL}${show.movie.poster_path}`
-                  : null,
-                supportLink: "https://www.teasonmike.io.vn",
+                posterUrl,
+                supportLink: isLocal
+                  ? "http://localhost:5173"
+                  : "https://www.teasonmike.io.vn",
               }),
             });
-            console.log(`Sent update for "${show.movie.title}" → ${email}`);
+            console.log(`Email sent to ${email}`);
           } catch (err) {
-            console.warn(
-              `Failed to send email for booking ${booking._id}:`,
-              err.message
-            );
+            console.warn(`Failed email for ${booking._id}:`, err.message);
           }
         })
       );
     }
 
-    // Phản hồi về client
     res.json({ success: true, message: "Show updated successfully" });
   } catch (error) {
     console.error("updateShow error:", error);
