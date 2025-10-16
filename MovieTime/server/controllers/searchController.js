@@ -3,11 +3,13 @@ import Movie from "../models/Movie.js";
 export const searchMoviesAndActors = async (req, res) => {
   try {
     const { q } = req.query;
-
+    console.log(" Search query:", q);
     if (!q || q.trim().length < 2)
       return res.json({ type: "none", results: [] });
+    
+    const regex = new RegExp(q, "i");
 
-    // Ưu tiên dùng Atlas Search (nếu có index) ====
+    // Ưu tiên dùng Atlas Search (nếu có index) 
     const atlasResults = await Movie.aggregate([
       {
         $search: {
@@ -78,7 +80,7 @@ export const searchMoviesAndActors = async (req, res) => {
     }
 
     // Nếu không có Atlas Search hoặc lỗi → fallback Regex 
-    const regex = new RegExp(q, "i");
+
     const movies = await Movie.find({ title: regex })
       .limit(8)
       .select("title poster_path release_date casts genres");

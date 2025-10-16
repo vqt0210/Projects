@@ -11,7 +11,6 @@ export const isAdmin = async (req, res) => {
   res.json({ success: true, isAdmin: true });
 };
 
-// API to get dashboard data
 
 // API: Get Admin Dashboard Data
 export const getDashboardData = async (req, res) => {
