@@ -1,69 +1,112 @@
 import Movie from "../models/Movie.js";
 
-// Search theo từ khóa (movie title hoặc casts)
 export const searchMoviesAndActors = async (req, res) => {
   try {
     const { q } = req.query;
 
-    // Nếu người dùng chưa nhập gì, trả về rỗng
-    if (!q || q.trim() === "") {
+    if (!q || q.trim().length < 2)
       return res.json({ type: "none", results: [] });
+
+    // Ưu tiên dùng Atlas Search (nếu có index) ====
+    const atlasResults = await Movie.aggregate([
+      {
+        $search: {
+          index: "movie_search", // hoặc "default" nếu bạn để nguyên
+          compound: {
+            should: [
+              {
+                text: {
+                  query: q,
+                  path: "title",
+                  fuzzy: { maxEdits: 2 }, // cho phép sai chính tả nhẹ
+                },
+              },
+              {
+                text: {
+                  query: q,
+                  path: "casts.name",
+                  fuzzy: { maxEdits: 2 },
+                },
+              },
+            ],
+          },
+        },
+      },
+      { $limit: 15 },
+      {
+        $project: {
+          title: 1,
+          poster_path: 1,
+          release_date: 1,
+          casts: 1,
+          genres: 1,
+          score: { $meta: "searchScore" },
+        },
+      },
+    ]);
+
+    // Nếu Atlas Search ra kết quả
+    if (atlasResults.length > 0) {
+      const movies = atlasResults.slice(0, 8);
+      const matchedActors = [];
+
+      const seen = new Set();
+      movies.forEach((m) =>
+        m.casts?.forEach((c) => {
+          if (regex.test(c?.name) && !seen.has(c.id)) {
+            seen.add(c.id);
+            matchedActors.push(c);
+          }
+        })
+      );
+
+      const actors = matchedActors.slice(0, 5);
+
+      if (movies.length > 0 && actors.length > 0)
+        return res.json({ type: "both", keyword: q, movies, profiles: actors });
+
+      if (movies.length > 0)
+        return res.json({ type: "movie", keyword: q, results: movies });
+
+      if (actors.length > 0)
+        return res.json({
+          type: "actor",
+          keyword: q,
+          profiles: actors,
+          results: [],
+        });
     }
-    if (q.trim().length < 2) return res.json({ type: "none", results: [] });
 
-    // Regex không phân biệt hoa thường, tìm từ đầu hoặc giữa chuỗi
+    // Nếu không có Atlas Search hoặc lỗi → fallback Regex 
     const regex = new RegExp(q, "i");
-
-    // Tìm theo tiêu đề phim
     const movies = await Movie.find({ title: regex })
       .limit(8)
       .select("title poster_path release_date casts genres");
 
-    // Tìm theo tên diễn viên (trong mảng casts)
-    const actorMovies = await Movie.find({
-      "casts.name": { $regex: regex },
-    })
+    const actorMovies = await Movie.find({ "casts.name": regex })
       .limit(8)
-      .select(
-        "title poster_path release_date casts genres runtime vote_average"
-      );
+      .select("title poster_path release_date casts genres");
 
-    // Tìm tất cả diễn viên trùng tên từ các phim khớp
     let matchedActors = [];
-    
-    if (actorMovies.length > 0) {
-      const seenIds = new Set();
-      actorMovies.forEach((movie) => {
-        movie.casts.forEach((actor) => {
-          if (regex.test(actor.name) && !seenIds.has(actor.id)) {
-            seenIds.add(actor.id);
-            matchedActors.push(actor);
-          }
-        });
-      });
-    }
-    
-    matchedActors = matchedActors.slice(0, 5);
-    console.log({
-      movies: movies.length,
-      actorMovies: actorMovies.length,
-      matchedActors: matchedActors.length,
-    });
-    if (movies.length > 0 && actorMovies.length > 0) {
-      return res.json({
-        type: "both",
-        keyword: q,
-        movies,
-        profiles: matchedActors,
-      });
-    }
+    const seen = new Set();
+    actorMovies.forEach((m) =>
+      m.casts.forEach((c) => {
+        if (regex.test(c.name) && !seen.has(c.id)) {
+          seen.add(c.id);
+          matchedActors.push(c);
+        }
+      })
+    );
 
-    // Nếu tìm thấy phim → type=movie
+    matchedActors = matchedActors.slice(0, 5);
+
+    if (movies.length > 0 && matchedActors.length > 0)
+      return res.json({ type: "both", keyword: q, movies, profiles: matchedActors });
+
     if (movies.length > 0)
       return res.json({ type: "movie", keyword: q, results: movies });
 
-    // Nếu không có phim mà có diễn viên → type=actor
-    if (actorMovies.length > 0)
+    if (matchedActors.length > 0)
       return res.json({
         type: "actor",
         keyword: q,
@@ -71,7 +114,6 @@ export const searchMoviesAndActors = async (req, res) => {
         results: actorMovies,
       });
 
-    // Không có kết quả
     return res.json({ type: "none", keyword: q, results: [] });
   } catch (err) {
     console.error("Search error:", err);
