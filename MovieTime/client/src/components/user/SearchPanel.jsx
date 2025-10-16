@@ -150,7 +150,7 @@ export default function SearchPanel({ isOpen, onClose }) {
                 <p className="text-sm text-gray-400">Recent Searches</p>
                 <button
                   onClick={clearHistory}
-                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 className="w-3 h-3" /> Clear All
                 </button>

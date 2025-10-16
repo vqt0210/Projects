@@ -79,7 +79,7 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
                 navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
                 scrollTo(0, 0);
               }}
-              className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium"
+              className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
             >
               Buy Tickets
             </button>
