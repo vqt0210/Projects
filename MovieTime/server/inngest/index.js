@@ -178,21 +178,19 @@ const handlePaymentSuccess = inngest.createFunction(
     try {
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId)
-        .populate({ path: "show", populate: { path: "movie" } });
-
-      //Tìm user thủ công nếu userId là string
-      let user = null;
-      if (typeof booking.userId === "string") {
-        user = await User.findById(booking.userId);
-      } else {
-        user = booking.userId;
-      }
+        .populate({ path: "show", populate: { path: "movie" } })
+        .populate({ path: "userId", model: "User" }); 
 
       if (!booking) {
         await step.run("log missing booking", async () =>
           console.log(`[PAYMENT] Booking not found: ${bookingId}`)
         );
         return { success: false };
+      }
+
+      let user = booking?.userId;
+      if (!user?.email) {
+        user = await User.findById(booking.userId);
       }
 
       if (booking.status !== "PAID" || !booking.isPaid) {
@@ -202,7 +200,6 @@ const handlePaymentSuccess = inngest.createFunction(
         await booking.save();
       }
 
-      // Dùng email từ user tìm được
       if (user?.email) {
         await sendEmail({
           to: user.email,
@@ -216,7 +213,6 @@ const handlePaymentSuccess = inngest.createFunction(
             supportLink: `https://teasonmike.io.vn`,
           }),
         });
-
         console.log(`[EMAIL] Sent booking confirmation to ${user.email}`);
       } else {
         console.log(`[EMAIL] Skipped, user email not found`);
@@ -233,6 +229,7 @@ const handlePaymentSuccess = inngest.createFunction(
     }
   }
 );
+
 
 export const functions = [
   syncUserCreation,
