@@ -110,7 +110,9 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
       await show.save();
     }
 
-    await step.log(`Released seats for expired booking: ${bookingId}`);
+    await step.run("log expired booking", async () => {
+      console.log(`Released seats for expired booking: ${bookingId}`);
+    });
   }
 );
 
@@ -125,7 +127,7 @@ const sendBookingConfirmationEmail = inngest.createFunction(
       .populate({ path: "userId", model: "User" });
     if (!booking?.userId?.email) return;
     await sendEmail({
-      to: booking.userId.email, 
+      to: booking.userId.email,
       subject: `Booking Confirmation: "${booking.show.movie.title}"`,
       body: bookingConfirmationEmail({
         user: booking.userId,
@@ -208,17 +210,18 @@ const handlePaymentSuccess = inngest.createFunction(
         });
       }
 
-      await step.log(`[PAYMENT] Confirmed booking: ${bookingId}`);
+      await step.run("log payment success", async () => {
+        console.log(`[PAYMENT] Confirmed booking + email sent: ${bookingId}`);
+      });
       return { success: true };
     } catch (error) {
-      console.error(" Payment handler failed:", error);
-      await step.log(`Error in payment handler: ${error.message}`);
-      throw error; 
+      await step.run("log payment error", async () => {
+        console.error(`[PAYMENT ERROR] ${error.message}`);
+      });
+      throw error;
     }
   }
 );
-
-
 
 export const functions = [
   syncUserCreation,
