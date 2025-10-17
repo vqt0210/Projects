@@ -23,14 +23,8 @@ const MovieDetails = () => {
   const { id } = useParams();
   const [show, setShow] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
-  const {
-    shows,
-    user,
-    favoriteMovies,
-    image_base_url,
-    setFavoriteMovies,
-    toggleFavorite,
-  } = useAppContext();
+  const { shows, user, favoriteMovies, image_base_url, toggleFavorite } =
+    useAppContext();
   // Lọc ra các movie duy nhất
   const uniqueShows = [
     ...new Map(shows.map((show) => [show.movie._id, show])).values(),
@@ -71,9 +65,9 @@ const MovieDetails = () => {
   };
 
   const handleFavorite = async () => {
-  if (!user) return toast.error("Please login to proceed");
-  await toggleFavorite(id);
-};
+    if (!user) return toast.error("Please login to proceed");
+    await toggleFavorite(id);
+  };
 
   useEffect(() => {
     if (id) {
@@ -123,10 +117,10 @@ const MovieDetails = () => {
             {show.movie.release_date.split("-")[0]}{" "}
             {/*  Hàm split cắt chuỗi thành một mảng, dựa trên ký tự phân cách là "-"; [0]:Lấy phần tử đầu tiên trong mảng vừa tách ra */}
           </p>
-          <div className="flex flex-wrap items-center gap-4 mt-4 w-full">
+          <div className="flex flex-wrap items-center w-full gap-4 mt-4">
             <button
               onClick={handleWatchTrailer}
-              className={`flex items-center justify-center gap-2 py-3 text-sm font-medium transition bg-gray-800 rounded-md cursor-pointer hover:bg-gray-700 active:scale-95 ${
+              className={`flex items-center justify-center gap-2 py-3 text-sm font-medium transition bg-gray-800 rounded-full shadow-md cursor-pointer hover:bg-gray-700 active:scale-95 ${
                 isExpired ? "px-20 md:px-32" : "px-7"
               }`}
               style={{ flex: isExpired ? "1 1 90%" : "unset" }}
@@ -138,7 +132,7 @@ const MovieDetails = () => {
             {!isExpired && (
               <a
                 href="#dateSelect"
-                className="px-10 py-3 text-sm font-medium transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull active:scale-95"
+                className="px-10 py-3 text-sm font-medium transition rounded-full shadow-md cursor-pointer bg-primary hover:bg-primary-dull active:scale-95"
               >
                 Buy Tickets
               </a>
@@ -179,7 +173,7 @@ const MovieDetails = () => {
                   alt={cast.name}
                   className="object-cover w-20 h-20 rounded-full"
                 />
-                <p className="mt-3 text-xs font-medium hover:text-primary transition">
+                <p className="mt-3 text-xs font-medium transition hover:text-primary">
                   {cast.name}
                 </p>
               </div>
@@ -187,7 +181,13 @@ const MovieDetails = () => {
           </div>
         </div>
 
-        <DateSelect dateTime={show.dateTime} id={id} onExpired={setIsExpired} />
+        <div id="dateSelect">
+          <DateSelect
+            dateTime={show.dateTime}
+            id={id}
+            onExpired={setIsExpired}
+          />
+        </div>
 
         <p className="mt-20 mb-8 text-lg font-medium">You May Also Like</p>
         <div className="flex flex-wrap gap-8 max-sm:justify-center">
@@ -234,7 +234,7 @@ const MovieDetails = () => {
             />
             <button
               onClick={() => setShowTrailer(false)}
-              className="absolute right-0 text-2xl font-bold text-white -top-10 cursor-pointer"
+              className="absolute right-0 text-2xl font-bold text-white cursor-pointer -top-10"
             >
               <XIcon />
             </button>

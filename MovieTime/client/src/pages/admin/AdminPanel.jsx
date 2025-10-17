@@ -7,6 +7,8 @@ import Loading from "@/components/common/Loading";
 import { toast } from "react-hot-toast";
 import { useAppContext } from "@/context/AppContext";
 import { CopyTokenButton } from "@/components/admin/utils/CopyToken";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 
 const AdminPanel = () => {
   const {
@@ -84,7 +86,32 @@ const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const MySwal = withReactContent(Swal);
+
+    // Hiển thị popup xác nhận xóa
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: "This user will be permanently deleted!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#f84565",
+      cancelButtonColor: "#6b7280",
+      background: "#1e1e1e",
+      color: "#fff",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+        confirmButton:
+          "px-5 py-2 rounded-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all",
+        cancelButton:
+          "px-5 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 transition-all",
+      },
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Nếu người dùng xác nhận
     setPageLoading(true);
     try {
       const authApi = await authorizedApi(getToken);
@@ -99,6 +126,7 @@ const AdminPanel = () => {
       setPageLoading(false);
     }
   };
+
   if (isCheckingAdmin) {
     return <Loading text="Checking permission..." />;
   }

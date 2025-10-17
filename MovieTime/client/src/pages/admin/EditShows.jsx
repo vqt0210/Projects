@@ -2,15 +2,32 @@ import { useState } from "react";
 import { authorizedApi } from "@/utils/api";
 import { useAppContext } from "@/context/AppContext";
 import { dateFormat } from "@/lib/dateFormat";
-import { StarIcon, Clock, DollarSign } from "lucide-react";
+import { StarIcon, Clock, DollarSign, XIcon } from "lucide-react";
 import toast from "react-hot-toast";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DialogClose } from "@/components/ui/dialog";
+
+const MySwal = withReactContent(Swal);
 
 export default function EditShows({ shows, refreshDashboard }) {
   const { getToken, image_base_url } = useAppContext();
   const currency = import.meta.env.VITE_CURRENCY;
 
   const [editingShow, setEditingShow] = useState(null);
-  const [deletingShow, setDeletingShow] = useState(null);
   const [newTime, setNewTime] = useState("");
   const [newPrice, setNewPrice] = useState("");
 
@@ -38,37 +55,67 @@ export default function EditShows({ shows, refreshDashboard }) {
 
   // === Delete show ===
   const handleDelete = async (show, force = false) => {
-    try {
-      const api = await authorizedApi(getToken);
-      const { data } = await api.delete(
-        `/api/admin/delete-show/${show._id}`,
-        { data: { force } }
-      );
+  try {
+    // Hiển thị popup trước
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: `Delete "${show.movie.title}"? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f84565",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      background: "#1e1e1e",
+      color: "#fff",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+        confirmButton:
+          "px-5 py-2 rounded-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all",
+        cancelButton:
+          "px-5 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 transition-all",
+      },
+    });
 
-      if (data.success) {
-        toast.success(data.message);
-        refreshDashboard();
-        setDeletingShow(null);
-      } else if (data.message?.includes("users already booked")) {
-        // force confirm dialog
-        const confirmForce = window.confirm(
-          "⚠️ This show has active bookings.\nDo you want to cancel it and notify users?"
-        );
-        if (confirmForce) await handleDelete(show, true);
-      } else {
-        toast.error(data.message || "Error deleting show");
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error deleting show");
+    if (!result.isConfirmed) return;
+
+    // ✅ Tạo API sau khi người dùng xác nhận
+    const api = await authorizedApi(getToken);
+
+    const { data } = await api.delete(`/api/admin/delete-show/${show._id}`, {
+      data: { force },
+    });
+
+    if (data.success) {
+      toast.success(data.message);
+      refreshDashboard();
+    } else if (data.message?.includes("users already booked")) {
+      const forceResult = await MySwal.fire({
+        title: "⚠ Active Bookings Detected",
+        text: "This show has existing bookings. Cancel it and notify users?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#f84565",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Yes, force delete",
+        background: "#1e1e1e",
+        color: "#fff",
+      });
+
+      if (forceResult.isConfirmed) await handleDelete(show, true);
+    } else {
+      toast.error(data.message || "Error deleting show");
     }
-  };
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Error deleting show");
+  }
+};
 
   return (
     <div className="relative flex flex-wrap gap-6 mt-5 max-w-6xl">
       {shows?.map((show) => (
         <div
           key={show._id}
-          className="w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 hover:shadow-primary/20 transition duration-300"
+          className="w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 hover:shadow-primary/30 transition duration-300"
         >
           <img
             src={image_base_url + show.movie.poster_path}
@@ -98,138 +145,144 @@ export default function EditShows({ shows, refreshDashboard }) {
               {dateFormat(show.showDateTime)}
             </p>
 
-            {/* Edit & Delete Buttons */}
+            {/* Buttons */}
             <div className="flex justify-between mt-3">
-              <button
-                onClick={() => {
-                  setEditingShow(show);
-                  setNewTime("");
-                  setNewPrice("");
+              <Dialog
+                open={editingShow?._id === show._id}
+                onOpenChange={(open) => {
+                  if (!open) setEditingShow(null);
                 }}
-                className="px-3 py-1 text-sm bg-primary/80 hover:bg-primary text-white rounded cursor-pointer"
               >
-                ✏ Edit
-              </button>
-              <button
-                onClick={() => setDeletingShow(show)}
-                className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded cursor-pointer"
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="px-4 py-2 font-medium text-white bg-gradient-to-r from-primary to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all rounded-lg cursor-pointer"
+                    onClick={() => {
+                      setEditingShow(show);
+                      setNewTime("");
+                      setNewPrice("");
+                    }}
+                  >
+                    ✏ Edit
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent
+                  className="bg-[#111]/90 text-white border border-primary/30 
+      shadow-[0_0_30px_rgba(248,69,101,0.2)] sm:max-w-[440px]
+      backdrop-blur-xl rounded-2xl
+      data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90 data-[state=open]:duration-300 
+      data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-90 data-[state=closed]:duration-200"
+                >
+                  <DialogHeader>
+                    <div className="flex justify-between items-start border-b border-white/10 pb-3">
+                      <div>
+                        <DialogTitle className="text-primary font-semibold text-lg">
+                          Edit Show — {show.movie.title}
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-400 text-sm">
+                          Modify showtime or price below
+                        </DialogDescription>
+                      </div>
+
+                      <DialogClose asChild>
+                        <button
+                          className="text-gray-400 hover:text-white transition cursor-pointer"
+                          aria-label="Close"
+                        >
+                          <XIcon className="w-5 h-5" />
+                        </button>
+                      </DialogClose>
+                    </div>
+                  </DialogHeader>
+
+                  {/* Movie Preview */}
+                  <div className="flex items-center gap-3 mb-4 mt-4">
+                    <img
+                      src={image_base_url + show.movie.poster_path}
+                      alt={show.movie.title}
+                      className="w-16 h-20 rounded-lg object-cover border border-gray-700 shadow"
+                    />
+                    <div className="text-sm text-gray-300 space-y-1">
+                      <p>
+                        Current Time:{" "}
+                        <span className="text-primary">
+                          {dateFormat(show.showDateTime)}
+                        </span>
+                      </p>
+                      <p>
+                        Current Price:{" "}
+                        <span className="text-primary">
+                          {currency}{" "}
+                          {show.showPrice?.adult || show.showPrice || 0}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Inputs */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <Label className="text-gray-300 flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> New Showtime
+                      </Label>
+                      <Input
+                        type="datetime-local"
+                        value={newTime}
+                        onChange={(e) => setNewTime(e.target.value)}
+                        className="bg-gray-900/70 border border-gray-700 text-white placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
+                        placeholder="Select new date & time..."
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-gray-300 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" /> New Price
+                      </Label>
+                      <Input
+                        type="number"
+                        value={newPrice}
+                        onChange={(e) => setNewPrice(e.target.value)}
+                        placeholder={`Current: ${
+                          show.showPrice?.adult || show.showPrice || 0
+                        }`}
+                        className="bg-gray-900/70 border border-gray-700 text-white placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer buttons */}
+                  <DialogFooter className="flex justify-end mt-6 gap-3">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setEditingShow(null)}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg cursor-pointer transition-all"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-[0_0_10px_#10b981] text-white px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      onClick={handleUpdate}
+                    >
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Delete button */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDelete(show)}
+                className="px-4 py-2 font-medium bg-gray-800 hover:bg-red-600 hover:shadow-[0_0_10px_#ef4444] transition-all text-white rounded-lg cursor-pointer"
               >
                 🗑 Delete
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ))}
-
-      {/* === Edit Modal === */}
-      {editingShow && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
-          <div className="bg-gray-900 p-6 rounded-xl border border-primary/20 w-[420px] shadow-lg relative">
-            <h2 className="text-xl font-semibold mb-5 text-white text-center border-b border-gray-700 pb-2">
-              Edit Show — {editingShow.movie.title}
-            </h2>
-
-            {/* Show info */}
-            <div className="flex items-center gap-3 mb-4">
-              <img
-                src={image_base_url + editingShow.movie.poster_path}
-                alt={editingShow.movie.title}
-                className="w-16 h-20 rounded-lg object-cover border border-gray-700"
-              />
-              <div>
-                <p className="text-gray-300 text-sm">
-                  Current Time:{" "}
-                  <span className="text-primary">
-                    {dateFormat(editingShow.showDateTime)}
-                  </span>
-                </p>
-                <p className="text-gray-300 text-sm">
-                  Current Price:{" "}
-                  <span className="text-primary">
-                    {currency}{" "}
-                    {editingShow.showPrice?.adult ||
-                      editingShow.showPrice ||
-                      0}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Input Fields */}
-            <div className="space-y-4">
-              <div>
-                <label className="flex items-center gap-2 text-gray-400 text-sm mb-1">
-                  <Clock className="w-4 h-4" /> New Showtime
-                </label>
-                <input
-                  type="datetime-local"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-gray-400 text-sm mb-1">
-                  <DollarSign className="w-4 h-4" /> New Price
-                </label>
-                <input
-                  type="number"
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(e.target.value)}
-                  className="w-full p-2 rounded bg-gray-800 border border-gray-600 text-white focus:ring-2 focus:ring-primary/50 outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-between mt-6">
-              <button
-                onClick={() => setEditingShow(null)}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-white cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdate}
-                className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-white cursor-pointer"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* === Delete Modal === */}
-      {deletingShow && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
-          <div className="bg-gray-900 p-6 rounded-xl border border-gray-700 w-[400px] text-center shadow-lg">
-            <h2 className="text-xl font-semibold mb-3 text-red-400">
-              ⚠ Confirm Delete
-            </h2>
-            <p className="text-gray-300 mb-5">
-              Delete <strong>{deletingShow.movie.title}</strong>?  
-              <br />This action cannot be undone.
-            </p>
-
-            <div className="flex justify-around">
-              <button
-                onClick={() => setDeletingShow(null)}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-white cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deletingShow)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-white cursor-pointer"
-              >
-                🗑 Delete Show
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

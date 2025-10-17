@@ -7,6 +7,8 @@ import { clerkMiddleware } from "@clerk/express";
 import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest/index.js";
 import connectDB from "./configs/db.js";
+import http from "http";
+import { Server } from "socket.io";
 
 // Routes
 import showRouter from "./routes/showRoutes.js";
@@ -26,7 +28,7 @@ app.use(helmet());
 
 const PORT = process.env.PORT || 10000;
 const HOST = "0.0.0.0";
-const allowedOrigins = ["https://teasonmike.io.vn", "http://localhost:5173"];
+const allowedOrigins = ["https://teasonmike.io.vn", "http://localhost:5173", "https://www.teasonmike.io.vn",];
 
 app.use(
   cors({
@@ -74,11 +76,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Internal server error" });
 });
 
+// Create HTTP + Socket.IO server
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
+});
+
+// Gắn vào global để controller có thể emit
+global._io = io;
+
+// Khi client kết nối
+io.on("connection", (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  socket.on("disconnect", () => console.log(`Socket disconnected: ${socket.id}`));
+});
+
 // Start Server
 
-const server = app.listen(PORT, HOST, () =>
-  console.log(`Server listening at http://${HOST}:${PORT}`)
-);
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
+});
 server.keepAliveTimeout = 120000;
 server.headersTimeout = 120000;
 

@@ -22,17 +22,19 @@ export const stripeWebhooks = async (req, res) => {
   try {
     console.log("[WEBHOOK] type:", event.type);
 
+    // payment_intent.succeeded
+
     if (event.type === "payment_intent.succeeded") {
-      const pi = event.data.object;           // Stripe.PaymentIntent
-      let bookingId = pi?.metadata?.bookingId;
+      const pi = event.data.object;
+      const bookingId = pi?.metadata?.bookingId;
 
       if (!bookingId) {
-        console.warn("[WEBHOOK] PI succeeded but missing bookingId:", pi.id);
-        return res.json({ received: true });  // Không biết update booking nào -> bỏ qua
+        console.warn("[WEBHOOK] Missing bookingId in PaymentIntent:", pi.id);
+        return res.json({ received: true });
       }
 
       const upd = await Booking.updateOne(
-        { _id: bookingId },                    // không cần guard status nữa khi test
+        { _id: bookingId },
         {
           $set: {
             status: "PAID",
@@ -44,32 +46,41 @@ export const stripeWebhooks = async (req, res) => {
         }
       );
 
-      console.log("[WEBHOOK] PAID via PI:", {
-        bookingId,
-        matched: upd.matchedCount,
-        modified: upd.modifiedCount,
-      });
+      console.log("[WEBHOOK] PAID via PI:", bookingId, upd);
+
+      // Emit realtime event
+      if (global._io) {
+        global._io.emit("paymentUpdate", { bookingId });
+        console.log("Realtime emit (PI):", bookingId);
+      }
+
+      // Trigger Inngest background flow (email, logs, etc)
+      await inngest.send({ name: "app/payment.success", data: { bookingId } });
     }
 
+    // checkout.session.completed
+
     else if (event.type === "checkout.session.completed") {
-      const s = event.data.object;            // Stripe.Checkout.Session
+      const s = event.data.object;
       let bookingId = s?.metadata?.bookingId;
 
-      // Lấy bookingId từ PaymentIntent nếu session không có
-      if (!bookingId) {
+      // Nếu thiếu metadata, lấy từ payment_intent
+      if (!bookingId && s.payment_intent) {
         const piId =
           typeof s.payment_intent === "string"
             ? s.payment_intent
             : s.payment_intent?.id;
 
-        if (piId) {
+        try {
           const pi = await stripe.paymentIntents.retrieve(piId);
           bookingId = pi?.metadata?.bookingId;
+        } catch (err) {
+          console.error("[WEBHOOK] Cannot retrieve PI:", err.message);
         }
       }
 
       if (!bookingId) {
-        console.warn("[WEBHOOK] Session completed but missing bookingId");
+        console.warn("[WEBHOOK] Missing bookingId in session:", s.id);
         return res.json({ received: true });
       }
 
@@ -86,16 +97,20 @@ export const stripeWebhooks = async (req, res) => {
         }
       );
 
-      console.log("[WEBHOOK] PAID via session:", {
-        bookingId,
-        matched: upd.matchedCount,
-        modified: upd.modifiedCount,
-      });
+      console.log("[WEBHOOK] PAID via session:", bookingId, upd);
 
+      // Emit realtime update
+      if (global._io) {
+        global._io.emit("paymentUpdate", { bookingId });
+        console.log("Realtime emit (Session):", bookingId);
+      }
+
+      // Trigger Inngest job
       if (upd.modifiedCount === 1) {
         await inngest.send({ name: "app/payment.success", data: { bookingId } });
       }
     }
+
 
     else {
       console.log("[WEBHOOK] Unhandled event:", event.type);

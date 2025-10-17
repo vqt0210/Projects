@@ -24,6 +24,8 @@
     "mongoose": "^8.18.1",
     "nodemailer": "^7.0.6",
     "resend": "^6.1.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "stripe": "^18.5.0",
     "svix": "^1.76.1"
   },

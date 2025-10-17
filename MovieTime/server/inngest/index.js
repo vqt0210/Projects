@@ -119,15 +119,16 @@ const sendBookingConfirmationEmail = inngest.createFunction(
   { id: "send-booking-confirmation-email" },
   { event: "app/show.booked" },
   async ({ event, step }) => {
-    const booking = await Booking.findById(event.data.bookingId)
+    const bookingId = event.data.bookingId;
+    const booking = await Booking.findById(bookingId)
       .populate({ path: "show", populate: { path: "movie" } })
-      .populate("user");
-    if (!booking?.user?.email) return;
+      .populate({ path: "userId", model: "User" });
+    if (!booking?.userId?.email) return;
     await sendEmail({
-      to: booking.user.email,
+      to: booking.userId.email, 
       subject: `Booking Confirmation: "${booking.show.movie.title}"`,
       body: bookingConfirmationEmail({
-        user: booking.user,
+        user: booking.userId,
         movieTitle: booking.show.movie.title,
         showDateTime: booking.show.showDateTime,
         bookedSeats: booking.bookedSeats,
@@ -172,46 +173,52 @@ const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
   { event: "app/payment.success" },
   async ({ event, step }) => {
-    const bookingId = event.data.bookingId;
-    const booking = await Booking.findById(bookingId)
-      .populate({ path: "show", populate: { path: "movie" } })
-      .populate("user");
+    try {
+      const bookingId = event.data.bookingId;
+      const booking = await Booking.findById(bookingId)
+        .populate({ path: "show", populate: { path: "movie" } })
+        .populate({ path: "userId", model: "User" });
 
-    if (!booking) {
-      await step.run("log booking not found", async () => {
-        console.log(`[PAYMENT] Booking not found: ${bookingId}`);
-      });
+      if (!booking) {
+        await step.run("log missing booking", async () =>
+          console.log(`[PAYMENT] Booking not found: ${bookingId}`)
+        );
+        return { success: false };
+      }
+
+      if (booking.status !== "PAID" || !booking.isPaid) {
+        booking.status = "PAID";
+        booking.isPaid = true;
+        booking.paidAt = new Date();
+        await booking.save();
+      }
+
+      if (booking?.userId?.email) {
+        await sendEmail({
+          to: booking.userId.email,
+          subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
+          body: bookingConfirmationEmail({
+            user: booking.userId,
+            movieTitle: booking.show.movie.title,
+            showDateTime: booking.show.showDateTime,
+            bookedSeats: booking.bookedSeats,
+            bookingLink: `https://teasonmike.io.vn/my-bookings`,
+            supportLink: `https://teasonmike.io.vn`,
+          }),
+        });
+      }
+
+      await step.log(`[PAYMENT] Confirmed booking: ${bookingId}`);
+      return { success: true };
+    } catch (error) {
+      console.error(" Payment handler failed:", error);
+      await step.log(`Error in payment handler: ${error.message}`);
+      throw error; 
     }
-
-    // Nếu chưa mark là PAID, cập nhật lại
-    if (booking.status !== "PAID" || !booking.isPaid) {
-      booking.status = "PAID";
-      booking.isPaid = true;
-      booking.paidAt = new Date();
-      await booking.save();
-    }
-
-    // Gửi email xác nhận
-    if (booking?.user?.email) {
-      await sendEmail({
-        to: booking.user.email,
-        subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
-        body: bookingConfirmationEmail({
-          user: booking.user,
-          movieTitle: booking.show.movie.title,
-          showDateTime: booking.show.showDateTime,
-          bookedSeats: booking.bookedSeats,
-          bookingLink: `https://teasonmike.io.vn/my-bookings`,
-          supportLink: `https://teasonmike.io.vn`,
-        }),
-      });
-    }
-
-    await step.run("log success", async () => {
-      console.log(`[PAYMENT] Confirmed booking + sent email: ${bookingId}`);
-    });
   }
 );
+
+
 
 export const functions = [
   syncUserCreation,
