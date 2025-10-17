@@ -1,8 +1,13 @@
 import MovieCard from "@/components/movies/MovieCard";
 import BlurCircle from "@/components/common/BlurCircle";
 import { useAppContext } from "@/context/AppContext";
+import Loading from "@/components/common/Loading";
+import { useEffect, useState } from "react";
 
 const Movies = () => {
+
+  const { shows } = useAppContext();
+  const [loading, setLoading] = useState(true);
   const positions = [
     { top: "100px", left: "50px" },
     { top: "400px", right: "150px" },
@@ -10,7 +15,18 @@ const Movies = () => {
     { bottom: "300px", right: "100px" },
     { top: "1200px", left: "100px" },
   ];
-  const { shows } = useAppContext();
+
+   // Khi shows thay đổi (nghĩa là dữ liệu phim load xong)
+  useEffect(() => {
+    if (Array.isArray(shows) && shows.length > 0) {
+      setLoading(false);
+    }
+  }, [shows]);
+
+  // Nếu đang loading → hiện Loading component
+  if (loading) {
+    return <Loading message="Đang tải danh sách phim..." />;
+  }
   // Lọc trùng phim, mỗi phim chỉ giữ 1 show đại diện
   const uniqueShows = Array.isArray(shows)
     ? [
@@ -21,6 +37,8 @@ const Movies = () => {
         ).values(),
       ]
     : [];
+
+  
 
   return uniqueShows.length > 0 ? (
     <div className="relative pt-32 md:pt-36 pb-40 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]">

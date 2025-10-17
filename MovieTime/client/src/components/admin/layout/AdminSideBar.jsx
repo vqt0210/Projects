@@ -2,6 +2,7 @@ import { useUser } from "@clerk/clerk-react";
 import { assets } from '@/assets/assets'
 import { LayoutDashboardIcon, ListCollapseIcon, ListIcon, PlusSquareIcon, UsersIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import Loading from "@/components/common/Loading";
 
 const AdminSideBar = () => {
 
@@ -17,11 +18,7 @@ const AdminSideBar = () => {
   ]
 
   if (!isLoaded) {
-    return (
-      <div className="flex justify-center items-center h-full text-gray-400">
-        Loading sidebar...
-      </div>
-    );
+    return <Loading/>
   }
    // Kiểm tra user có tồn tại
   if (!user) {

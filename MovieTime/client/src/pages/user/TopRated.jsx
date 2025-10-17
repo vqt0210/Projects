@@ -1,8 +1,11 @@
 import MovieCard from "@/components/movies/MovieCard";
 import BlurCircle from "@/components/common/BlurCircle";
 import { useAppContext } from "@/context/AppContext";
+import Loading from "@/components/common/Loading";
+import { useEffect, useState } from "react";
 export default function TopRated() {
   const { shows } = useAppContext();
+  const [loading, setLoading] = useState(true);
 
   const positions = [
     { top: "100px", left: "50px" },
@@ -11,6 +14,18 @@ export default function TopRated() {
     { bottom: "300px", right: "100px" },
     { top: "1200px", left: "100px" },
   ];
+
+  // Khi shows được load (hoặc thay đổi)
+  useEffect(() => {
+    if (Array.isArray(shows) && shows.length > 0) {
+      setLoading(false);
+    }
+  }, [shows]);
+
+  // loading
+  if (loading) {
+    return <Loading message="Đang tải danh sách Top Rated..." />;
+  }
 
   // Nếu shows chưa có hoặc rỗng
   if (!Array.isArray(shows) || shows.length === 0)

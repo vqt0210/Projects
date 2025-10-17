@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import MovieCard from "@/components/movies/MovieCard";
 import BlurCircle from "@/components/common/BlurCircle";
 import { useAppContext } from "@/context/AppContext";
+import Loading from "@/components/common/Loading";
 
 const Favorite = () => {
   const [loading, setLoading] = useState(true);
@@ -17,11 +18,7 @@ const Favorite = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen text-gray-300">
-        <h1 className="text-2xl font-medium animate-pulse">Loading favorites...</h1>
-      </div>
-    );
+    return <Loading />
   }
 
   return favoriteMovies.length > 0 ? (
