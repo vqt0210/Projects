@@ -178,8 +178,15 @@ const handlePaymentSuccess = inngest.createFunction(
     try {
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId)
-        .populate({ path: "show", populate: { path: "movie" } })
-        .populate({ path: "userId", model: "User" });
+        .populate({ path: "show", populate: { path: "movie" } });
+
+      //Tìm user thủ công nếu userId là string
+      let user = null;
+      if (typeof booking.userId === "string") {
+        user = await User.findById(booking.userId);
+      } else {
+        user = booking.userId;
+      }
 
       if (!booking) {
         await step.run("log missing booking", async () =>
@@ -195,12 +202,13 @@ const handlePaymentSuccess = inngest.createFunction(
         await booking.save();
       }
 
-      if (booking?.userId?.email) {
+      // Dùng email từ user tìm được
+      if (user?.email) {
         await sendEmail({
-          to: booking.userId.email,
+          to: user.email,
           subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
           body: bookingConfirmationEmail({
-            user: booking.userId,
+            user,
             movieTitle: booking.show.movie.title,
             showDateTime: booking.show.showDateTime,
             bookedSeats: booking.bookedSeats,
@@ -208,16 +216,19 @@ const handlePaymentSuccess = inngest.createFunction(
             supportLink: `https://teasonmike.io.vn`,
           }),
         });
+
+        console.log(`[EMAIL] Sent booking confirmation to ${user.email}`);
+      } else {
+        console.log(`[EMAIL] Skipped, user email not found`);
       }
 
       await step.run("log payment success", async () => {
         console.log(`[PAYMENT] Confirmed booking + email sent: ${bookingId}`);
       });
+
       return { success: true };
     } catch (error) {
-      await step.run("log payment error", async () => {
-        console.error(`[PAYMENT ERROR] ${error.message}`);
-      });
+      console.error(" Payment handler failed:", error);
       throw error;
     }
   }
