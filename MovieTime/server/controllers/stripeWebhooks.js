@@ -22,8 +22,7 @@ export const stripeWebhooks = async (req, res) => {
   try {
     console.log("[WEBHOOK] type:", event.type);
 
-    // payment_intent.succeeded
-
+    // Handle payment_intent.succeeded
     if (event.type === "payment_intent.succeeded") {
       const pi = event.data.object;
       const bookingId = pi?.metadata?.bookingId;
@@ -34,7 +33,7 @@ export const stripeWebhooks = async (req, res) => {
       }
 
       const upd = await Booking.updateOne(
-        { _id: bookingId },
+        { _id: bookingId, isPaid: false },
         {
           $set: {
             status: "PAID",
@@ -48,23 +47,19 @@ export const stripeWebhooks = async (req, res) => {
 
       console.log("[WEBHOOK] PAID via PI:", bookingId, upd);
 
-      // Emit realtime event
       if (global._io) {
         global._io.emit("paymentUpdate", { bookingId });
         console.log("Realtime emit (PI):", bookingId);
       }
 
-      // Trigger Inngest background flow (email, logs, etc)
-      await inngest.send({ name: "app/payment.success", data: { bookingId } });
+      // Không gửi Inngest ở đây để tránh chạy trùng
     }
 
-    // checkout.session.completed
-
+    // Handle checkout.session.completed
     else if (event.type === "checkout.session.completed") {
       const s = event.data.object;
       let bookingId = s?.metadata?.bookingId;
 
-      // Nếu thiếu metadata, lấy từ payment_intent
       if (!bookingId && s.payment_intent) {
         const piId =
           typeof s.payment_intent === "string"
@@ -85,7 +80,7 @@ export const stripeWebhooks = async (req, res) => {
       }
 
       const upd = await Booking.updateOne(
-        { _id: bookingId },
+        { _id: bookingId, isPaid: false },
         {
           $set: {
             status: "PAID",
@@ -99,18 +94,19 @@ export const stripeWebhooks = async (req, res) => {
 
       console.log("[WEBHOOK] PAID via session:", bookingId, upd);
 
-      // Emit realtime update
       if (global._io) {
         global._io.emit("paymentUpdate", { bookingId });
         console.log("Realtime emit (Session):", bookingId);
       }
 
-      // Trigger Inngest job
+      // Chỉ trigger Inngest khi DB thật sự update
       if (upd.modifiedCount === 1) {
-        await inngest.send({ name: "app/payment.success", data: { bookingId } });
+        await inngest.send({
+          name: "app/payment.success",
+          data: { bookingId },
+        });
       }
     }
-
 
     else {
       console.log("[WEBHOOK] Unhandled event:", event.type);
