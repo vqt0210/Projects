@@ -24,7 +24,6 @@ import {
   Cell,
   LineChart,
   Line,
-  LabelList,
 } from "recharts";
 import EditShows from "./EditShows";
 
@@ -65,6 +64,7 @@ const Dashboard = () => {
     "#FBBF24", // amber
     "#F87171", // red
     "#38BDF8", // cyan
+    "#8B5CF6", // deep violet (new!)
   ];
 
   const dashboardCards = [
@@ -92,16 +92,16 @@ const Dashboard = () => {
       <Title text1="Admin" text2="Dashboard" />
 
       {/* ==== Stat Cards ==== */}
-      <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-6">
+      <div className="relative grid grid-cols-1 gap-5 mt-6 sm:grid-cols-2 lg:grid-cols-4">
         <BlurCircle top="-100px" left="0" />
         {dashboardCards.map((card, index) => (
           <div
             key={index}
-            className="flex items-center justify-between p-5 rounded-2xl shadow-md bg-primary/10 border border-primary/20 text-white hover:bg-primary/20 hover:shadow-primary/30 transition-all duration-300"
+            className="flex items-center justify-between p-5 text-white transition-all duration-300 border shadow-md rounded-2xl bg-primary/10 border-primary/20 hover:bg-primary/20 hover:shadow-primary/30"
           >
             <div>
               <h1 className="text-sm opacity-90">{card.title}</h1>
-              <p className="text-2xl font-semibold mt-1 text-primary">
+              <p className="mt-1 text-2xl font-semibold text-primary">
                 {card.value}
               </p>
             </div>
@@ -111,10 +111,10 @@ const Dashboard = () => {
       </div>
 
       {/* ==== Charts Grid ==== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-10">
+      <div className="grid grid-cols-1 gap-6 mt-10 lg:grid-cols-2">
         {/* Chart 1: Revenue by Month */}
-        <div className="bg-primary/10 border border-primary/20 p-5 rounded-2xl shadow-md hover:shadow-primary/30 transition">
-          <p className="text-lg font-semibold mb-4 text-white">
+        <div className="p-5 transition border shadow-md bg-primary/10 border-primary/20 rounded-2xl hover:shadow-primary/30">
+          <p className="mb-4 text-lg font-semibold text-white">
             Revenue by Month{" "}
             <span className="text-sm text-primary/80">({currency})</span>
           </p>
@@ -125,7 +125,16 @@ const Dashboard = () => {
                 stroke="rgba(255,255,255,0.1)"
               />
               <XAxis dataKey="month" stroke="#aaa" />
-              <YAxis stroke="#aaa" />
+              <YAxis
+                stroke="#aaa"
+                label={{
+                  value: `Revenue (${currency})`,
+                  angle: -90,
+                  position: "insideLeft",
+                  fill: "#aaa",
+                  fontSize: 12,
+                }}
+              />
               <Tooltip
                 formatter={(v) => [
                   `${v.toLocaleString()} ${currency}`,
@@ -148,8 +157,8 @@ const Dashboard = () => {
         </div>
 
         {/* Chart 2: Tickets Sold per Movie */}
-        <div className="bg-primary/10 border border-primary/20 p-5 rounded-2xl shadow-md hover:shadow-primary/30 transition">
-          <p className="text-lg font-semibold mb-4 text-white">
+        <div className="p-5 transition border shadow-md bg-primary/10 border-primary/20 rounded-2xl hover:shadow-primary/30">
+          <p className="mb-4 text-lg font-semibold text-white">
             Tickets Sold per Movie{" "}
             <span className="text-sm text-primary/80">(Tickets)</span>
           </p>
@@ -160,7 +169,16 @@ const Dashboard = () => {
                 stroke="rgba(255,255,255,0.1)"
               />
               <XAxis dataKey="_id" stroke="#aaa" tick={{ fontSize: 12 }} />
-              <YAxis stroke="#aaa" />
+              <YAxis
+                stroke="#aaa"
+                label={{
+                  value: `Tickets`,
+                  angle: -90,
+                  position: "insideLeft",
+                  fill: "#aaa",
+                  fontSize: 12,
+                }}
+              />
               <Tooltip
                 formatter={(v) => [`${v.toLocaleString()} tickets`, "Tickets"]}
                 contentStyle={{
@@ -174,8 +192,8 @@ const Dashboard = () => {
         </div>
 
         {/* Chart 3: Revenue by Genre */}
-        <div className="bg-primary/10 border border-primary/20 p-5 rounded-2xl shadow-md hover:shadow-primary/30 transition">
-          <p className="text-lg font-semibold mb-4 text-white">
+        <div className="p-5 transition border shadow-md bg-primary/10 border-primary/20 rounded-2xl hover:shadow-primary/30">
+          <p className="mb-4 text-lg font-semibold text-white">
             Revenue by Genre{" "}
             <span className="text-sm text-primary/80">({currency})</span>
           </p>
@@ -200,7 +218,12 @@ const Dashboard = () => {
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const { name, value, fill } = payload[0];
+                    const { name, value } = payload[0];
+                    // index an toàn hơn lấy từ payload[0].payload nếu có
+                    const index =
+                      payload[0].payload?.index ?? payload[0].index ?? 0;
+                    const fill = COLORS[index % COLORS.length];
+
                     return (
                       <div
                         style={{
@@ -238,32 +261,59 @@ const Dashboard = () => {
         </div>
 
         {/* Chart 4: Revenue by Movie */}
-        <div className="bg-primary/10 border border-primary/20 p-5 rounded-2xl shadow-md hover:shadow-primary/30 transition">
-          <p className="text-lg font-semibold mb-4 text-white">
+
+        <div className="p-5 transition border shadow-md bg-primary/10 border-primary/20 rounded-2xl hover:shadow-primary/30">
+          <p className="mb-4 text-lg font-semibold text-white">
             Revenue by Movie{" "}
             <span className="text-sm text-primary/80">({currency})</span>
           </p>
-          <ResponsiveContainer width="100%" height={380}>
+
+          <ResponsiveContainer width="100%" height={360}>
             <BarChart
               data={dashboardData.revenueByMovie}
-              margin={{ top: 20, right: 30, left: 10, bottom: 80 }}
+              margin={{ top: 20, right: 30, left: 10, bottom: 40 }}
+              barCategoryGap="20%"
             >
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="rgba(255,255,255,0.1)"
               />
+
               <XAxis
                 dataKey="_id"
-                stroke="#ccc"
-                tick={{ fontSize: 12, fill: "#ddd" }}
+                stroke="#aaa"
+                tickLine={false}
                 interval={0}
-                angle={-25}
-                dy={20}
-                height={60}
+                height={80}
+                tick={({ x, y, payload }) => {
+                  const words = payload.value.split(" ");
+                  const lines = [];
+                  for (let i = 0; i < words.length; i += 3) {
+                    lines.push(words.slice(i, i + 3).join(" "));
+                  }
+
+                  return (
+                    <text
+                      x={x}
+                      y={y + 10}
+                      textAnchor="middle"
+                      fill="#ddd"
+                      fontSize={11}
+                      fontFamily="Outfit, sans-serif"
+                    >
+                      {lines.map((line, i) => (
+                        <tspan key={i} x={x} dy={i === 0 ? 0 : 12}>
+                          {line}
+                        </tspan>
+                      ))}
+                    </text>
+                  );
+                }}
               />
+
               <YAxis
-                stroke="#ccc"
-                tick={{ fontSize: 12, fill: "#ddd" }}
+                stroke="#aaa"
+                tick={{ fontSize: 12 }}
                 label={{
                   value: `Revenue (${currency})`,
                   angle: -90,
@@ -272,6 +322,7 @@ const Dashboard = () => {
                   fontSize: 12,
                 }}
               />
+
               <Tooltip
                 formatter={(v) => [
                   `${v.toLocaleString()} ${currency}`,
@@ -283,30 +334,12 @@ const Dashboard = () => {
                   borderRadius: "8px",
                 }}
               />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                wrapperStyle={{ paddingBottom: "10px" }}
-              />
-              <defs>
-                <linearGradient id="movieGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#A78BFA" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#6366F1" stopOpacity={0.6} />
-                </linearGradient>
-              </defs>
+
               <Bar
                 dataKey="totalRevenue"
-                fill="url(#movieGradient)"
-                radius={[8, 8, 0, 0]}
-                barSize={60}
-              >
-                <LabelList
-                  dataKey="totalRevenue"
-                  position="top"
-                  formatter={(v) => `${currency}${v}`}
-                  style={{ fill: "#fff", fontSize: 11 }}
-                />
-              </Bar>
+                fill="#A78BFA"
+                radius={[6, 6, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
