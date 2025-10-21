@@ -1,9 +1,9 @@
 import express from "express"
 import { getActorDetail } from "../controllers/actorController.js"
 
-const actorRoutes = express.Router()
+const actorRouter = express.Router()
 
 // GET /api/actors/:id
-actorRoutes.get("/:id", getActorDetail)
+actorRouter.get("/:id", getActorDetail)
 
-export default actorRoutes;
+export default actorRouter;

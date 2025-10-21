@@ -1,9 +1,9 @@
   import express from "express"
   import { searchMoviesAndActors } from "../controllers/searchController.js"
 
-  const searchRoutes = express.Router()
+  const searchRouter = express.Router()
 
   // GET /api/search?q=...
-  searchRoutes.get("/", searchMoviesAndActors)
+  searchRouter.get("/", searchMoviesAndActors)
 
-  export default searchRoutes;
+  export default searchRouter;
