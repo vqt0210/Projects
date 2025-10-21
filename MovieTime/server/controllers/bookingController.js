@@ -1,11 +1,9 @@
-
-
-// Function to check availability of selected seats for a movie
-
 import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
-import Stripe from 'stripe'
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const checkSeatsAvailability = async (showId, selectedSeats) => {
   try {
@@ -16,16 +14,12 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
     const bookings = await Booking.find({ show: showId });
 
     // Lấy danh sách ghế đã đặt
-    const occupiedSeats = bookings.flatMap(b => b.bookedSeats);
+    const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
     // Kiểm tra có seat nào bị trùng không
-    const isAnySeatTaken = selectedSeats.some(seat =>
-      occupiedSeats.includes(seat)
-    );
-
-    return !isAnySeatTaken;
+    return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error) {
-    console.log(error.message);
+    console.error("Seat check error:", error.message);
     return false;
   }
 };
@@ -33,36 +27,71 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
 export const createBooking = async (req, res) => {
   try {
     const { userId } = req.auth();
-    const { showId, selectedSeats } = req.body;
+    const { showId, selectedSeats, promoCode } = req.body;
     const { origin } = req.headers;
 
-    // Check if the seat is available for the selected show
+    // Kiểm tra ghế trống
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
-
     if (!isAvailable) {
-      return res.json({ success: false, message: "Selected Seats are not available." });
+      return res.json({
+        success: false,
+        message: "Selected seats are not available.",
+      });
     }
 
-    const showData = await Show.findById(showId).populate('movie');
+    const showData = await Show.findById(showId).populate("movie");
+    if (!showData)
+      return res.json({ success: false, message: "Show not found." });
+
     const amount = Number(showData.showPrice) * selectedSeats.length;
 
+    // Kiểm tra mã giảm giá với Stripe
+    let promotion = null;
+    if (promoCode) {
+      try {
+        const promos = await stripe.promotionCodes.list({
+          code: promoCode,
+          active: true,
+        });
+
+        if (promos.data.length > 0) {
+          promotion = promos.data[0];
+          console.log(`[PROMO] Applied ${promoCode}`);
+        } else {
+          return res.json({
+            success: false,
+            message: "Invalid or inactive promo code.",
+          });
+        }
+      } catch (err) {
+        console.error("Stripe promo check failed:", err.message);
+        return res.json({
+          success: false,
+          message: "Error verifying promo code.",
+        });
+      }
+    }
+
+    // Tạo booking trong DB
     const booking = await Booking.create({
       userId,
       show: showId,
       amount,
       bookedSeats: selectedSeats,
-      isPaid: false,  // Đảm bảo ban đầu là false
+      isPaid: false,
       status: "PENDING_PAYMENT",
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    // Cập nhật occupiedSeats
+    // Cập nhật ghế đã chọn
     if (!showData.occupiedSeats) showData.occupiedSeats = {};
-    selectedSeats.forEach(seat => { showData.occupiedSeats[seat] = userId; });
+    selectedSeats.forEach((seat) => {
+      showData.occupiedSeats[seat] = userId;
+    });
     showData.markModified("occupiedSeats");
     await showData.save();
 
-    // FREE BOOKING (amount = 0): confirm ngay, KHÔNG Stripe, KHÔNG checkpayment
+    // Nếu giá = 0 thì auto xác nhận
     if (amount <= 0) {
       booking.isPaid = true;
       booking.status = "CONFIRMED";
@@ -75,71 +104,57 @@ export const createBooking = async (req, res) => {
       return res.json({ success: true, url: `${origin}/loading/my-bookings` });
     }
 
-    // Thanh toán Stripe: cập nhật trạng thái thanh toán
-    const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-    // Tạo line items cho Stripe
-    const line_items = [{
-      price_data: {
-        currency: 'usd',
-        product_data: { name: showData.movie.title },
-        unit_amount: showData.showPrice * 100,
-      },
-      quantity: selectedSeats.length
-    }];
-
-    const session = await stripeInstance.checkout.sessions.create({
+    // Tạo session Stripe Checkout
+    const session = await stripe.checkout.sessions.create({
       success_url: `${origin}/loading/my-bookings`,
       cancel_url: `${origin}/my-bookings`,
-      line_items: line_items,
-      mode: 'payment',
-      locale: 'en',
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { name: showData.movie.title },
+            unit_amount: amount * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      discounts: promotion ? [{ promotion_code: promotion.id }] : [],
       metadata: { bookingId: booking._id.toString() },
-      payment_intent_data: {
-      metadata: { bookingId: booking._id.toString() },
-      },
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // Expire in 30 minutes
     });
 
-    // Cập nhật paymentLink cho Stripe
+    //  Lưu thông tin thanh toán vào DB
     booking.paymentLink = session.url;
-    booking.checkoutSessionId = session.id; 
+    booking.checkoutSessionId = session.id;
     await booking.save();
 
-    // Run Inngest Scheduler Function to check payment status after 10 minutes
+    //  Gửi event check payment
     await inngest.send({
       name: "app/checkpayment",
-      data: { bookingId: booking._id.toString() }
+      data: { bookingId: booking._id.toString() },
     });
 
     res.json({ success: true, url: session.url });
   } catch (error) {
-    console.log(error.message);
+    console.error("Create booking error:", error.message);
     res.json({ success: false, message: error.message });
   }
 };
 
-
-
+//  Get occupied seats 
 export const getOccupiedSeats = async (req, res) => {
   try {
     const { showId } = req.params;
-
-    // Kiểm tra show có tồn tại
     const showData = await Show.findById(showId);
-    if (!showData) {
+    if (!showData)
       return res.json({ success: false, message: "Show not found" });
-    }
 
-    // Lấy tất cả booking của show
     const bookings = await Booking.find({ show: showId });
-
-    // Gom tất cả bookedSeats lại thành 1 mảng
-    const occupiedSeats = bookings.flatMap(b => b.bookedSeats);
+    const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
     res.json({ success: true, occupiedSeats });
   } catch (error) {
-    console.log(error.message);
+    console.error("Get occupied seats error:", error.message);
     res.json({ success: false, message: error.message });
   }
 };

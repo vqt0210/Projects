@@ -191,7 +191,7 @@ export const getShow = async (req, res) => {
   try {
     const { movieId } = req.params;
 
-    // Tìm show và movie song song
+    // Tìm movie
     const movie =
       (await Movie.findById(String(movieId))) ||
       (await Movie.findOne({ _id: movieId })) ||
@@ -203,32 +203,41 @@ export const getShow = async (req, res) => {
         .json({ success: false, message: "Movie not found in database" });
     }
 
+    // Lấy danh sách show của phim đó
     const shows = await Show.find({
       movie: movie._id,
       showDateTime: { $gte: new Date() },
-    });
+    }).sort({ showDateTime: 1 });
 
     const dateTime = {};
+    let showPrice = null;
 
     for (const s of shows) {
       const date = s.showDateTime.toISOString().split("T")[0];
       if (!dateTime[date]) dateTime[date] = [];
-      dateTime[date].push({ time: s.showDateTime, showId: s._id });
-    }
-    console.log("movieId", movieId);
-    console.log("shows", shows.length);
-    console.log("movie", movie ? movie.title : "null");
+      dateTime[date].push({
+        time: s.showDateTime,
+        showId: s._id,
+        price: s.showPrice, //  Gửi giá vé ra frontend
+      });
 
-    return res.json({ success: true, movie, dateTime });
+      // Gán giá của show đầu tiên làm mặc định
+      if (!showPrice) showPrice = s.showPrice;
+    }
+
+    return res.json({
+      success: true,
+      movie,
+      dateTime,
+      showPrice: showPrice || 0, //  gửi giá vé chung
+    });
   } catch (error) {
     console.error("getShow error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/* ---------------------------
-   New: top-rated & upcoming
-   --------------------------- */
+//  New: top-rated & upcoming
 
 export const getTopRatedMovies = async (req, res) => {
   try {

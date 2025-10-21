@@ -18,7 +18,8 @@ import userRouter from "./routes/userRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
 import actorRoutes from "./routes/actorRoutes.js";
 import meRouter from "./routes/me.js";
-import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
+import stripeRouter from "./routes/stripeRoutes.js";
+import { stripeWebhooks } from "./controllers/stripeController.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -47,7 +48,7 @@ app.get("/healthz", (req, res) => res.status(200).send("ok"));
 // Stripe Webhook
 
 app.post(
-  "/api/stripe",
+  "/api/stripe/webhooks",
   express.raw({ type: "application/json" }),
   stripeWebhooks
 );
@@ -66,6 +67,7 @@ app.use("/api/user", userRouter);
 app.use("/api/search", searchRoutes);
 app.use("/api/actors", actorRoutes);
 app.use("/api/me", meRouter);
+app.use("/api/stripe", stripeRouter);
 
 // 404 + Error handler
 app.use((req, res) =>

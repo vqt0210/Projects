@@ -60,7 +60,7 @@ const MyBookings = () => {
     });
 
     // Khi backend emit sự kiện paymentUpdate
-    socket.on("paymentUpdate", ({ bookingId }) => { 
+    socket.on("paymentUpdate", ({ bookingId }) => {
       console.log("Payment updated:", bookingId);
       setBookings((prev) =>
         prev.map((b) =>
@@ -102,7 +102,7 @@ const MyBookings = () => {
     );
   }
 
- return (
+  return (
     <>
       <Toaster position="top-right" richColors closeButton />
       {!isSignedIn ? (
@@ -174,10 +174,31 @@ const MyBookings = () => {
 
                   <div className="flex flex-col justify-between p-4 mb-2 md:items-end md:text-right">
                     <div className="flex items-center gap-4 mb-3">
-                      <p className="text-2xl font-semibold leading-none">
-                        {currency}
-                        {amount}
-                      </p>
+                      <div className="flex flex-col items-end">
+                        {item.discountValue > 0 ? (
+                          <>
+                            <p className="text-lg text-gray-400 line-through">
+                              {currency}
+                              {(
+                                amount /
+                                (1 - item.discountValue / 100)
+                              ).toFixed(2)}
+                            </p>
+                            <p className="text-2xl font-semibold leading-none text-green-400">
+                              {currency}
+                              {amount.toFixed(2)}
+                            </p>
+                            <p className="mt-1 text-xs text-green-400">
+                              Discount applied: -{item.discountValue}%
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-2xl font-semibold leading-none">
+                            {currency}
+                            {amount.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
 
                       {canPay ? (
                         <a

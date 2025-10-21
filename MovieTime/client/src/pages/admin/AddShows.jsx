@@ -47,7 +47,7 @@ const AddShows = () => {
       return;
     }
 
-    // ✅ Chuẩn bị dữ liệu trước khi hỏi confirm
+    //  Chuẩn bị dữ liệu trước khi hỏi confirm
     const showsInput = Object.entries(dateTimeSelection).flatMap(
       ([date, times]) => times.map((time) => ({ date, time }))
     );

@@ -11,15 +11,15 @@ import api, { authorizedApi } from "@/utils/api";
 
 const SeatLayout = () => {
   const seatRows = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
-
   const { id, date } = useParams();
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedTime, setSelectedTime] = useState(null);
   const [show, setShow] = useState(null);
   const [occupiedSeats, setOccupiedSeats] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const navigate = useNavigate();
+  const [promoCode, setPromoCode] = useState("");
+  const [discountPreview, setDiscountPreview] = useState(null);
+  const [loadingPromo, setLoadingPromo] = useState(false);
 
   const { getToken, user } = useAppContext();
 
@@ -27,96 +27,99 @@ const SeatLayout = () => {
     try {
       const { data } = await api.get(`/api/show/${id}`);
       if (data.success) {
-        setShow(data);
+        setShow({
+          movie: data.movie,
+          dateTime: data.dateTime,
+          showPrice: data.showPrice,
+        });
       }
     } catch (error) {
       console.log(error);
     }
   };
+
   const handleSeatClick = (seatId) => {
-    if (!selectedTime) {
-      toast("Please select time first");
-      return;
-    }
+    if (!selectedTime) return toast("Please select time first");
 
     setSelectedSeats((prev) => {
       const already = prev.includes(seatId);
-
       if (!already && prev.length >= 5) {
         toast("You can only select up to 5 seats");
         return prev;
       }
       if (occupiedSeats.includes(seatId)) {
-        return toast("This seat is already booked");
+        toast("This seat is already booked");
+        return prev;
       }
-
-      if (already) {
-        return prev.filter((s) => s !== seatId);
-      } else {
-        return [...prev, seatId];
-      }
+      return already ? prev.filter((s) => s !== seatId) : [...prev, seatId];
     });
   };
 
-  const renderSeats = (row, totalCols = 14) => (
-    <div key={row} className="flex items-center gap-2">
-      <div className="flex gap-1">
-        {Array.from({ length: totalCols }, (_, i) => {
-          const seatId = `${row}${i + 1}`;
-          return (
-            <button
-              key={seatId}
-              onClick={() => handleSeatClick(seatId)}
-              className={`h-8 w-8 text-xs rounded border border-primary/60 cursor-pointer
-              ${selectedSeats.includes(seatId) ? "bg-primary text-white" : ""}
-              ${occupiedSeats.includes(seatId) && "opacity-50"}
-            `}
-            >
-              {seatId}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   const getOccupiedSeats = async () => {
+    if (!selectedTime?.showId) return;
     try {
-      if (!selectedTime?.showId) return;
       const { data } = await api.get(
         `/api/bookings/${selectedTime.showId}/seats`
       );
-      if (data.success) {
-        setOccupiedSeats(data.occupiedSeats || []);
-      } else {
-        toast.error(data.message);
-      }
+      if (data.success) setOccupiedSeats(data.occupiedSeats || []);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Preview discount (gọi API Stripe check)
+  const handleCheckPromo = async () => {
+    if (!promoCode || !show) return toast.error("Enter a promo code first!");
+    if (selectedSeats.length === 0) return toast.error("Select seats first!");
+    setLoadingPromo(true);
+    try {
+      const price = Number(show?.showPrice || 0); //  khai báo lại trong hàm
+      const totalBeforeDiscount = price * selectedSeats.length;
+
+      const { data } = await api.post("/api/stripe/check-promo", {
+        code: promoCode,
+        price: totalBeforeDiscount,
+      });
+
+      if (data.success) {
+        const discountPercent = data.discount?.coupon?.percent_off || 0;
+        const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
+        const finalPrice = totalBeforeDiscount - discountAmount;
+
+        setDiscountPreview({
+          discountValue: discountPercent,
+          finalPrice: finalPrice > 0 ? finalPrice : 0,
+        });
+        toast.success("Promo applied!");
+      } else toast.error(data.message);
+    } catch (error) {
+      toast.error("Invalid or inactive promo code");
+    } finally {
+      setLoadingPromo(false);
     }
   };
 
   const bookTickets = async () => {
     try {
       if (!user) return toast.error("Please login to proceed");
-
       if (!selectedTime || !selectedSeats.length)
         return toast.error("Please select a time and seat");
+
       setIsProcessing(true);
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.post("/api/bookings/create", {
         showId: selectedTime.showId,
         selectedSeats,
+        promoCode,
       });
+
       if (data.success) {
         window.location.href = data.url;
-      } else {
-        toast.error(data.message);
-      }
+      } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
     } finally {
-      setIsProcessing(false); // Tắt loading nếu có lỗi
+      setIsProcessing(false);
     }
   };
 
@@ -125,44 +128,60 @@ const SeatLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTime) {
-      getOccupiedSeats();
-    }
+    if (selectedTime) getOccupiedSeats();
   }, [selectedTime]);
 
-  useEffect(() => {
-    console.log("date:", date);
-    console.log("show.dateTime:", show?.dateTime);
-  }, [show, date]);
+  if (!show) return <Loading />;
 
-  return show ? (
+  const price = Number(show?.showPrice || 0);
+  const total = selectedSeats.length > 0 ? price * selectedSeats.length : 0;
+  const finalTotal = discountPreview?.finalPrice ?? total;
+
+  return (
     <div className="flex flex-col px-6 md:flex-row md:px-16 lg:px-40 py-30 md:pt-50">
-      {/*Available Timings */}
-      <div className="py-10 border rounded-lg w-60 bg-primary/10 border-primary/20 h-max md:sticky md:top-30">
-        <p className="px-6 text-lg font-semibold">Available Timings</p>
-        <div className="mt-5 space-y-1">
+      {/* Available Timings */}
+      <div className="self-start px-4 py-6 border shadow-lg rounded-2xl w-60 bg-primary/10 border-primary/20 h-max md:sticky md:top-10">
+        <p className="px-2 mb-3 text-lg font-semibold">Available Timings</p>
+        <div className="space-y-2">
           {show.dateTime && show.dateTime[date] ? (
             show.dateTime[date].map((item) => (
               <div
                 key={item.time}
                 onClick={() => setSelectedTime(item)}
-                className={`flex items-center gap-2 px-6 py-2 w-max rounded-r-md cursor-pointer transition ${
+                className={`flex items-center gap-3 px-4 py-2 w-full rounded-2xl cursor-pointer transition-all duration-200 ${
                   selectedTime?.time === item.time
-                    ? "bg-primary text-white"
-                    : "hover:bg-primary/20"
+                    ? "bg-primary text-white shadow-md scale-[1.02]"
+                    : "hover:bg-primary/10 text-gray-300"
                 }`}
               >
-                <ClockIcon className="w-4 h-4" />
-                <p className="text-sm">{isoTimeFormat(item.time)}</p>
+                <div
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                    selectedTime?.time === item.time
+                      ? "bg-white/25"
+                      : "bg-primary/15"
+                  }`}
+                >
+                  <ClockIcon
+                    className={`w-4 h-4 ${
+                      selectedTime?.time === item.time
+                        ? "text-white"
+                        : "text-primary"
+                    }`}
+                  />
+                </div>
+                <p className="text-sm font-medium">
+                  {isoTimeFormat(item.time)}
+                </p>
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-400">
-              No available timings for this date.
+            <p className="text-sm text-center text-gray-400">
+              No available timings.
             </p>
           )}
         </div>
       </div>
+
       {/* Seats Layout */}
       <div className="relative flex flex-col items-center flex-1 max-md:mt-16">
         <BlurCircle top="-100px" left="-100px" />
@@ -172,11 +191,82 @@ const SeatLayout = () => {
         <p className="mb-6 text-sm text-gray-400">SCREEN</p>
 
         <div className="flex flex-col items-center mt-10 text-xs text-gray-300">
-          {/* Layout ghế */}
           <div className="flex flex-col gap-2">
-            {seatRows.map((row) => renderSeats(row))}
+            {seatRows.map((row) => (
+              <div key={row} className="flex items-center gap-1">
+                {Array.from({ length: 14 }, (_, i) => {
+                  const seatId = `${row}${i + 1}`;
+                  return (
+                    <button
+                      key={seatId}
+                      onClick={() => handleSeatClick(seatId)}
+                      className={`h-8 w-8 text-xs rounded border border-primary/60 cursor-pointer
+                        ${
+                          selectedSeats.includes(seatId)
+                            ? "bg-primary text-white"
+                            : ""
+                        }
+                        ${
+                          occupiedSeats.includes(seatId) &&
+                          "opacity-50 cursor-not-allowed"
+                        }
+                      `}
+                    >
+                      {seatId}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* Discount & Total */}
+        {selectedSeats.length > 0 && (
+          <div className="mt-8 text-center text-white">
+            {/* Subtotal */}
+            <p className="mb-2 text-lg">
+              Subtotal:{" "}
+              <span className="font-semibold text-primary">
+                ${total > 0 ? total.toFixed(2) : "0.00"}
+              </span>
+            </p>
+
+            {/* Promo input */}
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <input
+                type="text"
+                placeholder="Enter promo code"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                className="p-2 text-sm border rounded-md bg-zinc-800 border-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleCheckPromo}
+                disabled={loadingPromo}
+                className="px-3 py-2 text-sm transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull"
+              >
+                {loadingPromo ? "Checking..." : "Apply"}
+              </button>
+            </div>
+
+            {/* Promo result */}
+            {discountPreview && (
+              <div className="mt-3 space-y-1">
+                <p className="text-green-400">
+                  ✅ Promo applied:{" "}
+                  <strong>-{discountPreview.discountValue}%</strong>
+                </p>
+                <p className="text-lg">
+                  Final Total:{" "}
+                  <span className="font-semibold text-primary">
+                    ${discountPreview.finalPrice.toFixed(2)}
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onClick={bookTickets}
@@ -190,8 +280,6 @@ const SeatLayout = () => {
         </button>
       </div>
     </div>
-  ) : (
-    <Loading />
   );
 };
 

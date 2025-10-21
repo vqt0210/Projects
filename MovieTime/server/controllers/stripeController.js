@@ -118,3 +118,43 @@ export const stripeWebhooks = async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 };
+
+export const checkStripePromo = async (req, res) => {
+  try {
+    const { code, price } = req.body;
+    if (!code) return res.json({ success: false, message: "Promo code required" });
+
+    // Lấy danh sách promotion code từ Stripe
+    const promos = await stripe.promotionCodes.list({
+      code,
+      active: true,
+      limit: 1,
+    });
+
+    if (promos.data.length === 0)
+      return res.json({
+        success: false,
+        message: "Invalid or inactive promo code",
+      });
+
+    const promo = promos.data[0];
+    const discountPercent = promo.coupon?.percent_off || 0;
+
+    // Tính toán giảm giá (theo phần trăm)
+    const discountAmount = ((price || 0) * discountPercent) / 100;
+    const finalPrice = Math.max((price || 0) - discountAmount, 0);
+
+    console.log(`[PROMO] Applied: ${code} (-${discountPercent}%) → $${finalPrice.toFixed(2)}`);
+
+    return res.json({
+      success: true,
+      code,
+      discountValue: discountPercent,
+      finalPrice,
+      stripePromoId: promo.id,
+    });
+  } catch (err) {
+    console.error("[PROMO] Error:", err.message);
+    return res.json({ success: false, message: "Error checking promo code" });
+  }
+};
