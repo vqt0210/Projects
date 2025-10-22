@@ -8,6 +8,7 @@ import BlurCircle from "@/components/common/BlurCircle";
 import toast from "react-hot-toast";
 import { useAppContext } from "@/context/AppContext";
 import api, { authorizedApi } from "@/utils/api";
+import axios from "axios"; // ⚠️ thiếu import này trong bản của bạn
 
 const SeatLayout = () => {
   const seatRows = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
@@ -17,6 +18,7 @@ const SeatLayout = () => {
   const [show, setShow] = useState(null);
   const [occupiedSeats, setOccupiedSeats] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingSeats, setIsLoadingSeats] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [discountPreview, setDiscountPreview] = useState(null);
   const [loadingPromo, setLoadingPromo] = useState(false);
@@ -38,42 +40,55 @@ const SeatLayout = () => {
     }
   };
 
+  const getOccupiedSeats = async () => {
+    if (!selectedTime?.showId) return;
+    setIsLoadingSeats(true);
+    try {
+      const { data } = await api.get(`/api/bookings/${selectedTime.showId}/seats`);
+      if (data.success) {
+        setOccupiedSeats(data.occupiedSeats || []);
+      }
+    } catch (error) {
+      console.error("Failed to load seats:", error);
+    } finally {
+      setIsLoadingSeats(false);
+    }
+  };
+
+  // ✅ Tự loại bỏ ghế đã bị chiếm khi backend load xong
+  useEffect(() => {
+    setSelectedSeats((prev) =>
+      prev.filter((seat) => !occupiedSeats.includes(seat))
+    );
+  }, [occupiedSeats]);
+
   const handleSeatClick = (seatId) => {
-    if (!selectedTime) return toast("Please select time first");
+    if (isLoadingSeats) return; // chặn khi đang load
+    if (!selectedTime) return toast("Please select a time first");
 
     setSelectedSeats((prev) => {
       const already = prev.includes(seatId);
+
       if (!already && prev.length >= 5) {
         toast("You can only select up to 5 seats");
         return prev;
       }
+
       if (occupiedSeats.includes(seatId)) {
         toast("This seat is already booked");
         return prev;
       }
+
       return already ? prev.filter((s) => s !== seatId) : [...prev, seatId];
     });
   };
 
-  const getOccupiedSeats = async () => {
-    if (!selectedTime?.showId) return;
-    try {
-      const { data } = await api.get(
-        `/api/bookings/${selectedTime.showId}/seats`
-      );
-      if (data.success) setOccupiedSeats(data.occupiedSeats || []);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Preview discount (gọi API Stripe check)
   const handleCheckPromo = async () => {
     if (!promoCode || !show) return toast.error("Enter a promo code first!");
     if (selectedSeats.length === 0) return toast.error("Select seats first!");
     setLoadingPromo(true);
     try {
-      const price = Number(show?.showPrice || 0); //  khai báo lại trong hàm
+      const price = Number(show?.showPrice || 0);
       const totalBeforeDiscount = price * selectedSeats.length;
 
       const { data } = await api.post("/api/stripe/check-promo", {
@@ -83,12 +98,9 @@ const SeatLayout = () => {
 
       if (data.success) {
         const discountPercent = data.discountValue || 0;
-
-  
-
         setDiscountPreview({
           discountValue: discountPercent,
-          finalPrice: data.finalPrice ?? total,
+          finalPrice: data.finalPrice ?? totalBeforeDiscount,
         });
         toast.success(`Promo applied: -${discountPercent}%`);
       } else toast.error(data.message);
@@ -190,7 +202,12 @@ const SeatLayout = () => {
         <img src={assets.screenImage} alt="screen" />
         <p className="mb-6 text-sm text-gray-400">SCREEN</p>
 
-        <div className="flex flex-col items-center mt-10 text-xs text-gray-300">
+        <div className="relative flex flex-col items-center mt-10 text-xs text-gray-300">
+          {isLoadingSeats && (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-white rounded-lg bg-black/40 backdrop-blur-sm">
+              Loading seats...
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             {seatRows.map((row) => (
               <div key={row} className="flex items-center gap-1">
@@ -200,15 +217,19 @@ const SeatLayout = () => {
                     <button
                       key={seatId}
                       onClick={() => handleSeatClick(seatId)}
-                      className={`h-8 w-8 text-xs rounded border border-primary/60 cursor-pointer
+                      disabled={
+                        isLoadingSeats || occupiedSeats.includes(seatId)
+                      }
+                      className={`h-8 w-8 text-xs rounded border border-primary/60 transition-all
                         ${
                           selectedSeats.includes(seatId)
-                            ? "bg-primary text-white"
-                            : ""
+                            ? "bg-primary text-white scale-105"
+                            : "hover:bg-primary/20"
                         }
                         ${
-                          occupiedSeats.includes(seatId) &&
-                          "opacity-50 cursor-not-allowed"
+                          occupiedSeats.includes(seatId)
+                            ? "opacity-40 cursor-not-allowed"
+                            : "cursor-pointer"
                         }
                       `}
                     >
@@ -224,15 +245,13 @@ const SeatLayout = () => {
         {/* Discount & Total */}
         {selectedSeats.length > 0 && (
           <div className="mt-8 text-center text-white">
-            {/* Subtotal */}
             <p className="mb-2 text-lg">
               Subtotal:{" "}
               <span className="font-semibold text-primary">
-                ${total > 0 ? total.toFixed(2) : "0.00"}
+                ${total.toFixed(2)}
               </span>
             </p>
 
-            {/* Promo input */}
             <div className="flex items-center justify-center gap-2 mt-2">
               <input
                 type="text"
@@ -250,12 +269,10 @@ const SeatLayout = () => {
               </button>
             </div>
 
-            {/* Promo result */}
             {discountPreview && (
               <div className="mt-3 space-y-1">
                 <p className="text-green-400">
-                  ✅ Promo applied:{" "}
-                  <strong>-{discountPreview.discountValue}%</strong>
+                  ✅ Promo applied: <strong>-{discountPreview.discountValue}%</strong>
                 </p>
                 <p className="text-lg">
                   Final Total:{" "}
@@ -274,9 +291,7 @@ const SeatLayout = () => {
           className="flex items-center gap-2 px-10 py-3 mt-20 text-sm font-medium transition rounded-full cursor-pointer bg-primary hover:bg-primary-dull active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isProcessing ? "Processing..." : "Proceed to Checkout"}
-          {!isProcessing && (
-            <ArrowRightIcon strokeWidth={3} className="w-4 h-4" />
-          )}
+          {!isProcessing && <ArrowRightIcon strokeWidth={3} className="w-4 h-4" />}
         </button>
       </div>
     </div>
