@@ -86,9 +86,12 @@ const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    const MySwal = withReactContent(Swal);
+    if (!userId) return toast.error("Invalid user ID");
+    if (userId === currentUserWithRole?.id) {
+      return toast.error("You cannot delete your own account");
+    }
 
-    // Hiển thị popup xác nhận xóa
+    const MySwal = withReactContent(Swal);
     const result = await MySwal.fire({
       title: "Are you sure?",
       text: "This user will be permanently deleted!",
@@ -100,18 +103,10 @@ const AdminPanel = () => {
       cancelButtonColor: "#6b7280",
       background: "#1e1e1e",
       color: "#fff",
-      customClass: {
-        popup: "rounded-xl shadow-lg",
-        confirmButton:
-          "px-5 py-2 rounded-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all",
-        cancelButton:
-          "px-5 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 transition-all",
-      },
     });
 
     if (!result.isConfirmed) return;
 
-    // Nếu người dùng xác nhận
     setPageLoading(true);
     try {
       const authApi = await authorizedApi(getToken);
@@ -120,8 +115,12 @@ const AdminPanel = () => {
         toast.success("User deleted successfully");
         setUsers((prev) => prev.filter((u) => u.id !== userId));
       } else toast.error(data.message || "Failed to delete user");
-    } catch {
-      toast.error("Error deleting user");
+    } catch (err) {
+      if (err.response?.status === 403) {
+        toast.error("You cannot delete this user (permission denied)");
+      } else {
+        toast.error("Error deleting user");
+      }
     } finally {
       setPageLoading(false);
     }
@@ -144,9 +143,9 @@ const AdminPanel = () => {
 
       {/* ==== Admin Access Card (DEV only) ==== */}
       {import.meta.env.MODE === "development" && (
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 text-white">
-          <h2 className="text-lg font-semibold mb-2">Admin Access</h2>
-          <p className="text-sm mb-3 opacity-80">
+        <div className="p-4 mb-6 text-white border rounded-lg bg-primary/10 border-primary/20">
+          <h2 className="mb-2 text-lg font-semibold">Admin Access</h2>
+          <p className="mb-3 text-sm opacity-80">
             Use this token for <strong>development</strong> and API testing
             only.
           </p>
@@ -155,26 +154,26 @@ const AdminPanel = () => {
       )}
 
       {/* ==== Users List ==== */}
-      <div className="relative flex flex-col mt-6 bg-primary/10 border border-primary/20 rounded-lg p-6">
+      <div className="relative flex flex-col p-6 mt-6 border rounded-lg bg-primary/10 border-primary/20">
         <BlurCircle top="-100px" left="0" />
         {error ? (
-          <p className="text-red-500 text-center py-6">{error}</p>
+          <p className="py-6 text-center text-red-500">{error}</p>
         ) : users.length === 0 ? (
-          <p className="text-gray-500 text-center py-6">No users found.</p>
+          <p className="py-6 text-center text-gray-500">No users found.</p>
         ) : (
           <div className="space-y-4">
             {users.map((user) => {
               const isCurrentUser = user.id === currentUserWithRole?.id;
               return (
                 <div
-                  key={user.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/80 rounded-lg shadow-sm hover:shadow-md transition"
+                  key={user.id || user.email || Math.random()}
+                  className="flex flex-col justify-between p-4 transition rounded-lg shadow-sm md:flex-row md:items-center bg-white/80 hover:shadow-md"
                 >
                   <div className="flex items-center gap-4">
                     <img
                       src={user.image || "/assets/profile_pic.png"}
                       alt={user.name}
-                      className="w-12 h-12 rounded-full object-cover border"
+                      className="object-cover w-12 h-12 border rounded-full"
                     />
                     <div>
                       <p className="font-semibold text-gray-800">
@@ -249,7 +248,7 @@ const AdminPanel = () => {
                         (currentUserRole !== "super-admin" &&
                           user.role === "admin")
                       }
-                      onClick={() => handleDeleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user.id || user._id)}
                       className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 cursor-pointer ${
                         !isSuperAdmin ||
                         isCurrentUser ||
