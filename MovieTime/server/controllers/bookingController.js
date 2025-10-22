@@ -143,7 +143,7 @@ export const createBooking = async (req, res) => {
 
     // Gửi event check payment (Inngest)
     await inngest.send({
-      name: "app/checkpayment",
+      name: "app/payment.success",
       data: { bookingId: booking._id.toString() },
     });
 

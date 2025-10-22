@@ -105,142 +105,136 @@ const MyBookings = () => {
       </div>
     );
   }
+  const activeBookings = bookings.filter(
+    (b) => b.status !== "CANCELLED" && b.show !== null
+  );
 
   return (
     <>
       <Toaster position="top-right" richColors closeButton />
-      {!isSignedIn ? (
-        <div className="flex flex-col items-center justify-center h-[80vh] text-center">
-          <h2 className="mb-4 text-xl font-semibold">
-            You must{" "}
-            <button
-              onClick={openSignIn}
-              className="font-semibold transition cursor-pointer text-primary hover:underline hover:text-primary/80"
-            >
-              login
-            </button>{" "}
-            to continue
-          </h2>
-        </div>
-      ) : isLoading ? (
-        <Loading />
-      ) : (
-        <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]">
-          <BlurCircle top="100px" left="100px" />
-          <div>
-            <BlurCircle bottom="0px" left="600px" />
-          </div>
-          <h1 className="mb-4 text-lg font-semibold">My Bookings</h1>
+      <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]">
+        <BlurCircle top="100px" left="100px" />
+        <BlurCircle bottom="0px" left="600px" />
 
-          {bookings.length === 0 ? (
-            <p className="mt-10 text-gray-400">You have no bookings yet.</p>
-          ) : (
-            bookings.map((item, index) => {
-              const amount = Number(item?.amount) || 0;
-              const isPaid = !!item?.isPaid;
-              const paymentUrl = item?.paymentLink ?? item?.payment ?? "";
-              const canPay = amount > 0 && !isPaid && paymentUrl;
-              const movie = item?.show?.movie;
-              const poster = movie?.poster_path;
-              const title = movie?.title || "Unknown Movie";
-              const runtime = movie?.runtime;
-              const showTime = item?.show?.showDateTime;
-              const seats = Array.isArray(item?.bookedSeats)
-                ? item.bookedSeats
-                : [];
+        <h1 className="mb-4 text-lg font-semibold">My Bookings</h1>
 
-              return (
-                <div
-                  key={item?._id || index}
-                  className="flex flex-col justify-between max-w-3xl p-2 mt-4 border rounded-lg md:flex-row bg-primary/8 border-primary/20"
-                >
-                  <div className="flex flex-col md:flex-row">
-                    {poster ? (
-                      <img
-                        src={image_base_url + poster}
-                        alt={title}
-                        className="object-cover object-bottom h-auto rounded md:max-w-45 aspect-video"
-                      />
-                    ) : (
-                      <div className="object-cover object-bottom h-auto bg-gray-300 rounded md:max-w-45 aspect-video" />
-                    )}
+        {activeBookings.length === 0 ? (
+          <p className="mt-10 text-gray-400">You have no active bookings.</p>
+        ) : (
+          activeBookings.map((item, index) => {
+            const amount = Number(item?.amount) || 0;
+            const isPaid = !!item?.isPaid;
+            const paymentUrl = item?.paymentLink ?? item?.payment ?? "";
+            const canPay = amount > 0 && !isPaid && paymentUrl;
+            const movie = item?.show?.movie;
+            const poster = movie?.poster_path;
+            const title = movie?.title || "Unknown Movie";
+            const runtime = movie?.runtime;
+            const showTime = item?.show?.showDateTime;
+            const seats = Array.isArray(item?.bookedSeats)
+              ? item.bookedSeats
+              : [];
 
-                    <div className="flex flex-col p-4">
-                      <p className="text-lg font-semibold">{title}</p>
-                      <p className="text-sm text-gray-400">
-                        {runtime != null ? timeFormat(runtime) : "N/A"}
-                      </p>
-                      <p className="mt-auto text-sm text-gray-400">
-                        {showTime ? dateFormat(showTime) : "—"}
-                      </p>
-                    </div>
+            return (
+              <div
+                key={item?._id || index}
+                className="flex flex-col justify-between max-w-3xl p-2 mt-4 border rounded-lg md:flex-row bg-primary/8 border-primary/20"
+              >
+                <div className="flex flex-col md:flex-row">
+                  {poster ? (
+                    <img
+                      src={image_base_url + poster}
+                      alt={title}
+                      className="object-cover object-bottom h-auto rounded md:max-w-45 aspect-video"
+                    />
+                  ) : (
+                    <div className="object-cover object-bottom h-auto bg-gray-300 rounded md:max-w-45 aspect-video" />
+                  )}
+
+                  <div className="flex flex-col p-4">
+                    <p className="text-lg font-semibold">{title}</p>
+                    <p className="text-sm text-gray-400">
+                      {runtime != null ? timeFormat(runtime) : "N/A"}
+                    </p>
+                    <p className="mt-auto text-sm text-gray-400">
+                      {showTime ? dateFormat(showTime) : "—"}
+                    </p>
                   </div>
+                </div>
 
-                  <div className="flex flex-col justify-between p-4 mb-2 md:items-end md:text-right">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="flex flex-col items-end">
-                        {item.discountValue > 0 ? (
-                          <>
-                            <p className="text-lg text-gray-400 line-through">
-                              {currency}
-                              {(
-                                amount /
-                                (1 - item.discountValue / 100)
-                              ).toFixed(2)}
-                            </p>
-                            <p className="text-2xl font-semibold leading-none text-green-400">
-                              {currency}
-                              {amount.toFixed(2)}
-                            </p>
-                            <p className="mt-1 text-xs text-green-400">
-                              Discount applied: -{item.discountValue}%
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-2xl font-semibold leading-none">
+                <div className="flex flex-col justify-between p-4 mb-2 md:items-end md:text-right">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="flex flex-col items-end">
+                      {item.discountValue > 0 ? (
+                        <>
+                          <p className="text-lg text-gray-400 line-through">
+                            {currency}
+                            {(amount / (1 - item.discountValue / 100)).toFixed(
+                              2
+                            )}
+                          </p>
+                          <p className="text-2xl font-semibold leading-none text-green-400">
                             {currency}
                             {amount.toFixed(2)}
                           </p>
-                        )}
-                      </div>
-
-                      {canPay ? (
-                        <a
-                          href={paymentUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center h-9 min-w-[110px] px-5 rounded-full bg-primary text-sm font-medium leading-none text-center whitespace-nowrap"
-                        >
-                          Pay Now
-                        </a>
+                          <p className="mt-1 text-xs text-green-400">
+                            Discount applied: -{item.discountValue}%
+                          </p>
+                        </>
                       ) : (
-                        <span className="min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium bg-green-500/20 text-green-300 text-center">
-                          {amount === 0
-                            ? "Free Booking"
-                            : isPaid
-                            ? "Paid"
-                            : "Pending"}
-                        </span>
+                        <p className="text-2xl font-semibold leading-none">
+                          {currency}
+                          {amount.toFixed(2)}
+                        </p>
                       )}
                     </div>
 
-                    <div className="text-sm">
-                      <p>
-                        <span className="text-gray-400">Total Tickets: </span>
-                        {seats.length}
-                      </p>
-                      <p>
-                        <span className="text-gray-400">Seat Number: </span>
-                        {seats.join(", ")}
-                      </p>
-                    </div>
+                    {canPay ? (
+                      <a
+                        href={paymentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center h-9 min-w-[110px] px-5 rounded-full bg-primary text-sm font-medium leading-none text-center whitespace-nowrap"
+                      >
+                        Pay Now
+                      </a>
+                    ) : (
+                      <span
+                        className={`min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium text-center ${
+                          item.status === "CANCELLED"
+                            ? "bg-red-500/20 text-red-300"
+                            : isPaid
+                            ? "bg-green-500/20 text-green-300"
+                            : "bg-yellow-500/20 text-yellow-300"
+                        }`}
+                      >
+                        {item.status === "CANCELLED"
+                          ? "Cancelled"
+                          : amount === 0
+                          ? "Free Booking"
+                          : isPaid
+                          ? "Paid"
+                          : "Pending"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-sm">
+                    <p>
+                      <span className="text-gray-400">Total Tickets: </span>
+                      {seats.length}
+                    </p>
+                    <p>
+                      <span className="text-gray-400">Seat Number: </span>
+                      {seats.join(", ")}
+                    </p>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      )}
+              </div>
+            );
+          })
+        )}
+      </div>
     </>
   );
 };

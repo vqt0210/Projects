@@ -248,7 +248,7 @@ const handlePaymentSuccess = inngest.createFunction(
             bookedSeats: booking.bookedSeats,
             bookingLink: `https://teasonmike.io.vn/my-bookings`,
             supportLink: `https://teasonmike.io.vn`,
-            qrImage: qrCodeDataUrl, // truyền thẳng vào template, không cần nối chuỗi thủ công
+            qrImage: qrCodeDataUrl, 
           }),
         });
 

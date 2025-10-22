@@ -45,14 +45,17 @@ export const bookingConfirmationEmail = ({
   )}</p>
   <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
 
-  ${
-    qrImage
-      ? `<div style="text-align:center; margin-top:20px;">
-          <p style="color:#374151; font-size:14px;">Scan this QR code to check in at the cinema:</p>
-          <img src="${qrImage}" alt="QR Code" style="width:150px;height:150px;border:1px solid #ddd;border-radius:8px;" />
-        </div>`
-      : ""
-  }
+ ${
+   qrImage
+     ? `
+  <div style="margin-top: 25px; text-align: center;">
+    <p style="color: #555; font-size: 14px;">Scan this QR code at the cinema to check in:</p>
+    <img src="${qrImage}" alt="Booking QR" 
+         style="width: 160px; height: 160px; border-radius: 8px; margin-top: 10px;" />
+  </div>
+`
+     : ""
+ }
 
   <div style="margin: 20px 0; text-align: center;">
     <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Booking</a>
@@ -64,7 +67,7 @@ export const bookingConfirmationEmail = ({
 </div>
 `;
 
-// ==== ⏰ Show Reminder ==== //
+// Show Reminder //
 export const showReminderEmail = ({
   user,
   movieTitle,
@@ -90,7 +93,7 @@ export const showReminderEmail = ({
 </div>
 `;
 
-// ==== 🕒 Show Time Changed ==== //
+// Show Time Changed //
 export const showTimeChangedEmail = ({
   user,
   movieTitle,
@@ -135,7 +138,7 @@ export const showTimeChangedEmail = ({
 </div>
 `;
 
-// ==== ❌ Show Cancellation ==== //
+// Show Cancellation //
 export const cancelShowEmail = ({
   user,
   movieTitle,
