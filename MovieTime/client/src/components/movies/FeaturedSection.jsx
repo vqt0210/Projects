@@ -3,77 +3,90 @@ import { useNavigate } from "react-router-dom";
 import BlurCircle from "@/components/common/BlurCircle";
 import MovieCard from "@/components/movies/MovieCard";
 import { useAppContext } from "@/context/AppContext";
+import { useEffect } from "react";
 
 const FeaturedSection = () => {
   const navigate = useNavigate();
-  const { shows } = useAppContext();
+  const { shows, fetchShows } = useAppContext();
+
+  // Gọi API lần đầu + tự refresh mỗi 60s
+  useEffect(() => {
+    console.log("Fetching shows...");
+    fetchShows();
+
+    const interval = setInterval(() => {
+      console.log("Auto-refreshing shows...");
+      fetchShows();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  //  CHUẨN HÓA THEO UTC 
+  const now = new Date();
+
+  // Lọc show còn hiệu lực (so sánh UTC)
+  const validShows = shows.filter((show) => {
+    const showTime = new Date(show.showDateTime);
+    const isValid = showTime > now;
+    console.log(
+      `🎬 [${show.movie.title}] — showTime=${showTime.toISOString()}, now=${now.toISOString()}, valid=${isValid}`
+    );
+    return isValid;
+  });
+
   // Lọc trùng phim, mỗi phim chỉ giữ 1 show đại diện
   const uniqueShows = [
-    ...new Map(shows.map((show) => [show.movie._id, show])).values(),
+    ...new Map(validShows.map((show) => [show.movie._id, show])).values(),
   ];
+
+  console.log(`Total valid shows: ${uniqueShows.length}`);
 
   return (
     <div className="relative px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden">
-      {/* Hiệu ứng Blur background */}
       <BlurCircle top="0" right="-80px" />
-
-      <div className="max-w-screen-xl mx-auto pt-20 pb-10">
-        {/* Header: Now Showing + mô tả + View all */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          {/* Left: title + subtitle + count */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+      <div className="max-w-screen-xl pt-20 pb-10 mx-auto">
+        {/* Header */}
+        <div className="flex flex-col justify-between gap-6 mb-6 md:flex-row md:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+            <h2 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
               Now Showing
             </h2>
             <div className="flex items-center gap-3 text-sm text-gray-300">
               <span className="hidden sm:inline">
                 Latest releases &amp; showtimes
               </span>
-              <span
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-medium text-gray-100"
-                aria-hidden="true"
-              >
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-medium text-gray-100">
                 {uniqueShows.length} titles
               </span>
             </div>
           </div>
 
-          {/* Right: View all button */}
+          {/* View all */}
           <button
             onClick={() => {
               navigate("/movies");
               scrollTo(0, 0);
             }}
             className="group inline-flex items-center gap-3 px-3.5 py-2 rounded-md bg-white/5 hover:bg-white/10 transition cursor-pointer"
-            aria-label="View all movies"
           >
-            <span className="text-sm md:text-base font-medium text-gray-100 cursor-pointer">
+            <span className="text-sm font-medium text-gray-100 md:text-base">
               View all
             </span>
-            <span className="transform transition-transform duration-300 group-hover:translate-x-1">
-              <ArrowRightIcon className="w-4 h-4 text-primary" />
-            </span>
+            <ArrowRightIcon className="w-4 h-4 transition-transform duration-300 transform text-primary group-hover:translate-x-1" />
           </button>
         </div>
 
-        {/* Grid các phim */}
-        <div
-          className="grid gap-8 mt-8 
-          grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4  
-          justify-items-center"
-        >
+        {/* Grid phim */}
+        <div className="grid grid-cols-1 gap-8 mt-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-items-center">
           {uniqueShows.slice(0, 8).map((show) => (
-            <MovieCard
-              key={`${show._id}-${show.movie._id}`}
-              movie={show.movie}
-            />
+            <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} />
           ))}
         </div>
 
-        {/* Nút Show more */}
+        {/* Show more */}
         <div className="flex justify-center mt-20">
           <button
-            aria-label="Show more movies"
             onClick={() => {
               navigate("/movies");
               scrollTo(0, 0);
@@ -82,9 +95,7 @@ const FeaturedSection = () => {
             style={{ minWidth: 160 }}
           >
             <span className="select-none">Show more</span>
-            <span className="transition-transform duration-300 transform group-hover:translate-x-1">
-              <ArrowRightIcon className="w-4 h-4 text-white" />
-            </span>
+            <ArrowRightIcon className="w-4 h-4 text-white transition-transform duration-300 transform group-hover:translate-x-1" />
           </button>
         </div>
       </div>

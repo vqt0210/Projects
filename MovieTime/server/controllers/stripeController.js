@@ -19,17 +19,36 @@ export const stripeWebhooks = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  try {
-    console.log("[WEBHOOK] type:", event.type);
+  //  Trả OK sớm để Stripe không retry
+  res.status(200).json({ received: true });
 
-    // Handle payment_intent.succeeded
-    if (event.type === "payment_intent.succeeded") {
-      const pi = event.data.object;
-      const bookingId = pi?.metadata?.bookingId;
+  // Xử lý bất đồng bộ
+  setImmediate(async () => {
+    try {
+      console.log("[WEBHOOK] type:", event.type);
+      let bookingId = null;
+
+      if (event.type === "payment_intent.succeeded") {
+        const pi = event.data.object;
+        bookingId = pi?.metadata?.bookingId;
+      } else if (event.type === "checkout.session.completed") {
+        const s = event.data.object;
+        bookingId = s?.metadata?.bookingId || null;
+
+        // Nếu metadata trống → truy xuất từ payment_intent
+        if (!bookingId && s.payment_intent) {
+          try {
+            const pi = await stripe.paymentIntents.retrieve(s.payment_intent);
+            bookingId = pi?.metadata?.bookingId;
+          } catch (e) {
+            console.error("[WEBHOOK] Cannot retrieve PI:", e.message);
+          }
+        }
+      }
 
       if (!bookingId) {
-        console.warn("[WEBHOOK] Missing bookingId in PaymentIntent:", pi.id);
-        return res.json({ received: true });
+        console.warn("[WEBHOOK] Missing bookingId in event");
+        return;
       }
 
       const upd = await Booking.updateOne(
@@ -39,85 +58,32 @@ export const stripeWebhooks = async (req, res) => {
             status: "PAID",
             isPaid: true,
             paidAt: new Date(),
-            paymentIntentId: pi.id,
             paymentLink: "",
           },
         }
       );
 
-      console.log("[WEBHOOK] PAID via PI:", bookingId, upd);
-
-      if (global._io) {
-        global._io.emit("paymentUpdate", { bookingId });
-        console.log("Realtime emit (PI):", bookingId);
-      }
-
-      // Không gửi Inngest ở đây để tránh chạy trùng
-    }
-
-    // Handle checkout.session.completed
-    else if (event.type === "checkout.session.completed") {
-      const s = event.data.object;
-      let bookingId = s?.metadata?.bookingId;
-
-      if (!bookingId && s.payment_intent) {
-        const piId =
-          typeof s.payment_intent === "string"
-            ? s.payment_intent
-            : s.payment_intent?.id;
-
-        try {
-          const pi = await stripe.paymentIntents.retrieve(piId);
-          bookingId = pi?.metadata?.bookingId;
-        } catch (err) {
-          console.error("[WEBHOOK] Cannot retrieve PI:", err.message);
-        }
-      }
-
-      if (!bookingId) {
-        console.warn("[WEBHOOK] Missing bookingId in session:", s.id);
-        return res.json({ received: true });
-      }
-
-      const upd = await Booking.updateOne(
-        { _id: bookingId, isPaid: false },
-        {
-          $set: {
-            status: "PAID",
-            isPaid: true,
-            paidAt: new Date(),
-            checkoutSessionId: s.id,
-            paymentLink: "",
-          },
-        }
-      );
-
-      console.log("[WEBHOOK] PAID via session:", bookingId, upd);
-
-      if (global._io) {
-        global._io.emit("paymentUpdate", { bookingId });
-        console.log("Realtime emit (Session):", bookingId);
-      }
-
-      // Chỉ trigger Inngest khi DB thật sự update
       if (upd.modifiedCount === 1) {
+        console.log("[WEBHOOK] Booking marked as PAID:", bookingId);
+
+        if (global._io) {
+          global._io.emit("paymentUpdate", { bookingId });
+          console.log("Real-time emit sent to client");
+        }
+
         await inngest.send({
           name: "app/payment.success",
           data: { bookingId },
         });
+      } else {
+        console.log("[WEBHOOK] No update — already paid or missing booking");
       }
+    } catch (err) {
+      console.error("[WEBHOOK] processing error:", err);
     }
-
-    else {
-      console.log("[WEBHOOK] Unhandled event:", event.type);
-    }
-
-    return res.json({ received: true });
-  } catch (err) {
-    console.error("[WEBHOOK] processing error:", err);
-    return res.status(500).send("Internal Server Error");
-  }
+  });
 };
+
 
 export const checkStripePromo = async (req, res) => {
   try {

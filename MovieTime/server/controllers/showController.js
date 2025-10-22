@@ -45,12 +45,10 @@ export const getNowPlayingMovies = async (req, res) => {
       "getNowPlayingMovies error:",
       error?.response?.data || error?.message || error
     );
-    res
-      .status(502)
-      .json({
-        success: false,
-        message: error?.message || "Failed to fetch TMDB now_playing",
-      });
+    res.status(502).json({
+      success: false,
+      message: error?.message || "Failed to fetch TMDB now_playing",
+    });
   }
 };
 
@@ -138,12 +136,16 @@ export const addShow = async (req, res) => {
 
     const showsToCreate = [];
     (showsInput || []).forEach((sh) => {
-      const showDate = sh.date;
-      const time = sh.time;
-      const dateTimeString = `${showDate}T${time}`;
+      // Admin nhập giờ chiếu dạng local (VD 2025-10-25T19:30)
+      // ta convert sang UTC để lưu đồng bộ toàn cầu
+      const localDateTime = new Date(`${sh.date}T${sh.time}`);
+      const utcDateTime = new Date(
+        localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
+      ); // offset phút → ms
+
       showsToCreate.push({
         movie: movieId,
-        showDateTime: new Date(dateTimeString),
+        showDateTime: utcDateTime, // LƯU DẠNG UTC
         showPrice,
         occupiedSeats: {},
       });
@@ -164,27 +166,29 @@ export const addShow = async (req, res) => {
       "addShow error:",
       error?.response?.data || error?.message || error
     );
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error?.message || "Internal server error",
-      });
+    res.status(500).json({
+      success: false,
+      message: error?.message || "Internal server error",
+    });
   }
 };
 
 // API to get all shows from the database
 export const getShows = async (req, res) => {
   try {
-    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+    const nowUtc = new Date();
+
+    const shows = await Show.find({ showDateTime: { $gte: nowUtc } })
       .populate("movie")
       .sort({ showDateTime: 1 });
+
     res.json({ success: true, shows });
   } catch (error) {
     console.error("getShows error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // API to get a single show from the database
 export const getShow = async (req, res) => {
@@ -206,7 +210,7 @@ export const getShow = async (req, res) => {
     // Lấy danh sách show của phim đó
     const shows = await Show.find({
       movie: movie._id,
-      showDateTime: { $gte: new Date() },
+      showDateTime: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
     }).sort({ showDateTime: 1 });
 
     const dateTime = {};

@@ -29,58 +29,61 @@ export const AppProvider = ({ children }) => {
     }
   }, [isLoaded, user]);
 
-const fetchIsAdmin = async () => {
-  try {
-    setIsCheckingAdmin(true); // bắt đầu check
+  const fetchIsAdmin = async () => {
+    try {
+      setIsCheckingAdmin(true); // bắt đầu check
 
-    const authApi = await authorizedApi(getToken);
-    const { data } = await authApi.get("/api/admin/is-admin");
+      const authApi = await authorizedApi(getToken);
+      const { data } = await authApi.get("/api/admin/is-admin");
 
-    if (!data || typeof data.isAdmin !== "boolean") {
-      throw new Error("Invalid response from server");
-    }
+      if (!data || typeof data.isAdmin !== "boolean") {
+        throw new Error("Invalid response from server");
+      }
 
-    setIsAdmin(data.isAdmin);
+      setIsAdmin(data.isAdmin);
 
-    if (!data.isAdmin && location.pathname.startsWith("/admin")) {
-      navigate("/");
-      toast.dismiss();
-      toast.error("You are not allowed to access admin dashboard", {
-        id: "admin-error",
-      });
-    }
-  } catch (error) {
-    if (error.response?.status === 403) {
-      setIsAdmin(false);
-      if (location.pathname.startsWith("/admin")) {
+      if (!data.isAdmin && location.pathname.startsWith("/admin")) {
         navigate("/");
         toast.dismiss();
         toast.error("You are not allowed to access admin dashboard", {
           id: "admin-error",
         });
       }
-    } else {
-      console.error("fetchIsAdmin error:", error);
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch admin status"
-      );
+    } catch (error) {
+      if (error.response?.status === 403) {
+        setIsAdmin(false);
+        if (location.pathname.startsWith("/admin")) {
+          navigate("/");
+          toast.dismiss();
+          toast.error("You are not allowed to access admin dashboard", {
+            id: "admin-error",
+          });
+        }
+      } else {
+        console.error("fetchIsAdmin error:", error);
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to fetch admin status"
+        );
+      }
+    } finally {
+      // Quan trọng: đảm bảo luôn dừng loading
+      setIsCheckingAdmin(false);
     }
-  } finally {
-    // Quan trọng: đảm bảo luôn dừng loading
-    setIsCheckingAdmin(false);
-  }
-};
-
-
+  };
 
   // ================== MOVIES ==================
   const fetchShows = async () => {
     try {
       const { data } = await api.get("/api/show/all");
-      if (data.success) setShows(data.shows);
-      else toast.error(data.message);
+      if (data.success) {
+        // lọc thêm 1 lần ở client cho chắc
+        const valid = data.shows.filter(
+          (show) => new Date(show.showDateTime) > new Date()
+        );
+        setShows(valid);
+      }
     } catch (error) {
       console.error("fetchShows error:", error);
     }
@@ -154,4 +157,3 @@ const fetchIsAdmin = async () => {
 };
 
 export const useAppContext = () => useContext(AppContext);
-

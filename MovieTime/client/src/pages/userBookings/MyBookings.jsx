@@ -71,6 +71,10 @@ const MyBookings = () => {
         description: "Your booking has been confirmed. Enjoy the show!",
         duration: 4000,
       });
+      // Fallback đảm bảo sync chính xác
+      setTimeout(() => {
+        getMyBookings(); // refetch để chắc DB đã cập nhật
+      }, 2000);
     });
 
     // cleanup khi unmount

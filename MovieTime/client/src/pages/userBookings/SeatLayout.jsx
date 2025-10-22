@@ -82,15 +82,15 @@ const SeatLayout = () => {
       });
 
       if (data.success) {
-        const discountPercent = data.discount?.coupon?.percent_off || 0;
-        const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
-        const finalPrice = totalBeforeDiscount - discountAmount;
+        const discountPercent = data.discountValue || 0;
+
+  
 
         setDiscountPreview({
           discountValue: discountPercent,
-          finalPrice: finalPrice > 0 ? finalPrice : 0,
+          finalPrice: data.finalPrice ?? total,
         });
-        toast.success("Promo applied!");
+        toast.success(`Promo applied: -${discountPercent}%`);
       } else toast.error(data.message);
     } catch (error) {
       toast.error("Invalid or inactive promo code");
@@ -244,7 +244,7 @@ const SeatLayout = () => {
               <button
                 onClick={handleCheckPromo}
                 disabled={loadingPromo}
-                className="px-3 py-2 text-sm transition rounded-md cursor-pointer bg-primary hover:bg-primary-dull"
+                className="px-4 py-2 text-sm transition cursor-pointer rounded-xl bg-primary hover:bg-primary-dull"
               >
                 {loadingPromo ? "Checking..." : "Apply"}
               </button>

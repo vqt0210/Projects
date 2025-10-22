@@ -10,13 +10,8 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
     const showData = await Show.findById(showId);
     if (!showData) return false;
 
-    // Lấy tất cả bookings của show
     const bookings = await Booking.find({ show: showId });
-
-    // Lấy danh sách ghế đã đặt
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
-
-    // Kiểm tra có seat nào bị trùng không
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error) {
     console.error("Seat check error:", error.message);
@@ -30,7 +25,7 @@ export const createBooking = async (req, res) => {
     const { showId, selectedSeats, promoCode } = req.body;
     const { origin } = req.headers;
 
-    // Kiểm tra ghế trống
+    //  Kiểm tra ghế còn trống
     const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
     if (!isAvailable) {
       return res.json({
@@ -39,14 +34,17 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    // Lấy thông tin suất chiếu
     const showData = await Show.findById(showId).populate("movie");
     if (!showData)
       return res.json({ success: false, message: "Show not found." });
 
-    const amount = Number(showData.showPrice) * selectedSeats.length;
-
-    // Kiểm tra mã giảm giá với Stripe
+    const baseAmount = Number(showData.showPrice) * selectedSeats.length;
+    let finalAmount = baseAmount;
+    let discountValue = 0;
     let promotion = null;
+
+    //  Kiểm tra mã giảm giá trên Stripe
     if (promoCode) {
       try {
         const promos = await stripe.promotionCodes.list({
@@ -56,7 +54,14 @@ export const createBooking = async (req, res) => {
 
         if (promos.data.length > 0) {
           promotion = promos.data[0];
-          console.log(`[PROMO] Applied ${promoCode}`);
+          discountValue = promotion.coupon?.percent_off || 0;
+          finalAmount = baseAmount - (baseAmount * discountValue) / 100;
+
+          console.log(
+            `[PROMO] Applied: ${promoCode} (-${discountValue}%) → $${finalAmount.toFixed(
+              2
+            )}`
+          );
         } else {
           return res.json({
             success: false,
@@ -72,27 +77,36 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    // Tạo booking trong DB
+    //  Tạo booking trong DB
     const booking = await Booking.create({
       userId,
       show: showId,
-      amount,
+      amount: finalAmount, // giá sau giảm
+      discountValue, // phần trăm giảm giá
       bookedSeats: selectedSeats,
       isPaid: false,
       status: "PENDING_PAYMENT",
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    // Cập nhật ghế đã chọn
+    //  Cập nhật ghế đã chọn
     if (!showData.occupiedSeats) showData.occupiedSeats = {};
     selectedSeats.forEach((seat) => {
       showData.occupiedSeats[seat] = userId;
     });
     showData.markModified("occupiedSeats");
-    await showData.save();
+    await Show.updateOne(
+  { _id: showId },
+  {
+    $set: selectedSeats.reduce((acc, seat) => {
+      acc[`occupiedSeats.${seat}`] = userId;
+      return acc;
+    }, {}),
+  }
+);
 
-    // Nếu giá = 0 thì auto xác nhận
-    if (amount <= 0) {
+    //  Nếu giá = 0 → tự xác nhận luôn
+    if (finalAmount <= 0) {
       booking.isPaid = true;
       booking.status = "CONFIRMED";
       booking.paymentLink = null;
@@ -104,7 +118,7 @@ export const createBooking = async (req, res) => {
       return res.json({ success: true, url: `${origin}/loading/my-bookings` });
     }
 
-    // Tạo session Stripe Checkout
+    //  Tạo session thanh toán Stripe
     const session = await stripe.checkout.sessions.create({
       success_url: `${origin}/loading/my-bookings`,
       cancel_url: `${origin}/my-bookings`,
@@ -113,27 +127,27 @@ export const createBooking = async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: { name: showData.movie.title },
-            unit_amount: amount * 100,
+            unit_amount: Math.round(finalAmount * 100), // đơn vị cent
           },
           quantity: 1,
         },
       ],
       mode: "payment",
-      discounts: promotion ? [{ promotion_code: promotion.id }] : [],
       metadata: { bookingId: booking._id.toString() },
     });
 
-    //  Lưu thông tin thanh toán vào DB
+    //  Lưu lại session Stripe
     booking.paymentLink = session.url;
     booking.checkoutSessionId = session.id;
     await booking.save();
 
-    //  Gửi event check payment
+    // Gửi event check payment (Inngest)
     await inngest.send({
       name: "app/checkpayment",
       data: { bookingId: booking._id.toString() },
     });
 
+    // Trả URL Stripe
     res.json({ success: true, url: session.url });
   } catch (error) {
     console.error("Create booking error:", error.message);
