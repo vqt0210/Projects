@@ -10,7 +10,7 @@ export const handleClerkWebhook = async (req, res) => {
   const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
 
   try {
-    // ✅ Xác minh chữ ký webhook (bắt buộc cho bảo mật)
+    //  Xác minh chữ ký webhook (bắt buộc cho bảo mật)
     const evt = wh.verify(JSON.stringify(payload), headers);
     const eventType = evt.type;
     const data = evt.data;
@@ -18,13 +18,14 @@ export const handleClerkWebhook = async (req, res) => {
     console.log(`[WEBHOOK] Event type: ${eventType}`);
     console.log("[WEBHOOK] Raw user data:", JSON.stringify(data, null, 2));
 
-    // 🧩 Khi user được tạo mới hoặc cập nhật
+    //  Khi user được tạo mới hoặc cập nhật
     if (eventType === "user.created" || eventType === "user.updated") {
       const user = {
         _id: data.id,
+        clerkId: data.id,
         name: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
         email: data.email_addresses?.[0]?.email_address || null,
-        image: data.image_url,
+        image: data.image_url || data.profile_image_url || null,
       };
 
       console.log("[WEBHOOK] Parsed user object:", user);
@@ -37,13 +38,12 @@ export const handleClerkWebhook = async (req, res) => {
       console.log(`[SYNC ✅] User ${eventType}: ${saved.email}`);
     }
 
-    // ❌ Khi user bị xóa
+    //  Khi user bị xóa
     if (eventType === "user.deleted") {
       await User.findByIdAndDelete(data.id);
       console.log(`[SYNC 🗑️] User deleted: ${data.id}`);
     }
 
-    console.log("====================================\n");
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error("[❌ WEBHOOK ERROR]");
@@ -51,7 +51,6 @@ export const handleClerkWebhook = async (req, res) => {
     console.error("Stack:", err.stack);
     console.error("Raw body:", req.body?.toString());
     console.error("Headers:", JSON.stringify(req.headers, null, 2));
-    console.log("====================================\n");
 
     return res.status(400).json({ error: "Invalid webhook signature" });
   }
