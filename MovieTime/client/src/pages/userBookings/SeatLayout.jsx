@@ -39,23 +39,6 @@ const SeatLayout = () => {
     }
   };
 
-  const getOccupiedSeats = async () => {
-    if (!selectedTime?.showId) return;
-    setIsLoadingSeats(true);
-    try {
-      const { data } = await api.get(
-        `/api/bookings/${selectedTime.showId}/seats`
-      );
-      if (data.success) {
-        setOccupiedSeats(data.occupiedSeats || []);
-      }
-    } catch (error) {
-      console.error("Failed to load seats:", error);
-    } finally {
-      setIsLoadingSeats(false);
-    }
-  };
-
   // Tự loại bỏ ghế đã bị chiếm khi backend load xong
   useEffect(() => {
     setSelectedSeats((prev) =>
