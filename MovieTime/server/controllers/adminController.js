@@ -11,7 +11,6 @@ export const isAdmin = async (req, res) => {
   res.json({ success: true, isAdmin: true });
 };
 
-
 // API: Get Admin Dashboard Data
 export const getDashboardData = async (req, res) => {
   try {
@@ -19,13 +18,12 @@ export const getDashboardData = async (req, res) => {
     const activeShows = await Show.find({
       showDateTime: { $gte: new Date() },
     }).populate("movie");
-    const { data: clerkUsers } = await clerkClient.users.getUserList({
-      limit: 500,
-    });
-    const totalUser = clerkUsers.length;
-    const thisMonth = new Date().getMonth();
-    const newUsersThisMonth = clerkUsers.filter(
-      (u) => new Date(u.createdAt).getMonth() === thisMonth
+    const users = await User.find();
+    const totalUser = users.length;
+
+    const currentMonth = new Date().getMonth();
+    const newUsersThisMonth = users.filter(
+      (u) => new Date(u.createdAt).getMonth() === currentMonth
     ).length;
 
     const totalBookings = bookings.length;
@@ -241,19 +239,8 @@ export const getAllBookings = async (req, res) => {
 // Get User List
 export const getUsers = async (req, res) => {
   try {
-    const { data } = await clerkClient.users.getUserList({ limit: 100 });
-    const mapped = data.map((u) => ({
-      id: u.id,
-      name: u.firstName
-        ? `${u.firstName} ${u.lastName || ""}`.trim()
-        : u.username,
-      email: u.emailAddresses?.[0]?.emailAddress,
-      image: u.imageUrl,
-      role: u.privateMetadata?.role || "user",
-      createdAt: u.createdAt,
-    }));
-
-    res.json({ success: true, users: mapped });
+    const users = await User.find().sort({ createdAt: -1 });
+    res.json({ success: true, users });
   } catch (err) {
     console.error("Get users error:", err);
     res.status(500).json({ success: false, message: "Failed to fetch users" });
