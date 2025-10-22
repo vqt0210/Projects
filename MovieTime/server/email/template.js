@@ -28,26 +28,38 @@ export const bookingConfirmationEmail = ({
   bookedSeats,
   bookingLink,
   supportLink,
+  qrImage,
 }) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden;">
   ${BASE_HEADER()}
   <div style="padding: 24px; color: #111827; line-height: 1.7;">
-    <h2 style="color: #F84565;">Hi ${user.name},</h2>
-    <p>Your booking for <strong>${movieTitle}</strong> is confirmed! 🎬</p>
-    <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString(
-      "en-US",
-      { timeZone: "Asia/Ho_Chi_Minh" }
-    )}</p>
-    <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString(
-      "en-US",
-      { timeZone: "Asia/Ho_Chi_Minh" }
-    )}</p>
-    <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
-    <div style="margin: 20px 0; text-align: center;">
-      <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Booking</a>
-    </div>
-    <p>Enjoy the show! 🍿</p>
+  <h2 style="color: #F84565;">Hi ${user.name},</h2>
+  <p>Your booking for <strong>${movieTitle}</strong> is confirmed! 🎬</p>
+  <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString(
+    "en-US",
+    { timeZone: "Asia/Ho_Chi_Minh" }
+  )}</p>
+  <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString(
+    "en-US",
+    { timeZone: "Asia/Ho_Chi_Minh" }
+  )}</p>
+  <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
+
+  ${
+    qrImage
+      ? `<div style="text-align:center; margin-top:20px;">
+          <p style="color:#374151; font-size:14px;">Scan this QR code to check in at the cinema:</p>
+          <img src="${qrImage}" alt="QR Code" style="width:150px;height:150px;border:1px solid #ddd;border-radius:8px;" />
+        </div>`
+      : ""
+  }
+
+  <div style="margin: 20px 0; text-align: center;">
+    <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Booking</a>
   </div>
+  <p>Enjoy the show! 🍿</p>
+</div>
+
   ${BASE_FOOTER(supportLink)}
 </div>
 `;

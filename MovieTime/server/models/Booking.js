@@ -13,6 +13,8 @@ const bookingSchema = new mongoose.Schema(
     status: { type: String, default: "PENDING_PAYMENT" }, // trạng thái booking
     paidAt: { type: Date }, // thời gian thanh toán thành công
     expiresAt: { type: Date }, // thời gian hết hạn (cho job release)
+    qrCode: { type: String }, // lưu Base64 QR hoặc URL QR
+    ticketCode: { type: String, unique: true }, //mã vé
   },
   { timestamps: true }
 );

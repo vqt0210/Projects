@@ -7,6 +7,8 @@ import {
   bookingConfirmationEmail,
   showReminderEmail,
 } from "../email/template.js";
+import QRCode from "qrcode";
+import axios from "axios"; // nếu chưa có
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-time" });
@@ -170,7 +172,7 @@ const sendShowReminders = inngest.createFunction(
   }
 );
 
-// Inngest Function: Handle payment success → confirm booking & send email
+//  Handle payment success → confirm booking & send email
 const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
   { event: "app/payment.success" },
@@ -179,27 +181,62 @@ const handlePaymentSuccess = inngest.createFunction(
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId)
         .populate({ path: "show", populate: { path: "movie" } })
-        .populate({ path: "userId", model: "User" }); 
+        .populate({ path: "userId", model: "User" });
 
       if (!booking) {
-        await step.run("log missing booking", async () =>
-          console.log(`[PAYMENT] Booking not found: ${bookingId}`)
-        );
+        console.log(`[PAYMENT] Booking not found: ${bookingId}`);
         return { success: false };
       }
 
+      // Lấy thông tin user, fallback Clerk nếu local DB chưa sync 
       let user = booking?.userId;
       if (!user?.email) {
-        user = await User.findById(booking.userId);
+        try {
+          const clerkUser = await axios.get(
+            `https://api.clerk.dev/v1/users/${booking.userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+              },
+            }
+          );
+
+          user = {
+            email: clerkUser.data.email_addresses?.[0]?.email_address,
+            name: `${clerkUser.data.first_name || ""} ${
+              clerkUser.data.last_name || ""
+            }`.trim(),
+            image: clerkUser.data.image_url,
+          };
+          console.log("[FALLBACK] Got email from Clerk:", user.email);
+        } catch (e) {
+          console.error("[FALLBACK] Clerk fetch failed:", e.message);
+        }
       }
 
+      //  Cập nhật trạng thái thanh toán 
       if (booking.status !== "PAID" || !booking.isPaid) {
         booking.status = "PAID";
         booking.isPaid = true;
         booking.paidAt = new Date();
-        await booking.save();
       }
 
+      //  Tạo mã QR riêng cho booking
+      const qrPayload = {
+        bookingId: booking._id,
+        movieTitle: booking.show.movie.title,
+        seats: booking.bookedSeats,
+        showTime: booking.show.showDateTime,
+        userEmail: user?.email || "unknown",
+      };
+
+      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload));
+      booking.qrCode = qrCodeDataUrl;
+      await booking.save();
+
+      console.log(`[QR] Created QR for booking ${bookingId}`);
+
+      //  Gửi email xác nhận
       if (user?.email) {
         await sendEmail({
           to: user.email,
@@ -211,20 +248,19 @@ const handlePaymentSuccess = inngest.createFunction(
             bookedSeats: booking.bookedSeats,
             bookingLink: `https://teasonmike.io.vn/my-bookings`,
             supportLink: `https://teasonmike.io.vn`,
+            qrImage: qrCodeDataUrl, // truyền thẳng vào template, không cần nối chuỗi thủ công
           }),
         });
-        console.log(`[EMAIL] Sent booking confirmation to ${user.email}`);
+
+        console.log(`[EMAIL] Sent booking confirmation with QR to ${user.email}`);
       } else {
         console.log(`[EMAIL] Skipped, user email not found`);
       }
 
-      await step.run("log payment success", async () => {
-        console.log(`[PAYMENT] Confirmed booking + email sent: ${bookingId}`);
-      });
-
+      console.log(`[PAYMENT] Confirmed booking + QR + email sent: ${bookingId}`);
       return { success: true };
     } catch (error) {
-      console.error(" Payment handler failed:", error);
+      console.error("[PAYMENT] Handler failed:", error);
       throw error;
     }
   }
