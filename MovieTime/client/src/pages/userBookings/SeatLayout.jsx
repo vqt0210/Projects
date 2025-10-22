@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { assets } from "@/assets/assets";
 import Loading from "@/components/common/Loading";
 import { ArrowRightIcon, ClockIcon } from "lucide-react";
@@ -8,7 +8,6 @@ import BlurCircle from "@/components/common/BlurCircle";
 import toast from "react-hot-toast";
 import { useAppContext } from "@/context/AppContext";
 import api, { authorizedApi } from "@/utils/api";
-import axios from "axios"; // ⚠️ thiếu import này trong bản của bạn
 
 const SeatLayout = () => {
   const seatRows = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
@@ -44,7 +43,9 @@ const SeatLayout = () => {
     if (!selectedTime?.showId) return;
     setIsLoadingSeats(true);
     try {
-      const { data } = await api.get(`/api/bookings/${selectedTime.showId}/seats`);
+      const { data } = await api.get(
+        `/api/bookings/${selectedTime.showId}/seats`
+      );
       if (data.success) {
         setOccupiedSeats(data.occupiedSeats || []);
       }
@@ -55,7 +56,7 @@ const SeatLayout = () => {
     }
   };
 
-  // ✅ Tự loại bỏ ghế đã bị chiếm khi backend load xong
+  // Tự loại bỏ ghế đã bị chiếm khi backend load xong
   useEffect(() => {
     setSelectedSeats((prev) =>
       prev.filter((seat) => !occupiedSeats.includes(seat))
@@ -63,22 +64,19 @@ const SeatLayout = () => {
   }, [occupiedSeats]);
 
   const handleSeatClick = (seatId) => {
-    if (isLoadingSeats) return; // chặn khi đang load
-    if (!selectedTime) return toast("Please select a time first");
+    if (isLoadingSeats) return toast("Please wait, loading seats...");
+    if (!selectedTime) return toast("Please select time first");
 
     setSelectedSeats((prev) => {
       const already = prev.includes(seatId);
-
       if (!already && prev.length >= 5) {
         toast("You can only select up to 5 seats");
         return prev;
       }
-
       if (occupiedSeats.includes(seatId)) {
         toast("This seat is already booked");
         return prev;
       }
-
       return already ? prev.filter((s) => s !== seatId) : [...prev, seatId];
     });
   };
@@ -140,7 +138,22 @@ const SeatLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTime) getOccupiedSeats();
+    const fetchSeats = async () => {
+      if (!selectedTime?.showId) return;
+      setIsLoadingSeats(true); // chặn click tạm thời
+      try {
+        const { data } = await api.get(
+          `/api/bookings/${selectedTime.showId}/seats`
+        );
+        if (data.success) setOccupiedSeats(data.occupiedSeats || []);
+      } catch (err) {
+        console.error("Failed to load seats:", err);
+        toast.error("Failed to load seat availability.");
+      } finally {
+        setIsLoadingSeats(false);
+      }
+    };
+    fetchSeats();
   }, [selectedTime]);
 
   if (!show) return <Loading />;
@@ -204,8 +217,8 @@ const SeatLayout = () => {
 
         <div className="relative flex flex-col items-center mt-10 text-xs text-gray-300">
           {isLoadingSeats && (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-white rounded-lg bg-black/40 backdrop-blur-sm">
-              Loading seats...
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
+              <p className="text-sm text-white">Loading seats...</p>
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -272,7 +285,8 @@ const SeatLayout = () => {
             {discountPreview && (
               <div className="mt-3 space-y-1">
                 <p className="text-green-400">
-                  ✅ Promo applied: <strong>-{discountPreview.discountValue}%</strong>
+                  ✅ Promo applied:{" "}
+                  <strong>-{discountPreview.discountValue}%</strong>
                 </p>
                 <p className="text-lg">
                   Final Total:{" "}
@@ -291,7 +305,9 @@ const SeatLayout = () => {
           className="flex items-center gap-2 px-10 py-3 mt-20 text-sm font-medium transition rounded-full cursor-pointer bg-primary hover:bg-primary-dull active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isProcessing ? "Processing..." : "Proceed to Checkout"}
-          {!isProcessing && <ArrowRightIcon strokeWidth={3} className="w-4 h-4" />}
+          {!isProcessing && (
+            <ArrowRightIcon strokeWidth={3} className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>
