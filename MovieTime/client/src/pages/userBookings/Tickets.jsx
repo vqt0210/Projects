@@ -12,7 +12,7 @@ export default function Tickets() {
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        const { data } = await api.get(`/ticket/${id}`);
+        const { data } = await api.get(`/api/ticket/${id}`);
         if (data.success) setTicket(data.ticket);
       } catch (err) {
         console.error(err);
