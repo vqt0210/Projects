@@ -1,4 +1,4 @@
-// ==== 🎬 Shared Base Layout ==== //
+// Shared Base Layout
 const BASE_HEADER = () => `
   <div style="background: linear-gradient(90deg, #0b1220, #1e1b4b); 
               padding: 24px; text-align: center;">
@@ -20,7 +20,7 @@ const BASE_FOOTER = (supportLink) => `
   </div>
 `;
 
-// ==== 🎟️ Booking Confirmation ==== //
+//Booking Confirmation
 export const bookingConfirmationEmail = ({
   user,
   movieTitle,
@@ -29,55 +29,70 @@ export const bookingConfirmationEmail = ({
   bookingLink,
   supportLink,
   qrImage,
+  posterUrl, // ✅ thêm dòng này
 }) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden;">
   ${BASE_HEADER()}
+  ${
+    posterUrl
+      ? `<div style="text-align:center; margin-top: 20px;">
+          <img src="${posterUrl}" alt="${movieTitle}" style="width: 100%; max-width: 400px; border-radius: 10px; object-fit: cover;"/>
+        </div>`
+      : ""
+  }
   <div style="padding: 24px; color: #111827; line-height: 1.7;">
-  <h2 style="color: #F84565;">Hi ${user.name},</h2>
-  <p>Your booking for <strong>${movieTitle}</strong> is confirmed! 🎬</p>
-  <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString(
-    "en-US",
-    { timeZone: "Asia/Ho_Chi_Minh" }
-  )}</p>
-  <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString(
-    "en-US",
-    { timeZone: "Asia/Ho_Chi_Minh" }
-  )}</p>
-  <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
+    <h2 style="color: #F84565;">Hi ${user.name},</h2>
+    <p>Your booking for <strong>${movieTitle}</strong> is confirmed! 🎬</p>
+    <p><strong>Date:</strong> ${new Date(showDateTime).toLocaleDateString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</p>
+    <p><strong>Time:</strong> ${new Date(showDateTime).toLocaleTimeString(
+      "en-US",
+      { timeZone: "Asia/Ho_Chi_Minh" }
+    )}</p>
+    <p><strong>Seats:</strong> ${bookedSeats.join(", ")}</p>
 
- ${
-   qrImage
-     ? `
-  <div style="margin-top: 25px; text-align: center;">
-    <p style="color: #555; font-size: 14px;">Scan this QR code at the cinema to check in:</p>
-    <img src="${qrImage}" alt="Booking QR" 
-         style="width: 160px; height: 160px; border-radius: 8px; margin-top: 10px;" />
+    ${
+      qrImage
+        ? `<div style="margin-top: 25px; text-align: center;">
+             <p style="color: #555; font-size: 14px;">Scan this QR code at the cinema to check in:</p>
+             <img src="${qrImage}" alt="Booking QR" style="width: 160px; height: 160px; border-radius: 8px; margin-top: 10px;" />
+           </div>`
+        : ""
+    }
+
+    <div style="margin: 20px 0; text-align: center;">
+      <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">
+        View Ticket 🎟️
+      </a>
+    </div>
+    <p>Enjoy the show! 🍿</p>
   </div>
-`
-     : ""
- }
-
-  <div style="margin: 20px 0; text-align: center;">
-    <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Ticket</a>
-  </div>
-  <p>Enjoy the show! 🍿</p>
-</div>
-
   ${BASE_FOOTER(supportLink)}
 </div>
 `;
 
-// Show Reminder //
+// Show Reminder
 export const showReminderEmail = ({
   user,
   movieTitle,
   showDateTime,
+  bookingLink,
   supportLink,
+  posterUrl,
 }) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden;">
   ${BASE_HEADER()}
+  ${
+    posterUrl
+      ? `<div style="text-align:center; margin-top: 20px;">
+          <img src="${posterUrl}" alt="${movieTitle}" style="width: 100%; max-width: 400px; border-radius: 10px; object-fit: cover;"/>
+        </div>`
+      : ""
+  }
   <div style="padding: 24px; color: #111827; line-height: 1.7;">
-    <h2 style="color: #F84565;">Hello ${user.name},</h2>
+    <h2 style="color: #F84565;">Hello ${user.name || "Movie lover"},</h2>
     <p>This is a friendly reminder that your movie:</p>
     <h3 style="color: #F84565;">"${movieTitle}"</h3>
     <p>is scheduled for <strong>${new Date(showDateTime).toLocaleDateString(
@@ -87,6 +102,15 @@ export const showReminderEmail = ({
     at <strong>${new Date(showDateTime).toLocaleTimeString("en-US", {
       timeZone: "Asia/Ho_Chi_Minh",
     })}</strong>.</p>
+
+    <div style="margin: 25px 0; text-align: center;">
+      <a href="${bookingLink}" 
+         style="background: #F84565; color: #fff; text-decoration: none; 
+         padding: 12px 25px; border-radius: 6px; font-weight: bold;">
+        View Ticket 🎟️
+      </a>
+    </div>
+
     <p>Get ready and enjoy the show! 🍿</p>
   </div>
   ${BASE_FOOTER(supportLink)}

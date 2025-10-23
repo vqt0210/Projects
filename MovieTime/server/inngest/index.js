@@ -8,7 +8,7 @@ import {
   showReminderEmail,
 } from "../email/template.js";
 import QRCode from "qrcode";
-import axios from "axios"; 
+import axios from "axios";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-time" });
@@ -121,28 +121,46 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
 // Inngest Function to send reminders
 const sendShowReminders = inngest.createFunction(
   { id: "send-show-reminders" },
-  { cron: "0 */2 * * *" },
+  { cron: "0 */2 * * *" }, // chạy mỗi 2 tiếng
   async ({ step }) => {
-    const now = new Date(),
-      in8h = new Date(now.getTime() + 8 * 60 * 60 * 1000),
-      windowStart = new Date(in8h.getTime() - 10 * 60 * 1000);
+    const now = new Date();
+    const in8h = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const windowStart = new Date(in8h.getTime() - 10 * 60 * 1000);
+
+    // Lấy tất cả các show sắp chiếu trong 8 tiếng tới
     const shows = await Show.find({
       showDateTime: { $gte: windowStart, $lte: in8h },
     }).populate("movie");
+
     for (const show of shows) {
-      const userIds = [...new Set(Object.values(show.occupiedSeats || {}))];
-      const users = await User.find({ _id: { $in: userIds } });
-      for (const user of users) {
+      // Lấy tất cả bookings đã thanh toán của show này
+      const bookings = await Booking.find({
+        show: show._id,
+        isPaid: true,
+      }).populate("userId");
+
+      for (const booking of bookings) {
+        const user = booking.userId;
+        if (!user?.email) continue;
+
         await sendEmail({
           to: user.email,
-          subject: `Reminder: Your movie "${show.movie.title}" starts soon!`,
+          subject: `🎬 Reminder: "${show.movie.title}" starts soon!`,
           body: showReminderEmail({
             user,
             movieTitle: show.movie.title,
             showDateTime: show.showDateTime,
-            bookingLink: `https://teasonmike.io.vn/my-bookings`,
+            bookingLink: `https://teasonmike.io.vn/ticket/${booking._id}`,
+            posterUrl: show.movie.poster_path
+              ? `https://image.tmdb.org/t/p/w500${show.movie.poster_path}`
+              : "https://teasonmike.io.vn/assets/fallBack.jpg",
+            supportLink: `https://teasonmike.io.vn`,
           }),
         });
+
+        console.log(
+          `[REMINDER] Sent to ${user.email} for booking ${booking._id}`
+        );
       }
     }
   }
@@ -164,7 +182,7 @@ const handlePaymentSuccess = inngest.createFunction(
         return { success: false };
       }
 
-      // Lấy thông tin user, fallback Clerk nếu local DB chưa sync
+      // Lấy thông tin user (fallback Clerk nếu local DB chưa sync)
       let user = booking?.userId;
       if (!user?.email) {
         try {
@@ -176,7 +194,6 @@ const handlePaymentSuccess = inngest.createFunction(
               },
             }
           );
-
           user = {
             email: clerkUser.data.email_addresses?.[0]?.email_address,
             name: `${clerkUser.data.first_name || ""} ${
@@ -190,22 +207,24 @@ const handlePaymentSuccess = inngest.createFunction(
         }
       }
 
-      //  Cập nhật trạng thái thanh toán
+      // Cập nhật trạng thái thanh toán
       if (booking.status !== "PAID" || !booking.isPaid) {
         booking.status = "PAID";
         booking.isPaid = true;
         booking.paidAt = new Date();
       }
 
-      //  Tạo mã QR riêng cho booking
-      const qrPayload = `https://www.teasonmike.io.vn/ticket/${booking._id}`;
-      const qrCodeDataUrl = await QRCode.toDataURL(qrPayload);
+      // Tạo mã QR cho vé
+      const ticketUrl = `https://teasonmike.io.vn/ticket/${booking._id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(ticketUrl);
       booking.qrCode = qrCodeDataUrl;
       await booking.save();
-
       console.log(`[QR] Created QR for booking ${bookingId}`);
+      const posterUrl = booking.show.movie?.poster_path
+        ? `https://image.tmdb.org/t/p/w500${booking.show.movie.poster_path}`
+        : "https://teasonmike.io.vn/assets/fallBack.jpg";
 
-      //  Gửi email xác nhận
+      // Gửi email xác nhận vé
       if (user?.email) {
         await sendEmail({
           to: user.email,
@@ -215,22 +234,19 @@ const handlePaymentSuccess = inngest.createFunction(
             movieTitle: booking.show.movie.title,
             showDateTime: booking.show.showDateTime,
             bookedSeats: booking.bookedSeats,
-            bookingLink: `https://teasonmike.io.vn/ticket/${booking._id}`,
+            bookingLink: ticketUrl, 
             supportLink: `https://teasonmike.io.vn`,
             qrImage: qrCodeDataUrl,
+            posterUrl, 
           }),
         });
 
-        console.log(
-          `[EMAIL] Sent booking confirmation with QR to ${user.email}`
-        );
+        console.log(`[EMAIL] Sent booking confirmation with QR to ${user.email}`);
       } else {
         console.log(`[EMAIL] Skipped, user email not found`);
       }
 
-      console.log(
-        `[PAYMENT] Confirmed booking + QR + email sent: ${bookingId}`
-      );
+      console.log(`[PAYMENT] Booking confirmed & email sent: ${bookingId}`);
       return { success: true };
     } catch (error) {
       console.error("[PAYMENT] Handler failed:", error);
@@ -238,6 +254,7 @@ const handlePaymentSuccess = inngest.createFunction(
     }
   }
 );
+
 
 export const functions = [
   syncUserCreation,

@@ -25,7 +25,7 @@ export default async function sendEmail({ to, subject, body }) {
 
   try {
     const response = await resend.emails.send({
-      from: "MovieTime <noreply@teasonmike.io.vn>",
+      from: "MovieTime <support@teasonmike.io.vn>",
       to,
       subject,
       html: body,
