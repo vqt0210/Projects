@@ -8,7 +8,7 @@ import {
   showReminderEmail,
 } from "../email/template.js";
 import QRCode from "qrcode";
-import axios from "axios"; // nếu chưa có
+import axios from "axios"; 
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-time" });
@@ -118,30 +118,6 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
   }
 );
 
-// Inngest Function to send email when user books a show
-const sendBookingConfirmationEmail = inngest.createFunction(
-  { id: "send-booking-confirmation-email" },
-  { event: "app/show.booked" },
-  async ({ event, step }) => {
-    const bookingId = event.data.bookingId;
-    const booking = await Booking.findById(bookingId)
-      .populate({ path: "show", populate: { path: "movie" } })
-      .populate({ path: "userId", model: "User" });
-    if (!booking?.userId?.email) return;
-    await sendEmail({
-      to: booking.userId.email,
-      subject: `Booking Confirmation: "${booking.show.movie.title}"`,
-      body: bookingConfirmationEmail({
-        user: booking.userId,
-        movieTitle: booking.show.movie.title,
-        showDateTime: booking.show.showDateTime,
-        bookedSeats: booking.bookedSeats,
-        bookingLink: `https://teasonmike.io.vn/my-bookings`,
-        supportLink: `https://teasonmike.io.vn`,
-      }),
-    });
-  }
-);
 // Inngest Function to send reminders
 const sendShowReminders = inngest.createFunction(
   { id: "send-show-reminders" },
@@ -188,7 +164,7 @@ const handlePaymentSuccess = inngest.createFunction(
         return { success: false };
       }
 
-      // Lấy thông tin user, fallback Clerk nếu local DB chưa sync 
+      // Lấy thông tin user, fallback Clerk nếu local DB chưa sync
       let user = booking?.userId;
       if (!user?.email) {
         try {
@@ -214,7 +190,7 @@ const handlePaymentSuccess = inngest.createFunction(
         }
       }
 
-      //  Cập nhật trạng thái thanh toán 
+      //  Cập nhật trạng thái thanh toán
       if (booking.status !== "PAID" || !booking.isPaid) {
         booking.status = "PAID";
         booking.isPaid = true;
@@ -222,15 +198,8 @@ const handlePaymentSuccess = inngest.createFunction(
       }
 
       //  Tạo mã QR riêng cho booking
-      const qrPayload = {
-        bookingId: booking._id,
-        movieTitle: booking.show.movie.title,
-        seats: booking.bookedSeats,
-        showTime: booking.show.showDateTime,
-        userEmail: user?.email || "unknown",
-      };
-
-      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload));
+      const qrPayload = `https://www.teasonmike.io.vn/ticket/${booking._id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(qrPayload);
       booking.qrCode = qrCodeDataUrl;
       await booking.save();
 
@@ -246,18 +215,22 @@ const handlePaymentSuccess = inngest.createFunction(
             movieTitle: booking.show.movie.title,
             showDateTime: booking.show.showDateTime,
             bookedSeats: booking.bookedSeats,
-            bookingLink: `https://teasonmike.io.vn/my-bookings`,
+            bookingLink: `https://teasonmike.io.vn/ticket/${booking._id}`,
             supportLink: `https://teasonmike.io.vn`,
-            qrImage: qrCodeDataUrl, 
+            qrImage: qrCodeDataUrl,
           }),
         });
 
-        console.log(`[EMAIL] Sent booking confirmation with QR to ${user.email}`);
+        console.log(
+          `[EMAIL] Sent booking confirmation with QR to ${user.email}`
+        );
       } else {
         console.log(`[EMAIL] Skipped, user email not found`);
       }
 
-      console.log(`[PAYMENT] Confirmed booking + QR + email sent: ${bookingId}`);
+      console.log(
+        `[PAYMENT] Confirmed booking + QR + email sent: ${bookingId}`
+      );
       return { success: true };
     } catch (error) {
       console.error("[PAYMENT] Handler failed:", error);
@@ -266,13 +239,11 @@ const handlePaymentSuccess = inngest.createFunction(
   }
 );
 
-
 export const functions = [
   syncUserCreation,
   syncUserDeletion,
   syncUserUpdation,
   releaseSeatsAndDeleteBooking,
-  sendBookingConfirmationEmail,
   sendShowReminders,
   handlePaymentSuccess,
 ];

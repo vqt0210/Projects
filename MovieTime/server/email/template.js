@@ -58,7 +58,7 @@ export const bookingConfirmationEmail = ({
  }
 
   <div style="margin: 20px 0; text-align: center;">
-    <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Booking</a>
+    <a href="${bookingLink}" style="background: #F84565; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold;">View Ticket</a>
   </div>
   <p>Enjoy the show! 🍿</p>
 </div>

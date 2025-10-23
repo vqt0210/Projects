@@ -21,6 +21,7 @@ import meRouter from "./routes/me.js";
 import stripeRouter from "./routes/stripeRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeController.js";
 import webhookRouter from "./routes/clerkWebhookRoutes.js";
+import ticketRouter from "./routes/ticketRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -70,6 +71,7 @@ app.use("/api/actors", actorRoutes);
 app.use("/api/me", meRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/webhooks", webhookRouter);
+app.use("/api/ticket", ticketRouter);
 
 // 404 + Error handler
 app.use((req, res) =>
