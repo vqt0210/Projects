@@ -14,6 +14,7 @@ export const getTicketById = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Ticket not found" });
     }
+    console.log("[DEBUG] Fetching booking:", req.params.id);
 
     const movie = booking.show.movie;
 

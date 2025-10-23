@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "@/components/common/Loading";
-import { CalendarDays, Clock, CheckCircle, XCircle, Ticket } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Ticket,
+} from "lucide-react";
 import api from "@/utils/api";
 
 export default function Tickets() {
@@ -24,7 +30,8 @@ export default function Tickets() {
   }, [id]);
 
   if (loading) return <Loading text="Loading your ticket..." />;
-  if (!ticket) return <p className="mt-10 text-center text-gray-400">Ticket not found</p>;
+  if (!ticket)
+    return <p className="mt-10 text-center text-gray-400">Ticket not found</p>;
 
   const { show, bookedSeats, amount, qrCode, status } = ticket;
   const { movie } = show || {};
@@ -43,28 +50,39 @@ export default function Tickets() {
             alt={movie?.title}
             className="object-cover w-40 mb-4 rounded-lg shadow-md h-60"
           />
-          <h1 className="mb-2 text-2xl font-bold text-primary">{movie?.title}</h1>
+          <h1 className="mb-2 text-2xl font-bold text-primary">
+            {movie?.title}
+          </h1>
           <p className="mb-6 text-sm text-gray-300">🎟️ Booking Confirmation</p>
         </div>
 
         {/* Details */}
         <div className="space-y-3 text-gray-200">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-primary" />
-            <span>
-              {new Date(show.showDateTime).toLocaleDateString("en-US", {
-                timeZone: "Asia/Ho_Chi_Minh",
-              })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            <span>
-              {new Date(show.showDateTime).toLocaleTimeString("en-US", {
-                timeZone: "Asia/Ho_Chi_Minh",
-              })}
-            </span>
-          </div>
+          {show && (
+            <>
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-primary" />
+                <span>
+                  {show?.showDateTime
+                    ? new Date(show.showDateTime).toLocaleDateString("en-US", {
+                        timeZone: "Asia/Ho_Chi_Minh",
+                      })
+                    : "N/A"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                <span>
+                  {show?.showDateTime
+                    ? new Date(show.showDateTime).toLocaleTimeString("en-US", {
+                        timeZone: "Asia/Ho_Chi_Minh",
+                      })
+                    : "N/A"}
+                </span>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-2">
             <Ticket className="w-5 h-5 text-primary" />
             <span>Seats: {bookedSeats.join(", ")}</span>
