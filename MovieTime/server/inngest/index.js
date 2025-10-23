@@ -8,7 +8,8 @@ import {
   showReminderEmail,
 } from "../email/template.js";
 import QRCode from "qrcode";
-import axios from "axios";
+import fs from "fs";
+import path from "path";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-time" });
@@ -170,91 +171,58 @@ const sendShowReminders = inngest.createFunction(
 const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
   { event: "app/payment.success" },
-  async ({ event, step }) => {
-    try {
-      const bookingId = event.data.bookingId;
-      const booking = await Booking.findById(bookingId)
-        .populate({ path: "show", populate: { path: "movie" } })
-        .populate({ path: "userId", model: "User" });
+  async ({ event }) => {
+    const bookingId = event.data.bookingId;
+    const booking = await Booking.findById(bookingId)
+      .populate({ path: "show", populate: { path: "movie" } })
+      .populate({ path: "userId", model: "User" });
 
-      if (!booking) {
-        console.log(`[PAYMENT] Booking not found: ${bookingId}`);
-        return { success: false };
-      }
+    if (!booking) return { success: false };
 
-      // Lấy thông tin user (fallback Clerk nếu local DB chưa sync)
-      let user = booking?.userId;
-      if (!user?.email) {
-        try {
-          const clerkUser = await axios.get(
-            `https://api.clerk.dev/v1/users/${booking.userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-              },
-            }
-          );
-          user = {
-            email: clerkUser.data.email_addresses?.[0]?.email_address,
-            name: `${clerkUser.data.first_name || ""} ${
-              clerkUser.data.last_name || ""
-            }`.trim(),
-            image: clerkUser.data.image_url,
-          };
-          console.log("[FALLBACK] Got email from Clerk:", user.email);
-        } catch (e) {
-          console.error("[FALLBACK] Clerk fetch failed:", e.message);
-        }
-      }
+    // Tạo file QR và lưu trên server
+    const qrDir = path.join(process.cwd(), "public", "qr");
+    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
-      // Cập nhật trạng thái thanh toán
-      if (booking.status !== "PAID" || !booking.isPaid) {
-        booking.status = "PAID";
-        booking.isPaid = true;
-        booking.paidAt = new Date();
-      }
+    const qrPath = path.join(qrDir, `${booking._id}.png`);
+    const qrPayload = `https://teasonmike.io.vn/ticket/${booking._id}`;
 
-      // Tạo mã QR cho vé
-      const ticketUrl = `https://teasonmike.io.vn/ticket/${booking._id}`;
-      const qrCodeDataUrl = await QRCode.toDataURL(ticketUrl);
-      booking.qrCode = qrCodeDataUrl;
-      await booking.save();
-      console.log(`[QR] Created QR for booking ${bookingId}`);
-      const posterUrl = booking.show.movie?.poster_path
-        ? `https://image.tmdb.org/t/p/w500${booking.show.movie.poster_path}`
-        : "https://teasonmike.io.vn/assets/fallBack.jpg";
+    await QRCode.toFile(qrPath, qrPayload, { width: 400 });
 
-      // Gửi email xác nhận vé
-      if (user?.email) {
-        await sendEmail({
-          to: user.email,
-          subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
-          body: bookingConfirmationEmail({
-            user,
-            movieTitle: booking.show.movie.title,
-            showDateTime: booking.show.showDateTime,
-            bookedSeats: booking.bookedSeats,
-            bookingLink: ticketUrl, 
-            supportLink: `https://teasonmike.io.vn`,
-            qrImage: qrCodeDataUrl,
-            posterUrl, 
-          }),
-        });
+    const qrPublicUrl = `https://server.teasonmike.io.vn/qr/${booking._id}.png`;
 
-        console.log(`[EMAIL] Sent booking confirmation with QR to ${user.email}`);
-      } else {
-        console.log(`[EMAIL] Skipped, user email not found`);
-      }
+    // Lưu vào DB để frontend hiển thị
+    booking.qrCode = qrPublicUrl;
+    await booking.save();
 
-      console.log(`[PAYMENT] Booking confirmed & email sent: ${bookingId}`);
-      return { success: true };
-    } catch (error) {
-      console.error("[PAYMENT] Handler failed:", error);
-      throw error;
-    }
+    // Gửi mail có link ảnh QR
+    await sendEmail({
+      to: booking.userId.email,
+      subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
+      body: bookingConfirmationEmail({
+        user: booking.userId,
+        movieTitle: booking.show.movie.title,
+        showDateTime: booking.show.showDateTime,
+        bookedSeats: booking.bookedSeats,
+        bookingLink: `https://teasonmike.io.vn/ticket/${booking._id}`,
+        supportLink: `https://teasonmike.io.vn`,
+        qrImage: qrPublicUrl, 
+      }),
+    });
+
+    console.log(`[EMAIL] Sent booking confirmation for ${bookingId}`);
+    return { success: true };
   }
 );
 
+// 🧹 Auto cleanup old QR files daily
+const cleanupOldQRCodes = inngest.createFunction(
+  { id: "cleanup-old-qr-files" },
+  { cron: "0 0 * * *" }, // Chạy mỗi ngày 0h
+  async ({ step }) => {
+    await import("../cleanupQr.js");
+    console.log("Daily QR cleanup done!");
+  }
+);
 
 export const functions = [
   syncUserCreation,
@@ -263,4 +231,5 @@ export const functions = [
   releaseSeatsAndDeleteBooking,
   sendShowReminders,
   handlePaymentSuccess,
+  cleanupOldQRCodes,
 ];

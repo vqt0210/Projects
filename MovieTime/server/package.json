@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "server": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "clean:qr": "node cleanupQR.js"
+    
   },
   "keywords": [],
   "author": "",
