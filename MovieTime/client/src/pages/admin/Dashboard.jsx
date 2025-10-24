@@ -71,7 +71,7 @@ const Dashboard = () => {
     { title: "Total Bookings", value: totalBookings || 0, icon: ChartLineIcon },
     {
       title: "Total Revenue",
-      value: `${currency}${totalRevenue || 0}`,
+      value: `${currency}${totalRevenue.toFixed(2) || 0}`,
       icon: CircleDollarSignIcon,
     },
     {

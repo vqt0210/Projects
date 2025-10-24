@@ -49,7 +49,6 @@ export default function Tickets() {
   // Chưa đăng nhập thì chuyển sang Clerk Sign In
   if (!isSignedIn) return <RedirectToSignIn />;
 
-
   if (loading) return <Loading text="Loading your ticket..." />;
 
   // Error
@@ -59,7 +58,7 @@ export default function Tickets() {
         <p className="mb-4 font-semibold">{error}</p>
         <button
           onClick={() => navigate("/my-bookings")}
-          className="px-4 py-2 text-white transition rounded-lg bg-primary hover:bg-primary-dull"
+          className="px-5 py-2 text-white transition rounded-full shadow-md cursor-pointer bg-primary hover:bg-primary-dull hover:shadow-lg"
         >
           Back to My Bookings
         </button>

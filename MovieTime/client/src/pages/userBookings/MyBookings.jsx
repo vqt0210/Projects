@@ -159,7 +159,7 @@ const MyBookings = () => {
 
                   <div className="text-sm text-gray-300">
                     <p>
-                      <span className="text-gray-400">Seats:</span>{" "}
+                      <span className="text-gray-400 ">Seats:</span>{" "}
                       {seats.join(", ")}
                     </p>
                   </div>
@@ -168,7 +168,7 @@ const MyBookings = () => {
                   {isPaid && (
                     <button
                       onClick={() => navigate(`/ticket/${item._id}`)}
-                      className="mt-3 px-5 py-2 bg-primary text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_10px_#f84565]"
+                      className="px-6 py-2 mt-5 text-white transition-all duration-300 transform rounded-full shadow-md cursor-pointer bg-primary hover:bg-primary-dull hover:scale-105 hover:shadow-lg"
                     >
                       View Ticket
                     </button>
