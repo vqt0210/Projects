@@ -25,7 +25,7 @@ export const getTicketById = async (req, res) => {
         movieTitle: movie.title,
         moviePoster: movie.poster_path,
         showDateTime: booking.show.showDateTime,
-        bookedSeats: booking.bookedSeats,
+        seats: booking.bookedSeats,
         amount: booking.amount,
         status: booking.status,
         qrCode: booking.qrCode,

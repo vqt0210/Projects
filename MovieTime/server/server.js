@@ -72,7 +72,13 @@ app.use("/api/me", meRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/webhooks", webhookRouter);
 app.use("/api/ticket", ticketRouter);
-app.use("/qr", express.static("public/qr"));
+app.use("/qr", (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://teasonmike.io.vn");
+  res.header("Access-Control-Allow-Methods", "GET");
+  res.header("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static("public/qr"));
+app.use("/posters", express.static("public/posters"));
 
 // 404 + Error handler
 app.use((req, res) =>

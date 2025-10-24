@@ -26,8 +26,15 @@ export default function Tickets() {
   if (!ticket)
     return <p className="mt-10 text-center text-gray-400">Ticket not found</p>;
 
-  const { moviePoster, movieTitle, showDateTime, seats, amount, qrCode, status } =
-    ticket;
+  const {
+    moviePoster,
+    movieTitle,
+    showDateTime,
+    seats,
+    amount,
+    qrCode,
+    status,
+  } = ticket;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0c10] to-[#1f2833] text-white p-6">
@@ -88,17 +95,23 @@ export default function Tickets() {
         </div>
 
         {/* QR Section */}
-        {qrCode && (
+        {qrCode ? (
           <div className="mt-8 text-center">
-            <img
-              src={qrCode}
-              alt="QR Code"
-              className="w-48 h-48 mx-auto border border-gray-700 rounded-lg shadow-md"
-            />
-            <p className="mt-3 text-xs text-gray-400">
-              Scan this QR code at the cinema to check in
-            </p>
+            <div className="border border-gray-700 p-3 inline-block rounded-xl bg-[#0b0c10] shadow-inner">
+              <img
+                src={qrCode}
+                alt="QR Code"
+                className="object-contain w-40 h-40 mx-auto"
+              />
+              <p className="mt-2 text-xs text-gray-400">
+                Scan this QR code at the cinema
+              </p>
+            </div>
           </div>
+        ) : (
+          <p className="mt-6 text-sm text-center text-gray-500">
+            QR code not available
+          </p>
         )}
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
 import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
+import { downloadPoster } from "../utils/downloadPoster.js";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-time" });
@@ -197,11 +198,13 @@ const handlePaymentSuccess = inngest.createFunction(
       booking.qrCode = qrUrl;
       await booking.save();
 
+      const posterUrl = await downloadPoster(
+        booking.show.movie.poster_path,
+        booking.show.movie._id
+      );
+
       // Gửi email xác nhận
       const user = booking.userId;
-      const posterUrl = booking.show.movie?.poster_path
-        ? `https://image.tmdb.org/t/p/w500${booking.show.movie.poster_path}`
-        : "https://teasonmike.io.vn/assets/fallBack.jpg";
       if (user?.email) {
         await sendEmail({
           to: user.email,
@@ -228,13 +231,13 @@ const handlePaymentSuccess = inngest.createFunction(
   }
 );
 
-// Auto cleanup old QR files daily
-const cleanupOldQRCodes = inngest.createFunction(
-  { id: "cleanup-old-qr-files" },
-  { cron: "0 0 * * *" }, // Chạy mỗi ngày 0h
+// Auto cleanup old QR & Poster files daily
+const cleanupOldFiles = inngest.createFunction(
+  { id: "cleanup-files-daily" },
+  { cron: "0 0 * * *" },
   async ({ step }) => {
-    await import("../cleanupQr.js");
-    console.log("Daily QR cleanup done!");
+    await import("../cleanupFiles.js");
+    console.log("✅ Daily cleanup (QR + Poster) done!");
   }
 );
 
@@ -245,5 +248,5 @@ export const functions = [
   releaseSeatsAndDeleteBooking,
   sendShowReminders,
   handlePaymentSuccess,
-  cleanupOldQRCodes,
+  cleanupOldFiles, 
 ];

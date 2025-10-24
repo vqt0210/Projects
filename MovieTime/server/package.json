@@ -7,7 +7,7 @@
   "scripts": {
     "server": "nodemon server.js",
     "start": "node server.js",
-    "clean:qr": "node cleanupQR.js"
+    "clean:file": "node cleanupFiles.js"
     
   },
   "keywords": [],
