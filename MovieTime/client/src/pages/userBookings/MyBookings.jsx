@@ -8,30 +8,28 @@ import { useClerk, useUser } from "@clerk/clerk-react";
 import { authorizedApi } from "@/utils/api";
 import { io } from "socket.io-client";
 import { Toaster, toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const MyBookings = () => {
+  const navigate = useNavigate();
   const currency = import.meta.env.VITE_CURRENCY;
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { openSignIn } = useClerk();
-  const { isLoaded, isSignedIn } = useUser(); // Clerk hook
+  const { isLoaded, isSignedIn } = useUser();
   const { getToken, user, image_base_url } = useAppContext();
-
-  // Chỉ gọi AppContext sau khi user đã đăng nhập
 
   const getMyBookings = async () => {
     try {
       const authAxios = await authorizedApi(getToken);
       const { data } = await authAxios.get("/api/user/bookings");
-
-      if (data.success) {
-        setBookings(data.bookings);
-      }
+      if (data.success) setBookings(data.bookings);
     } catch (error) {
       console.log(error);
     }
     setIsLoading(false);
   };
+
   useEffect(() => {
     if (user) getMyBookings();
   }, [user]);
@@ -40,9 +38,7 @@ const MyBookings = () => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, []);
 
-  // Realtime cập nhật bằng Socket.IO
   useEffect(() => {
-    // kết nối socket tới backend
     const socketUrl = import.meta.env.VITE_BASE_URL || "http://localhost:10000";
     const socket = io(socketUrl, {
       transports: ["websocket"],
@@ -51,52 +47,31 @@ const MyBookings = () => {
       reconnectionAttempts: 5,
     });
 
-    socket.on("connect", () => {
-      console.log("Connected to socket:", socket.id);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Disconnected from socket");
-    });
-
-    // Khi backend emit sự kiện paymentUpdate
     socket.on("paymentUpdate", ({ bookingId }) => {
-      console.log("Payment updated:", bookingId);
       setBookings((prev) =>
         prev.map((b) =>
           b._id === bookingId ? { ...b, isPaid: true, status: "PAID" } : b
         )
       );
       toast.success("🎉 Payment Successful!", {
-        description: "Your booking has been confirmed. Enjoy the show!",
+        description: "Your booking has been confirmed.",
         duration: 4000,
       });
-      // Fallback đảm bảo sync chính xác
-      setTimeout(() => {
-        getMyBookings(); // refetch để chắc DB đã cập nhật
-      }, 2000);
+      setTimeout(() => getMyBookings(), 2000);
     });
 
-    // cleanup khi unmount
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, []);
 
-  if (isLoading) return <Loading />;
-
-  // Nếu Clerk chưa load xong
-  if (!isLoaded) return <Loading />;
-
-  // Nếu chưa đăng nhập
-  if (!isSignedIn) {
+  if (isLoading || !isLoaded) return <Loading />;
+  if (!isSignedIn)
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
         <h2 className="mb-4 text-xl font-semibold">
           You must{" "}
           <button
             onClick={openSignIn}
-            className="font-semibold transition cursor-pointer text-primary hover:underline hover:text-primary/80"
+            className="font-semibold text-primary hover:underline hover:text-primary/80"
           >
             login
           </button>{" "}
@@ -104,7 +79,7 @@ const MyBookings = () => {
         </h2>
       </div>
     );
-  }
+
   const activeBookings = bookings.filter(
     (b) => b.status !== "CANCELLED" && b.show !== null
   );
@@ -115,29 +90,26 @@ const MyBookings = () => {
       <div className="relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]">
         <BlurCircle top="100px" left="100px" />
         <BlurCircle bottom="0px" left="600px" />
-
         <h1 className="mb-4 text-lg font-semibold">My Bookings</h1>
 
         {activeBookings.length === 0 ? (
           <p className="mt-10 text-gray-400">You have no active bookings.</p>
         ) : (
-          activeBookings.map((item, index) => {
-            const amount = Number(item?.amount) || 0;
-            const isPaid = !!item?.isPaid;
-            const paymentUrl = item?.paymentLink ?? item?.payment ?? "";
-            const canPay = amount > 0 && !isPaid && paymentUrl;
-            const movie = item?.show?.movie;
+          activeBookings.map((item) => {
+            const amount = Number(item.amount) || 0;
+            const isPaid = !!item.isPaid;
+            const movie = item.show?.movie;
             const poster = movie?.poster_path;
             const title = movie?.title || "Unknown Movie";
             const runtime = movie?.runtime;
-            const showTime = item?.show?.showDateTime;
-            const seats = Array.isArray(item?.bookedSeats)
+            const showTime = item.show?.showDateTime;
+            const seats = Array.isArray(item.bookedSeats)
               ? item.bookedSeats
               : [];
 
             return (
               <div
-                key={item?._id || index}
+                key={item._id}
                 className="flex flex-col justify-between max-w-3xl p-2 mt-4 border rounded-lg md:flex-row bg-primary/8 border-primary/20"
               >
                 <div className="flex flex-col md:flex-row">
@@ -150,7 +122,6 @@ const MyBookings = () => {
                   ) : (
                     <div className="object-cover object-bottom h-auto bg-gray-300 rounded md:max-w-45 aspect-video" />
                   )}
-
                   <div className="flex flex-col p-4">
                     <p className="text-lg font-semibold">{title}</p>
                     <p className="text-sm text-gray-400">
@@ -164,71 +135,44 @@ const MyBookings = () => {
 
                 <div className="flex flex-col justify-between p-4 mb-2 md:items-end md:text-right">
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="flex flex-col items-end">
-                      {item.discountValue > 0 ? (
-                        <>
-                          <p className="text-lg text-gray-400 line-through">
-                            {currency}
-                            {(amount / (1 - item.discountValue / 100)).toFixed(
-                              2
-                            )}
-                          </p>
-                          <p className="text-2xl font-semibold leading-none text-green-400">
-                            {currency}
-                            {amount.toFixed(2)}
-                          </p>
-                          <p className="mt-1 text-xs text-green-400">
-                            Discount applied: -{item.discountValue}%
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-2xl font-semibold leading-none">
-                          {currency}
-                          {amount.toFixed(2)}
-                        </p>
-                      )}
-                    </div>
+                    <p className="text-2xl font-semibold leading-none">
+                      {currency}
+                      {amount.toFixed(2)}
+                    </p>
 
-                    {canPay ? (
-                      <a
-                        href={paymentUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center h-9 min-w-[110px] px-5 rounded-full bg-primary text-sm font-medium leading-none text-center whitespace-nowrap"
-                      >
-                        Pay Now
-                      </a>
-                    ) : (
-                      <span
-                        className={`min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium text-center ${
-                          item.status === "CANCELLED"
-                            ? "bg-red-500/20 text-red-300"
-                            : isPaid
-                            ? "bg-green-500/20 text-green-300"
-                            : "bg-yellow-500/20 text-yellow-300"
-                        }`}
-                      >
-                        {item.status === "CANCELLED"
-                          ? "Cancelled"
-                          : amount === 0
-                          ? "Free Booking"
+                    <span
+                      className={`min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium text-center ${
+                        item.status === "CANCELLED"
+                          ? "bg-red-500/20 text-red-300"
                           : isPaid
-                          ? "Paid"
-                          : "Pending"}
-                      </span>
-                    )}
+                          ? "bg-green-500/20 text-green-300"
+                          : "bg-yellow-500/20 text-yellow-300"
+                      }`}
+                    >
+                      {item.status === "CANCELLED"
+                        ? "Cancelled"
+                        : isPaid
+                        ? "Paid"
+                        : "Pending"}
+                    </span>
                   </div>
 
-                  <div className="text-sm">
+                  <div className="text-sm text-gray-300">
                     <p>
-                      <span className="text-gray-400">Total Tickets: </span>
-                      {seats.length}
-                    </p>
-                    <p>
-                      <span className="text-gray-400">Seat Number: </span>
+                      <span className="text-gray-400">Seats:</span>{" "}
                       {seats.join(", ")}
                     </p>
                   </div>
+
+                  {/* View Ticket */}
+                  {isPaid && (
+                    <button
+                      onClick={() => navigate(`/ticket/${item._id}`)}
+                      className="mt-3 px-5 py-2 bg-primary text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_10px_#f84565]"
+                    >
+                      View Ticket
+                    </button>
+                  )}
                 </div>
               </div>
             );
