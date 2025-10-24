@@ -23,6 +23,18 @@ import { stripeWebhooks } from "./controllers/stripeController.js";
 import webhookRouter from "./routes/clerkWebhookRoutes.js";
 import ticketRouter from "./routes/ticketRoutes.js";
 
+import fs from "fs";
+import path from "path";
+
+const dirs = ["public/qr", "public/posters"];
+dirs.forEach((dir) => {
+  const fullPath = path.join(process.cwd(), dir);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+    console.log(`📁 Created missing directory: ${dir}`);
+  }
+});
+
 const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());

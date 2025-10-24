@@ -1,0 +1,6 @@
+.env
+# Ignore generated media
+public/qr/*
+public/posters/*
+!public/qr/.gitkeep
+!public/posters/.gitkeep
