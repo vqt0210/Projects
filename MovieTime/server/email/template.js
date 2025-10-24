@@ -29,7 +29,7 @@ export const bookingConfirmationEmail = ({
   bookingLink,
   supportLink,
   qrImage,
-  posterUrl, // ✅ thêm dòng này
+  posterUrl, 
 }) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden;">
   ${BASE_HEADER()}

@@ -197,8 +197,11 @@ const handlePaymentSuccess = inngest.createFunction(
       booking.qrCode = qrUrl;
       await booking.save();
 
-      // Gửi email xác nhận 
+      // Gửi email xác nhận
       const user = booking.userId;
+      const posterUrl = booking.show.movie?.poster_path
+        ? `https://image.tmdb.org/t/p/w500${booking.show.movie.poster_path}`
+        : "https://teasonmike.io.vn/assets/fallBack.jpg";
       if (user?.email) {
         await sendEmail({
           to: user.email,
@@ -211,6 +214,7 @@ const handlePaymentSuccess = inngest.createFunction(
             bookingLink: ticketUrl,
             supportLink: "https://teasonmike.io.vn",
             qrImage: qrUrl,
+            posterUrl,
           }),
         });
       }
