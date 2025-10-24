@@ -1,17 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Loading from "@/components/common/Loading";
-import {
-  CalendarDays,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Ticket,
-} from "lucide-react";
 import api from "@/utils/api";
 
 export default function Tickets() {
-  const { id } = useParams(); // bookingId
+  const { id } = useParams();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,96 +23,40 @@ export default function Tickets() {
   }, [id]);
 
   if (loading) return <Loading text="Loading your ticket..." />;
-  if (!ticket)
-    return <p className="mt-10 text-center text-gray-400">Ticket not found</p>;
+  if (!ticket) return <p className="mt-10 text-center text-gray-400">Ticket not found</p>;
 
-  const { show, bookedSeats, amount, qrCode, status } = ticket;
-  const { movie } = show || {};
+  const { moviePoster, movieTitle, showDateTime, seats, amount, qrCode, status } = ticket;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0B0C10] text-white px-6 py-20">
-      <div className="relative bg-[#1F2833] p-8 rounded-2xl shadow-lg max-w-xl w-full border border-gray-700">
-        {/* Movie Info */}
-        <div className="flex flex-col items-center text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0c10] to-[#1f2833] text-white p-6">
+      <div className="relative w-full max-w-md p-8 rounded-3xl shadow-xl border border-gray-700 bg-[#161b22]/80 backdrop-blur-lg">
+        <div className="mb-6 text-center">
           <img
-            src={
-              movie?.poster_path
-                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                : "/assets/fallBack.jpg"
-            }
-            alt={movie?.title}
-            className="object-cover w-40 mb-4 rounded-lg shadow-md h-60"
+            src={moviePoster ? `https://image.tmdb.org/t/p/w500${moviePoster}` : "/assets/fallBack.jpg"}
+            alt={movieTitle}
+            className="object-cover w-48 h-64 mx-auto mb-4 rounded-lg shadow-md"
           />
-          <h1 className="mb-2 text-2xl font-bold text-primary">
-            {movie?.title}
-          </h1>
-          <p className="mb-6 text-sm text-gray-300">🎟️ Booking Confirmation</p>
+          <h1 className="text-2xl font-bold text-primary">{movieTitle}</h1>
+          <p className="mt-1 text-sm text-gray-400">🎟️ Booking Confirmation</p>
         </div>
 
-        {/* Details */}
-        <div className="space-y-3 text-gray-200">
-          {show && (
-            <>
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-primary" />
-                <span>
-                  {show?.showDateTime
-                    ? new Date(show.showDateTime).toLocaleDateString("en-US", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                      })
-                    : "N/A"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                <span>
-                  {show?.showDateTime
-                    ? new Date(show.showDateTime).toLocaleTimeString("en-US", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                      })
-                    : "N/A"}
-                </span>
-              </div>
-            </>
-          )}
-          <div className="flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-primary" />
-            <span>Seats: {bookedSeats.join(", ")}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {status === "PAID" ? (
-              <CheckCircle className="w-5 h-5 text-green-500" />
-            ) : (
-              <XCircle className="w-5 h-5 text-red-500" />
-            )}
-            <span>
-              Status:{" "}
-              <strong
-                className={
-                  status === "PAID" ? "text-green-400" : "text-red-400"
-                }
-              >
-                {status}
-              </strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            💵 <span>Total: ${amount.toFixed(2)}</span>
-          </div>
+        <div className="space-y-3 text-sm text-gray-300">
+          <p className="flex justify-between"><span>🎬 Seats:</span><span>{seats.join(", ")}</span></p>
+          <p className="flex justify-between"><span>📅 Date:</span>
+            <span>{new Date(showDateTime).toLocaleDateString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</span></p>
+          <p className="flex justify-between"><span>🕒 Time:</span>
+            <span>{new Date(showDateTime).toLocaleTimeString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })}</span></p>
+          <p className="flex justify-between"><span>💵 Total:</span><span>${amount.toFixed(2)}</span></p>
+          <p className="flex justify-between">
+            <span>Status:</span>
+            <span className={status === "PAID" ? "text-green-400 font-semibold" : "text-red-400"}>{status}</span>
+          </p>
         </div>
 
-        {/* QR Code */}
         {qrCode && (
-          <div className="flex flex-col items-center mt-8">
-            <img
-              src={qrCode}
-              alt="QR Code"
-              className="border border-gray-600 rounded-lg shadow-md w-44 h-44"
-            />
-            <p className="mt-2 text-sm text-gray-400">
-              Scan this QR at the cinema to check in
-            </p>
+          <div className="mt-8 text-center">
+            <img src={qrCode} alt="QR Code" className="w-48 h-48 mx-auto border border-gray-700 rounded-lg shadow-md" />
+            <p className="mt-3 text-xs text-gray-400">Scan this QR code at the cinema to check in</p>
           </div>
         )}
       </div>

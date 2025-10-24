@@ -43,7 +43,7 @@ app.use(
   })
 );
 
-// =======================// Health check (quick)
+// Health check
 
 app.get("/healthz", (req, res) => res.status(200).send("ok"));
 
@@ -72,6 +72,7 @@ app.use("/api/me", meRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/webhooks", webhookRouter);
 app.use("/api/ticket", ticketRouter);
+app.use("/qr", express.static("public/qr"));
 
 // 404 + Error handler
 app.use((req, res) =>

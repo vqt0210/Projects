@@ -168,53 +168,63 @@ const sendShowReminders = inngest.createFunction(
 );
 
 //  Handle payment success → confirm booking & send email
+const qrDir = path.join(process.cwd(), "public", "qr");
+if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
 const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
   { event: "app/payment.success" },
-  async ({ event }) => {
-    const bookingId = event.data.bookingId;
-    const booking = await Booking.findById(bookingId)
-      .populate({ path: "show", populate: { path: "movie" } })
-      .populate({ path: "userId", model: "User" });
+  async ({ event, step }) => {
+    try {
+      const bookingId = event.data.bookingId;
+      const booking = await Booking.findById(bookingId)
+        .populate({ path: "show", populate: { path: "movie" } })
+        .populate({ path: "userId", model: "User" });
 
-    if (!booking) return { success: false };
+      if (!booking) return { success: false };
 
-    // Tạo file QR và lưu trên server
-    const qrDir = path.join(process.cwd(), "public", "qr");
-    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+      // Cập nhật trạng thái thanh toán
+      booking.status = "PAID";
+      booking.isPaid = true;
+      booking.paidAt = new Date();
 
-    const qrPath = path.join(qrDir, `${booking._id}.png`);
-    const qrPayload = `https://teasonmike.io.vn/ticket/${booking._id}`;
+      // Tạo file QR trên server
+      const ticketUrl = `https://teasonmike.io.vn/ticket/${booking._id}`;
+      const qrPath = path.join(qrDir, `${booking._id}.png`);
+      await QRCode.toFile(qrPath, ticketUrl, { width: 300, margin: 2 });
 
-    await QRCode.toFile(qrPath, qrPayload, { width: 400 });
+      const qrUrl = `https://server.teasonmike.io.vn/qr/${booking._id}.png`;
+      booking.qrCode = qrUrl;
+      await booking.save();
 
-    const qrPublicUrl = `https://server.teasonmike.io.vn/qr/${booking._id}.png`;
+      // Gửi email xác nhận 
+      const user = booking.userId;
+      if (user?.email) {
+        await sendEmail({
+          to: user.email,
+          subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
+          body: bookingConfirmationEmail({
+            user,
+            movieTitle: booking.show.movie.title,
+            showDateTime: booking.show.showDateTime,
+            bookedSeats: booking.bookedSeats,
+            bookingLink: ticketUrl,
+            supportLink: "https://teasonmike.io.vn",
+            qrImage: qrUrl,
+          }),
+        });
+      }
 
-    // Lưu vào DB để frontend hiển thị
-    booking.qrCode = qrPublicUrl;
-    await booking.save();
-
-    // Gửi mail có link ảnh QR
-    await sendEmail({
-      to: booking.userId.email,
-      subject: `🎟️ Booking Confirmed: ${booking.show.movie.title}`,
-      body: bookingConfirmationEmail({
-        user: booking.userId,
-        movieTitle: booking.show.movie.title,
-        showDateTime: booking.show.showDateTime,
-        bookedSeats: booking.bookedSeats,
-        bookingLink: `https://teasonmike.io.vn/ticket/${booking._id}`,
-        supportLink: `https://teasonmike.io.vn`,
-        qrImage: qrPublicUrl, 
-      }),
-    });
-
-    console.log(`[EMAIL] Sent booking confirmation for ${bookingId}`);
-    return { success: true };
+      console.log(`[QR] Created and sent for booking ${bookingId}`);
+      return { success: true };
+    } catch (error) {
+      console.error("[PAYMENT] Handler failed:", error);
+      throw error;
+    }
   }
 );
 
-// 🧹 Auto cleanup old QR files daily
+// Auto cleanup old QR files daily
 const cleanupOldQRCodes = inngest.createFunction(
   { id: "cleanup-old-qr-files" },
   { cron: "0 0 * * *" }, // Chạy mỗi ngày 0h
