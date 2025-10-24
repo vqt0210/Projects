@@ -21,6 +21,7 @@ const SeatLayout = () => {
   const [promoCode, setPromoCode] = useState("");
   const [discountPreview, setDiscountPreview] = useState(null);
   const [loadingPromo, setLoadingPromo] = useState(false);
+  const [isLocked, setIsLocked] = useState(false); 
 
   const { getToken, user } = useAppContext();
 
@@ -39,7 +40,6 @@ const SeatLayout = () => {
     }
   };
 
-  // Tự loại bỏ ghế đã bị chiếm khi backend load xong
   useEffect(() => {
     setSelectedSeats((prev) =>
       prev.filter((seat) => !occupiedSeats.includes(seat))
@@ -47,6 +47,7 @@ const SeatLayout = () => {
   }, [occupiedSeats]);
 
   const handleSeatClick = (seatId) => {
+    if (isLocked) return toast("Checkout in progress — seat selection locked!");
     if (isLoadingSeats) return toast("Please wait, loading seats...");
     if (!selectedTime) return toast("Please select time first");
 
@@ -65,6 +66,7 @@ const SeatLayout = () => {
   };
 
   const handleCheckPromo = async () => {
+    if (isLocked) return;
     if (!promoCode || !show) return toast.error("Enter a promo code first!");
     if (selectedSeats.length === 0) return toast.error("Select seats first!");
     setLoadingPromo(true);
@@ -98,6 +100,7 @@ const SeatLayout = () => {
       if (!selectedTime || !selectedSeats.length)
         return toast.error("Please select a time and seat");
 
+      setIsLocked(true); 
       setIsProcessing(true);
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.post("/api/bookings/create", {
@@ -111,6 +114,7 @@ const SeatLayout = () => {
       } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
+      setIsLocked(false); // nếu lỗi thì mở lại
     } finally {
       setIsProcessing(false);
     }
@@ -123,7 +127,7 @@ const SeatLayout = () => {
   useEffect(() => {
     const fetchSeats = async () => {
       if (!selectedTime?.showId) return;
-      setIsLoadingSeats(true); // chặn click tạm thời
+      setIsLoadingSeats(true);
       try {
         const { data } = await api.get(
           `/api/bookings/${selectedTime.showId}/seats`
@@ -155,11 +159,15 @@ const SeatLayout = () => {
             show.dateTime[date].map((item) => (
               <div
                 key={item.time}
-                onClick={() => setSelectedTime(item)}
+                onClick={() => !isLocked && setSelectedTime(item)}
                 className={`flex items-center gap-3 px-4 py-2 w-full rounded-2xl cursor-pointer transition-all duration-200 ${
                   selectedTime?.time === item.time
                     ? "bg-primary text-white shadow-md scale-[1.02]"
                     : "hover:bg-primary/10 text-gray-300"
+                } ${
+                  isLocked
+                    ? "opacity-50 cursor-not-allowed pointer-events-none"
+                    : ""
                 }`}
               >
                 <div
@@ -199,9 +207,11 @@ const SeatLayout = () => {
         <p className="mb-6 text-sm text-gray-400">SCREEN</p>
 
         <div className="relative flex flex-col items-center mt-10 text-xs text-gray-300">
-          {isLoadingSeats && (
+          {(isLoadingSeats || isLocked) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
-              <p className="text-sm text-white">Loading seats...</p>
+              <p className="text-sm text-white">
+                {isLocked ? "Checkout in progress..." : "Loading seats..."}
+              </p>
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -214,7 +224,7 @@ const SeatLayout = () => {
                       key={seatId}
                       onClick={() => handleSeatClick(seatId)}
                       disabled={
-                        isLoadingSeats || occupiedSeats.includes(seatId)
+                        isLocked || isLoadingSeats || occupiedSeats.includes(seatId)
                       }
                       className={`h-8 w-8 text-xs rounded border border-primary/60 transition-all
                         ${
@@ -227,6 +237,7 @@ const SeatLayout = () => {
                             ? "opacity-40 cursor-not-allowed"
                             : "cursor-pointer"
                         }
+                        ${isLocked ? "opacity-50 cursor-not-allowed" : ""}
                       `}
                     >
                       {seatId}
@@ -242,9 +253,9 @@ const SeatLayout = () => {
         {selectedSeats.length > 0 && (
           <div className="mt-8 text-center text-white">
             <p className="mb-2 text-lg">
-              Subtotal:{" "}
+              Total:{" "}
               <span className="font-semibold text-primary">
-                ${total.toFixed(2)}
+                ${finalTotal.toFixed(2)}
               </span>
             </p>
 
@@ -253,13 +264,14 @@ const SeatLayout = () => {
                 type="text"
                 placeholder="Enter promo code"
                 value={promoCode}
+                disabled={isLocked}
                 onChange={(e) => setPromoCode(e.target.value)}
-                className="p-2 text-sm border rounded-md bg-zinc-800 border-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary"
+                className="p-2 text-sm border rounded-md bg-zinc-800 border-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
               <button
                 onClick={handleCheckPromo}
-                disabled={loadingPromo}
-                className="px-4 py-2 text-sm transition cursor-pointer rounded-xl bg-primary hover:bg-primary-dull"
+                disabled={loadingPromo || isLocked}
+                className="px-4 py-2 text-sm transition cursor-pointer rounded-xl bg-primary hover:bg-primary-dull disabled:opacity-50"
               >
                 {loadingPromo ? "Checking..." : "Apply"}
               </button>
