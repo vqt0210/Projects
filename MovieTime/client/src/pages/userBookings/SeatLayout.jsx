@@ -21,7 +21,7 @@ const SeatLayout = () => {
   const [promoCode, setPromoCode] = useState("");
   const [discountPreview, setDiscountPreview] = useState(null);
   const [loadingPromo, setLoadingPromo] = useState(false);
-  const [isLocked, setIsLocked] = useState(false); 
+  const [isLocked, setIsLocked] = useState(false);
 
   const { getToken, user } = useAppContext();
 
@@ -85,6 +85,7 @@ const SeatLayout = () => {
           discountValue: discountPercent,
           finalPrice: data.finalPrice ?? totalBeforeDiscount,
         });
+        setIsLocked(true); // khoá chọn giờ / ghế sau khi áp mã
         toast.success(`Promo applied: -${discountPercent}%`);
       } else toast.error(data.message);
     } catch (error) {
@@ -100,7 +101,7 @@ const SeatLayout = () => {
       if (!selectedTime || !selectedSeats.length)
         return toast.error("Please select a time and seat");
 
-      setIsLocked(true); 
+      setIsLocked(true);
       setIsProcessing(true);
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.post("/api/bookings/create", {
@@ -224,7 +225,9 @@ const SeatLayout = () => {
                       key={seatId}
                       onClick={() => handleSeatClick(seatId)}
                       disabled={
-                        isLocked || isLoadingSeats || occupiedSeats.includes(seatId)
+                        isLocked ||
+                        isLoadingSeats ||
+                        occupiedSeats.includes(seatId)
                       }
                       className={`h-8 w-8 text-xs rounded border border-primary/60 transition-all
                         ${
@@ -253,9 +256,9 @@ const SeatLayout = () => {
         {selectedSeats.length > 0 && (
           <div className="mt-8 text-center text-white">
             <p className="mb-2 text-lg">
-              Total:{" "}
+              Subtotal:{" "}
               <span className="font-semibold text-primary">
-                ${finalTotal.toFixed(2)}
+                ${total.toFixed(2)}
               </span>
             </p>
 
@@ -278,18 +281,31 @@ const SeatLayout = () => {
             </div>
 
             {discountPreview && (
-              <div className="mt-3 space-y-1">
-                <p className="text-green-400">
-                  ✅ Promo applied:{" "}
-                  <strong>-{discountPreview.discountValue}%</strong>
-                </p>
-                <p className="text-lg">
-                  Final Total:{" "}
-                  <span className="font-semibold text-primary">
-                    ${discountPreview.finalPrice.toFixed(2)}
-                  </span>
-                </p>
-              </div>
+              <>
+                <div className="mt-3 space-y-1">
+                  <p className="text-green-400">
+                    ✅ Promo applied:{" "}
+                    <strong>-{discountPreview.discountValue}%</strong>
+                  </p>
+                  <p className="text-lg">
+                    Final Total:{" "}
+                    <span className="font-semibold text-primary">
+                      ${discountPreview.finalPrice.toFixed(2)}
+                    </span>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsLocked(false);
+                    setDiscountPreview(null);
+                    setPromoCode("");
+                  }}
+                  className="px-4 py-1 mt-3 text-xs text-white transition rounded-full cursor-pointer bg-gray-600/40 hover:bg-gray-500/40"
+                >
+                  Reset Promo / Unlock Selection
+                </button>
+              </>
             )}
           </div>
         )}
