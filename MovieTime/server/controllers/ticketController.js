@@ -3,19 +3,24 @@ import Booking from "../models/Booking.js";
 export const getTicketById = async (req, res) => {
   try {
     const bookingId = req.params.id.trim();
-    const userId = req.auth.userId;
+    const { userId } = req.auth();
+
+
     const booking = await Booking.findById(bookingId)
       .populate({
         path: "show",
         populate: { path: "movie" },
       })
       .lean();
+
     if (!booking) {
       return res
         .status(404)
         .json({ success: false, message: "Ticket not found" });
     }
 
+
+    // Kiểm tra quyền sở hữu vé
     if (booking.userId?.toString() !== userId) {
       return res.status(403).json({
         success: false,
@@ -24,6 +29,7 @@ export const getTicketById = async (req, res) => {
     }
 
     const movie = booking.show.movie;
+
 
     res.json({
       success: true,
@@ -39,7 +45,6 @@ export const getTicketById = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[TICKET] Error:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };

@@ -194,7 +194,12 @@ const handlePaymentSuccess = inngest.createFunction(
       const qrPath = path.join(qrDir, `${booking._id}.png`);
       await QRCode.toFile(qrPath, ticketUrl, { width: 300, margin: 2 });
 
-      const qrUrl = `https://server.teasonmike.io.vn/qr/${booking._id}.png`;
+      const isLocal = process.env.NODE_ENV !== "production";
+      const baseUrl = isLocal
+        ? "http://localhost:10000"
+        : "https://server.teasonmike.io.vn";
+
+      const qrUrl = `${baseUrl}/qr/${booking._id}.png`;
       booking.qrCode = qrUrl;
       await booking.save();
 
@@ -248,5 +253,5 @@ export const functions = [
   releaseSeatsAndDeleteBooking,
   sendShowReminders,
   handlePaymentSuccess,
-  cleanupOldFiles, 
+  cleanupOldFiles,
 ];

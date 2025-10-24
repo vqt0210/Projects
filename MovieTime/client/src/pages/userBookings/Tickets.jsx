@@ -1,50 +1,35 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth, useUser, RedirectToSignIn } from "@clerk/clerk-react";
+import { useUser, RedirectToSignIn } from "@clerk/clerk-react";
 import Loading from "@/components/common/Loading";
-import api from "@/utils/api";
+import { authorizedApi } from "@/utils/api";
+import { useAppContext } from "@/context/AppContext";
 
 export default function Tickets() {
-  const { id } = useParams(); // bookingId
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { getToken, isSignedIn } = useAuth();
-  const { user } = useUser();
-
+  const { getToken } = useAppContext();
+  const { isLoaded, isSignedIn } = useUser();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   // Fetch ticket info
   useEffect(() => {
     const fetchTicket = async () => {
       try {
-        if (!isSignedIn) return; // Nếu chưa đăng nhập thì Clerk xử lý redirect
-
-        const token = await getToken({ template: "default" });
-        const { data } = await api.get(`/api/ticket/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (data.success) {
-          // Kiểm tra xem user có đúng là người mua vé không
-          if (data.ticket.userId !== user.id) {
-            setError("You are not authorized to view this ticket.");
-          } else {
-            setTicket(data.ticket);
-          }
-        } else {
-          setError(data.message || "Ticket not found.");
-        }
+        const authAxios = await authorizedApi(getToken); // dùng token Clerk
+        const { data } = await authAxios.get(`/api/ticket/${id}`);
+        if (data.success) setTicket(data.ticket);
       } catch (err) {
         console.error("[Ticket Fetch Error]", err);
-        setError("Failed to load ticket.");
+        if (err.response?.status === 403) setUnauthorized(true);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchTicket();
-  }, [id, isSignedIn, getToken, user]);
+    if (isLoaded && isSignedIn) fetchTicket();
+  }, [id, isLoaded, isSignedIn]);
 
   // Chưa đăng nhập thì chuyển sang Clerk Sign In
   if (!isSignedIn) return <RedirectToSignIn />;
@@ -52,7 +37,7 @@ export default function Tickets() {
   if (loading) return <Loading text="Loading your ticket..." />;
 
   // Error
-  if (error)
+  if (unauthorized)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-400">
         <p className="mb-4 font-semibold">{error}</p>
@@ -77,7 +62,7 @@ export default function Tickets() {
   } = ticket;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0c10] to-[#1f2833] text-white p-6">
+    <div className="min-h-screen flex justify-center bg-gradient-to-br from-[#0b0c10] to-[#1f2833] text-white p-6 pt-32">
       <div className="relative w-full max-w-md p-8 rounded-3xl shadow-xl border border-gray-700 bg-[#161b22]/80 backdrop-blur-lg">
         {/* Header */}
         <div className="mb-6 text-center">
