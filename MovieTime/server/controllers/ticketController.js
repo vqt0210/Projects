@@ -3,6 +3,7 @@ import Booking from "../models/Booking.js";
 export const getTicketById = async (req, res) => {
   try {
     const bookingId = req.params.id.trim();
+    const userId = req.auth.userId;
     const booking = await Booking.findById(bookingId)
       .populate({
         path: "show",
@@ -14,7 +15,13 @@ export const getTicketById = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Ticket not found" });
     }
-    console.log("[DEBUG] Fetching booking:", req.params.id);
+
+    if (booking.userId?.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized — this ticket doesn’t belong to you.",
+      });
+    }
 
     const movie = booking.show.movie;
 
