@@ -40,7 +40,7 @@ export default function Tickets() {
   if (unauthorized)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-400">
-        <p className="mb-4 font-semibold">{error}</p>
+        <p className="mb-4 font-semibold">You are not authorized to view this ticket.</p>
         <button
           onClick={() => navigate("/my-bookings")}
           className="px-5 py-2 text-white transition rounded-full shadow-md cursor-pointer bg-primary hover:bg-primary-dull hover:shadow-lg"
