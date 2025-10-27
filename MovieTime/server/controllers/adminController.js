@@ -309,7 +309,6 @@ export const deleteUser = async (req, res) => {
     const currentUserId = req.currentUser?.id;
     const currentUserRole = req.currentUser?.role || "user";
 
-    console.log(`[DELETE USER] Request from ${currentUserId} (${currentUserRole}) → target ${userId}`);
 
     // Lấy user mục tiêu
     const targetUser = await clerkClient.users.getUser(userId).catch(() => null);
@@ -318,24 +317,22 @@ export const deleteUser = async (req, res) => {
     }
 
     const targetRole = targetUser.privateMetadata?.role || "user";
-    console.log(`[DELETE USER] Target user role: ${targetRole}`);
 
-    // ❌ Không cho xóa super-admin
+    // Không cho xóa super-admin
     if (targetRole === "super-admin") {
       return res.status(403).json({ success: false, message: "Cannot delete super-admin" });
     }
 
-    // ✅ Admin có thể xóa user thường
+    // Admin có thể xóa user thường
     if (currentUserRole === "admin" && targetRole === "user") {
       await clerkClient.users.deleteUser(userId);
       console.log(`[ADMIN] ${currentUserId} deleted user ${userId}`);
       return res.json({ success: true, message: "User deleted successfully by admin" });
     }
 
-    // ✅ Super-admin có thể xóa bất kỳ ai (trừ chính mình)
+    // Super-admin có thể xóa bất kỳ ai (trừ chính mình)
     if (currentUserRole === "super-admin" && userId !== currentUserId) {
       await clerkClient.users.deleteUser(userId);
-      console.log(`[SUPER-ADMIN] ${currentUserId} deleted user ${userId}`);
       return res.json({ success: true, message: "User deleted successfully by super-admin" });
     }
 
