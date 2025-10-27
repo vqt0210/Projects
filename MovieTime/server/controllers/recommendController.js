@@ -3,54 +3,64 @@ import Movie from "../models/Movie.js";
 import { clerkClient } from "@clerk/express";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Khởi tạo OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
+// Controller chính
 export const recommendMovies = async (req, res) => {
   try {
     const userId = req.currentUser?.id || req.auth?.userId;
     if (!userId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    // Favorites from Clerk (array of Movie ObjectIds)
+    // === Lấy danh sách phim yêu thích (favorites) từ Clerk ===
     const clerkUser = await clerkClient.users.getUser(userId).catch(() => null);
     const favoriteIds = Array.isArray(clerkUser?.privateMetadata?.favorites)
       ? clerkUser.privateMetadata.favorites
       : [];
 
-    // Watched movies from paid bookings
+    // === Lấy danh sách phim đã đặt vé (booking) ===
     const bookings = await Booking.find({ userId, isPaid: true }).populate({
       path: "show",
       populate: { path: "movie" },
     });
-    const watchedMovieDocs = bookings
+
+    const watchedMovies = bookings
       .map((b) => b?.show?.movie)
       .filter(Boolean);
 
-    // Load favorite movie docs and merge
-    const favoriteMovieDocs = favoriteIds.length
+    // === Merge favorites + watched movies ===
+    const favoriteMovies = favoriteIds.length
       ? await Movie.find({ _id: { $in: favoriteIds } })
       : [];
-    const combinedDocs = [...favoriteMovieDocs, ...watchedMovieDocs];
 
-    // De-duplicate docs (by _id string or title fallback)
+    const combinedMovies = [...favoriteMovies, ...watchedMovies];
+
+    // Loại bỏ trùng lặp (bằng _id hoặc title)
     const seen = new Set();
-    const likedMovieDocs = combinedDocs.filter((m) => {
+    const likedMovieDocs = combinedMovies.filter((m) => {
       const key = m?._id?.toString?.() || m?.title;
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    if (!likedMovieDocs.length)
+    if (!likedMovieDocs.length) {
       return res.json({
         success: true,
         message: "No watch history",
         recommendations: [],
       });
+    }
 
+    // === Chuẩn bị dữ liệu gửi cho GPT ===
     const likedTitles = likedMovieDocs.map((m) => m.title).filter(Boolean);
     const genreSummary = likedMovieDocs
-      .flatMap((m) => (Array.isArray(m.genres) ? m.genres.map((g) => g.name) : []))
+      .flatMap((m) =>
+        Array.isArray(m.genres) ? m.genres.map((g) => g.name) : []
+      )
       .slice(0, 10)
       .join(", ");
 
@@ -71,11 +81,7 @@ export const recommendMovies = async (req, res) => {
       ]
     `;
 
-    if (!process.env.OPENAI_API_KEY)
-      return res
-        .status(500)
-        .json({ success: false, message: "Missing OpenAI API key" });
-
+    // === Gọi OpenAI API ===
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
@@ -83,6 +89,8 @@ export const recommendMovies = async (req, res) => {
     });
 
     const text = completion.choices?.[0]?.message?.content || "[]";
+
+    // === Parse JSON output ===
     let recommendations = [];
     try {
       recommendations = JSON.parse(text);
@@ -99,4 +107,3 @@ export const recommendMovies = async (req, res) => {
       .json({ success: false, message: "AI recommendation failed" });
   }
 };
-

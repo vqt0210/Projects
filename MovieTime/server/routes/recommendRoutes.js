@@ -3,5 +3,5 @@ import { recommendMovies } from "../controllers/recommendController.js";
 
 const recommendRouter = express.Router();
 // No admin restriction; controller will return 401 if unauthenticated
-recommendRouter.get("/recommendations", recommendMovies);
+recommendRouter.get("/", recommendMovies);
 export default recommendRouter;
