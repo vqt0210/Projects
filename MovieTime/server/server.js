@@ -22,9 +22,11 @@ import stripeRouter from "./routes/stripeRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeController.js";
 import webhookRouter from "./routes/clerkWebhookRoutes.js";
 import ticketRouter from "./routes/ticketRoutes.js";
+import recommendRouter from "./routes/recommendRoutes.js";
 
 import fs from "fs";
 import path from "path";
+
 
 const dirs = ["public/qr", "public/posters"];
 dirs.forEach((dir) => {
@@ -91,6 +93,7 @@ app.use("/qr", (req, res, next) => {
   next();
 }, express.static("public/qr"));
 app.use("/posters", express.static("public/posters"));
+app.use("/api/recommendation", recommendRouter);
 
 // 404 + Error handler
 app.use((req, res) =>
