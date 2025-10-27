@@ -73,7 +73,9 @@ const AdminPanel = () => {
         role: newRole,
       });
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+        prev.map((u) =>
+          (u._id || u.id) === userId ? { ...u, role: newRole } : u
+        )
       );
       toast.success(
         `User ${newRole === "admin" ? "promoted" : "revoked"} successfully`
@@ -113,7 +115,7 @@ const AdminPanel = () => {
       const { data } = await authApi.delete(`/api/admin/delete-user/${userId}`);
       if (data.success) {
         toast.success("User deleted successfully");
-        setUsers((prev) => prev.filter((u) => u.id !== userId));
+        setUsers((prev) => prev.filter((u) => (u._id || u.id) !== userId));
       } else toast.error(data.message || "Failed to delete user");
     } catch (err) {
       if (err.response?.status === 403) {
@@ -141,7 +143,7 @@ const AdminPanel = () => {
       {pageLoading && <Loading text="Updating role..." />}
       <Title text1="Admin" text2="User Management" />
 
-      {/* ==== Admin Access Card (DEV only) ==== */}
+      {/*Admin Access Card (DEV only)*/}
       {import.meta.env.MODE === "development" && (
         <div className="p-4 mb-6 text-white border rounded-lg bg-primary/10 border-primary/20">
           <h2 className="mb-2 text-lg font-semibold">Admin Access</h2>
@@ -163,10 +165,11 @@ const AdminPanel = () => {
         ) : (
           <div className="space-y-4">
             {users.map((user) => {
-              const isCurrentUser = user.id === currentUserWithRole?.id;
+              const isCurrentUser =
+                (user._id || user.id) === currentUserWithRole?.id;
               return (
                 <div
-                  key={user.id || user.email || Math.random()}
+                  key={user._id || user.email || Math.random()}
                   className="flex flex-col justify-between p-4 transition rounded-lg shadow-sm md:flex-row md:items-center bg-white/80 hover:shadow-md"
                 >
                   <div className="flex items-center gap-4">
@@ -208,7 +211,7 @@ const AdminPanel = () => {
                         }
                         onClick={() =>
                           handleRoleChange(
-                            user.id,
+                            user._id || user.id,
                             user.role === "admin" ? "user" : "admin"
                           )
                         }
@@ -225,7 +228,7 @@ const AdminPanel = () => {
                             : "cursor-pointer"
                         }`}
                       >
-                        {loadingUserId === user.id ? (
+                        {loadingUserId === user._id ? (
                           <span className="animate-pulse">Processing...</span>
                         ) : user.role === "admin" ? (
                           <>
@@ -243,20 +246,20 @@ const AdminPanel = () => {
 
                     <button
                       disabled={
-                        !isSuperAdmin ||
-                        isCurrentUser ||
-                        (currentUserRole !== "super-admin" &&
-                          user.role === "admin")
+                        isCurrentUser || // không tự xóa mình
+                        user.role === "super-admin" || // không xóa superadmin
+                        (currentUserRole === "admin" && user.role !== "user") // admin chỉ được xóa user thường
                       }
-                      onClick={() => handleDeleteUser(user.id || user._id)}
-                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-gray-300 text-gray-800 transition-all duration-200 cursor-pointer ${
-                        !isSuperAdmin ||
+                      onClick={() => handleDeleteUser(user._id || user.id)}
+                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-white transition-all duration-200
+                      ${
                         isCurrentUser ||
-                        (currentUserRole !== "super-admin" &&
-                          user.role === "admin")
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-gray-400"
-                      }`}
+                        user.role === "super-admin" ||
+                        (currentUserRole === "admin" && user.role !== "user")
+                          ? "bg-gray-500 opacity-50 cursor-not-allowed"
+                          : "bg-red-500 hover:bg-red-600 cursor-pointer"
+                      }
+                    `}
                     >
                       <Trash2 size={16} />
                       Delete
