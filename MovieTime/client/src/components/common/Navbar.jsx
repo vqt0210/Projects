@@ -10,6 +10,7 @@ import {
   Calendar,
   Star,
   HeartIcon,
+  Sparkles,
 } from "lucide-react";
 import UserSection from "@/components/user/UserSection";
 import { useAppContext } from "@/context/AppContext";
@@ -21,6 +22,7 @@ const navItems = [
   { to: "/movies", label: "Movies", Icon: Film },
   { to: "/top-rated", label: "Top Rated", Icon: Star },
   { to: "/upcoming", label: "Upcoming", Icon: Calendar },
+  { to: "/recommend", label: "AI Suggestion", Icon: Sparkles },
 ];
 
 export default function Navbar() {
@@ -137,7 +139,7 @@ export default function Navbar() {
         {/* Right */}
         <div className="flex items-center gap-4">
           <SearchIcon
-            className="hidden w-5 h-5 text-gray-300 cursor-pointer md:block hover:text-white transition"
+            className="hidden w-5 h-5 text-gray-300 transition cursor-pointer md:block hover:text-white"
             onClick={() => setSearchOpen(true)}
           />
           <UserSection />

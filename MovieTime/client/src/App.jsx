@@ -26,6 +26,7 @@ import ScrollToTop from "@/components/common/ScrollToTop";
 
 import { useAppContext } from "@/context/AppContext";
 import Tickets from "./pages/userBookings/Tickets";
+import Recommend from "./pages/user/Recommend";
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith("/admin"); //Hàm dùng để biết mình đang ở trang nào
@@ -48,6 +49,7 @@ const App = () => {
         <Route path="/upcoming" element={<Upcoming />} />
         <Route path="/actors/:id" element={<ActorDetail />} />
         <Route path="/ticket/:id" element={<Tickets />} />
+        <Route path="/recommend" element={<Recommend />} />
         <Route
           path="/admin/*"
           element={

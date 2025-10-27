@@ -47,7 +47,6 @@ const AddShows = () => {
       return;
     }
 
-    //  Chuẩn bị dữ liệu trước khi hỏi confirm
     const showsInput = Object.entries(dateTimeSelection).flatMap(
       ([date, times]) => times.map((time) => ({ date, time }))
     );
@@ -83,9 +82,23 @@ const AddShows = () => {
     };
 
     try {
+      const loadingAlert = MySwal.fire({
+        title: "Adding new show...",
+        text: "Please wait while we process your request.",
+        background: "#1e1e1e",
+        color: "#fff",
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          MySwal.showLoading();
+        },
+      });
+
       setAddingShow(true);
       const api = await authorizedApi(getToken);
       const { data } = await api.post("/api/show/add", payload);
+
+      MySwal.close();
 
       if (data.success) {
         toast.success(data.message);
@@ -96,6 +109,7 @@ const AddShows = () => {
         toast.error(data.message);
       }
     } catch (err) {
+      MySwal.close();
       console.error("Add show error:", err);
       toast.error("Failed to add show.");
     } finally {
@@ -153,7 +167,7 @@ const AddShows = () => {
               <div className="relative overflow-hidden rounded-lg">
                 <img
                   src={image_base_url + movie.poster_path}
-                  alt=""
+                  alt={movie.title}
                   className="object-cover w-full brightness-90"
                 />
                 <div className="absolute bottom-0 left-0 flex items-center justify-between w-full p-2 text-sm bg-black/70">
