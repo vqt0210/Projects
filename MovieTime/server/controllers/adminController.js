@@ -336,7 +336,7 @@ export const deleteUser = async (req, res) => {
       return res.json({ success: true, message: "User deleted successfully by super-admin" });
     }
 
-    // ❌ Còn lại thì từ chối
+    // Còn lại thì từ chối
     return res.status(403).json({
       success: false,
       message: "You do not have permission to delete this user",
@@ -509,7 +509,7 @@ export const deleteShow = async (req, res) => {
   }
 };
 
-async function revokeAllUserSessions(userId) {
+async function revokeAllUserSessions(userId, { keepLatest = true } = {}) {
   try {
     const sessionsResponse = await clerkClient.sessions.getSessionList({
       userId,
@@ -517,17 +517,43 @@ async function revokeAllUserSessions(userId) {
     const sessions = sessionsResponse.data || [];
 
     if (!sessions.length) {
-      console.log(`No active sessions found for user ${userId}`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`No active sessions found for user ${userId}`);
+      }
       return;
     }
 
-    for (const sess of sessions) {
+    // Optionally keep the most recent session active and revoke the rest
+    let targetList = sessions;
+    if (keepLatest && sessions.length > 1) {
+      const sorted = [...sessions].sort((a, b) => {
+        const tsB = new Date(b.lastActiveAt || b.updatedAt || b.createdAt || 0).getTime();
+        const tsA = new Date(a.lastActiveAt || a.updatedAt || a.createdAt || 0).getTime();
+        return tsB - tsA;
+      });
+      // Keep the newest session (index 0), revoke others
+      targetList = sorted.slice(1);
+    }
+
+    let revoked = 0;
+    const revokedIds = [];
+    for (const sess of targetList) {
       try {
         await clerkClient.sessions.revokeSession(sess.id);
-        console.log(`Revoked session ${sess.id} for user ${userId}`);
+        revoked++;
+        if (process.env.NODE_ENV !== "production") revokedIds.push(sess.id);
       } catch (err) {
         console.warn("Failed to revoke session", sess.id, err.message);
       }
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `Revoked ${revoked} session(s) for user ${userId}` +
+          (revokedIds.length ? `: [${revokedIds.join(", ")}]` : "")
+      );
+    } else if (revoked > 0) {
+      console.log(`Revoked ${revoked} session(s) for user ${userId}`);
     }
   } catch (err) {
     console.error("Error fetching sessions for user:", userId, err.message);

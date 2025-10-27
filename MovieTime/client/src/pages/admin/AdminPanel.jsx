@@ -206,8 +206,8 @@ const AdminPanel = () => {
                         disabled={
                           isCurrentUser ||
                           user.role === "super-admin" ||
-                          (currentUserRole !== "super-admin" &&
-                            user.role === "admin")
+                          (currentUserRole !== "super-admin" && user.role === "admin") ||
+                          loadingUserId === (user._id || user.id)
                         }
                         onClick={() =>
                           handleRoleChange(
@@ -222,13 +222,13 @@ const AdminPanel = () => {
                         } ${
                           isCurrentUser ||
                           user.role === "super-admin" ||
-                          (currentUserRole !== "super-admin" &&
-                            user.role === "admin")
+                          (currentUserRole !== "super-admin" && user.role === "admin") ||
+                          loadingUserId === (user._id || user.id)
                             ? "opacity-50 cursor-not-allowed"
                             : "cursor-pointer"
                         }`}
                       >
-                        {loadingUserId === user._id ? (
+                        {loadingUserId === (user._id || user.id) ? (
                           <span className="animate-pulse">Processing...</span>
                         ) : user.role === "admin" ? (
                           <>
