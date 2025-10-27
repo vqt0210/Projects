@@ -21,10 +21,10 @@ const SeatLayout = () => {
   const [promoCode, setPromoCode] = useState("");
   const [discountPreview, setDiscountPreview] = useState(null);
   const [loadingPromo, setLoadingPromo] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
 
   const { getToken, user } = useAppContext();
 
+  // Fetch show info
   const getShow = async () => {
     try {
       const { data } = await api.get(`/api/show/${id}`);
@@ -36,10 +36,11 @@ const SeatLayout = () => {
         });
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
+  // Remove any seat already occupied
   useEffect(() => {
     setSelectedSeats((prev) =>
       prev.filter((seat) => !occupiedSeats.includes(seat))
@@ -47,9 +48,10 @@ const SeatLayout = () => {
   }, [occupiedSeats]);
 
   const handleSeatClick = (seatId) => {
-    if (isLocked) return toast("Checkout in progress — seat selection locked!");
+    if (isProcessing || loadingPromo)
+      return toast("Action in progress. Please wait...");
     if (isLoadingSeats) return toast("Please wait, loading seats...");
-    if (!selectedTime) return toast("Please select time first");
+    if (!selectedTime) return toast("Please select a showtime first");
 
     setSelectedSeats((prev) => {
       const already = prev.includes(seatId);
@@ -66,9 +68,10 @@ const SeatLayout = () => {
   };
 
   const handleCheckPromo = async () => {
-    if (isLocked) return;
+    if (loadingPromo || isProcessing) return;
     if (!promoCode || !show) return toast.error("Enter a promo code first!");
-    if (selectedSeats.length === 0) return toast.error("Select seats first!");
+    if (selectedSeats.length === 0)
+      return toast.error("Select seats first!");
     setLoadingPromo(true);
     try {
       const price = Number(show?.showPrice || 0);
@@ -83,9 +86,7 @@ const SeatLayout = () => {
         const discountPercent = data.discountValue || 0;
         setDiscountPreview({
           discountValue: discountPercent,
-          finalPrice: data.finalPrice ?? totalBeforeDiscount,
         });
-        setIsLocked(true); // khoá chọn giờ / ghế sau khi áp mã
         toast.success(`Promo applied: -${discountPercent}%`);
       } else toast.error(data.message);
     } catch (error) {
@@ -101,7 +102,6 @@ const SeatLayout = () => {
       if (!selectedTime || !selectedSeats.length)
         return toast.error("Please select a time and seat");
 
-      setIsLocked(true);
       setIsProcessing(true);
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.post("/api/bookings/create", {
@@ -115,7 +115,6 @@ const SeatLayout = () => {
       } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
-      setIsLocked(false); // nếu lỗi thì mở lại
     } finally {
       setIsProcessing(false);
     }
@@ -125,6 +124,7 @@ const SeatLayout = () => {
     getShow();
   }, []);
 
+  // Fetch occupied seats when selectedTime changes
   useEffect(() => {
     const fetchSeats = async () => {
       if (!selectedTime?.showId) return;
@@ -147,8 +147,9 @@ const SeatLayout = () => {
   if (!show) return <Loading />;
 
   const price = Number(show?.showPrice || 0);
-  const total = selectedSeats.length > 0 ? price * selectedSeats.length : 0;
-  const finalTotal = discountPreview?.finalPrice ?? total;
+  const baseTotal = selectedSeats.length > 0 ? price * selectedSeats.length : 0;
+  const discountPercent = discountPreview?.discountValue || 0;
+  const finalTotal = baseTotal * (1 - discountPercent / 100);
 
   return (
     <div className="flex flex-col px-6 md:flex-row md:px-16 lg:px-40 py-30 md:pt-50">
@@ -160,13 +161,19 @@ const SeatLayout = () => {
             show.dateTime[date].map((item) => (
               <div
                 key={item.time}
-                onClick={() => !isLocked && setSelectedTime(item)}
+                onClick={() => {
+                  if (loadingPromo || isProcessing) return;
+                  setSelectedTime(item);
+                  setSelectedSeats([]);
+                  setDiscountPreview(null);
+                  setPromoCode("");
+                }}
                 className={`flex items-center gap-3 px-4 py-2 w-full rounded-2xl cursor-pointer transition-all duration-200 ${
                   selectedTime?.time === item.time
                     ? "bg-primary text-white shadow-md scale-[1.02]"
                     : "hover:bg-primary/10 text-gray-300"
                 } ${
-                  isLocked
+                  loadingPromo || isProcessing
                     ? "opacity-50 cursor-not-allowed pointer-events-none"
                     : ""
                 }`}
@@ -208,10 +215,14 @@ const SeatLayout = () => {
         <p className="mb-6 text-sm text-gray-400">SCREEN</p>
 
         <div className="relative flex flex-col items-center mt-10 text-xs text-gray-300">
-          {(isLoadingSeats || isLocked) && (
+          {(isLoadingSeats || loadingPromo || isProcessing) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 rounded-2xl">
               <p className="text-sm text-white">
-                {isLocked ? "Checkout in progress..." : "Loading seats..."}
+                {isProcessing
+                  ? "Processing checkout..."
+                  : loadingPromo
+                  ? "Applying promo..."
+                  : "Loading seats..."}
               </p>
             </div>
           )}
@@ -225,7 +236,8 @@ const SeatLayout = () => {
                       key={seatId}
                       onClick={() => handleSeatClick(seatId)}
                       disabled={
-                        isLocked ||
+                        loadingPromo ||
+                        isProcessing ||
                         isLoadingSeats ||
                         occupiedSeats.includes(seatId)
                       }
@@ -240,7 +252,6 @@ const SeatLayout = () => {
                             ? "opacity-40 cursor-not-allowed"
                             : "cursor-pointer"
                         }
-                        ${isLocked ? "opacity-50 cursor-not-allowed" : ""}
                       `}
                     >
                       {seatId}
@@ -255,58 +266,45 @@ const SeatLayout = () => {
         {/* Discount & Total */}
         {selectedSeats.length > 0 && (
           <div className="mt-8 text-center text-white">
-            <p className="mb-2 text-lg">
-              Subtotal:{" "}
-              <span className="font-semibold text-primary">
-                ${total.toFixed(2)}
+            <p className="mb-1 text-lg text-gray-300">
+              Total:{" "}
+              <span
+                className={
+                  discountPercent ? "line-through opacity-70" : "font-semibold text-primary"
+                }
+              >
+                ${baseTotal.toFixed(2)}
               </span>
             </p>
+            {discountPercent > 0 && (
+              <p className="text-lg">
+                Final Total:{" "}
+                <span className="font-semibold text-primary">
+                  ${finalTotal.toFixed(2)}
+                </span>{" "}
+                <span className="text-sm text-green-400">
+                  (−{discountPercent}%)
+                </span>
+              </p>
+            )}
 
-            <div className="flex items-center justify-center gap-2 mt-2">
+            <div className="flex items-center justify-center gap-2 mt-3">
               <input
                 type="text"
                 placeholder="Enter promo code"
                 value={promoCode}
-                disabled={isLocked}
+                disabled={loadingPromo || isProcessing}
                 onChange={(e) => setPromoCode(e.target.value)}
                 className="p-2 text-sm border rounded-md bg-zinc-800 border-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
               <button
                 onClick={handleCheckPromo}
-                disabled={loadingPromo || isLocked}
+                disabled={loadingPromo || isProcessing}
                 className="px-4 py-2 text-sm transition cursor-pointer rounded-xl bg-primary hover:bg-primary-dull disabled:opacity-50"
               >
                 {loadingPromo ? "Checking..." : "Apply"}
               </button>
             </div>
-
-            {discountPreview && (
-              <>
-                <div className="mt-3 space-y-1">
-                  <p className="text-green-400">
-                    ✅ Promo applied:{" "}
-                    <strong>-{discountPreview.discountValue}%</strong>
-                  </p>
-                  <p className="text-lg">
-                    Final Total:{" "}
-                    <span className="font-semibold text-primary">
-                      ${discountPreview.finalPrice.toFixed(2)}
-                    </span>
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setIsLocked(false);
-                    setDiscountPreview(null);
-                    setPromoCode("");
-                  }}
-                  className="px-4 py-1 mt-3 text-xs text-white transition rounded-full cursor-pointer bg-gray-600/40 hover:bg-gray-500/40"
-                >
-                  Reset Promo / Unlock Selection
-                </button>
-              </>
-            )}
           </div>
         )}
 

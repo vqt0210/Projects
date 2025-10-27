@@ -168,7 +168,7 @@ const MyBookings = () => {
                   {isPaid && (
                     <button
                       onClick={() => navigate(`/ticket/${item._id}`)}
-                      className="px-6 py-2 mt-5 text-white transition-all duration-300 transform rounded-full shadow-md cursor-pointer bg-primary hover:bg-primary-dull hover:scale-105 hover:shadow-lg"
+                      className="px-6 py-2 mt-5 text-white transition-all duration-300 transform shadow-md cursor-pointer rounded-2xl bg-primary hover:bg-primary-dull hover:scale-105 hover:shadow-lg"
                     >
                       View Ticket
                     </button>

@@ -63,6 +63,15 @@ export default function Tickets() {
 
   return (
     <div className="min-h-screen flex justify-center bg-gradient-to-br from-[#0b0c10] to-[#1f2833] text-white p-6 pt-32">
+      <div className="absolute top-24 left-10 z-[9999]">
+        <button
+          onClick={() => navigate("/my-bookings")}
+          className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-[#1c1c1c]/70 hover:bg-[#2a2a2a]/80 text-white shadow-md transition-all duration-300 backdrop-blur-md cursor-pointer"
+        >
+          <span className="text-lg text-primary">←</span>
+          Back to My Bookings
+        </button>
+      </div>
       <div className="relative w-full max-w-md p-8 rounded-3xl shadow-xl border border-gray-700 bg-[#161b22]/80 backdrop-blur-lg">
         {/* Header */}
         <div className="mb-6 text-center">
