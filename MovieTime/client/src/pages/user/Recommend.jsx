@@ -164,7 +164,7 @@ export default function Recommend() {
                 onClick={() => handleViewMovieSmart(rec)}
                 className="w-full px-5 py-2 mt-5 text-sm font-medium text-white transition rounded-full cursor-pointer bg-primary hover:bg-primary/80"
               >
-                View Movie
+                Watch Movie
               </button>
             </div>
           ))}
