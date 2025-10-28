@@ -56,7 +56,7 @@ export const recommendMovies = async (req, res) => {
       You are a movie recommendation assistant.
       The user enjoys movies such as: ${likedTitles.join(", ")}.
       Their favorite genres are: ${genreSummary || "unknown"}.
-      Suggest 5 similar movies (popular ones available worldwide).
+      Suggest 8 similar movies (popular ones available worldwide).
       For each movie, include:
       - title
       - short description (max 20 words)
@@ -75,14 +75,14 @@ export const recommendMovies = async (req, res) => {
     }
 
     // Call Gemini model properly
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
     console.log("[STEP] Calling Gemini...");
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     console.log("[RAW RESPONSE]", text);
 
-    // Parse JSON tráº£ vá»
+    // Parse JSON 
     let recommendations = [];
     try {
       const cleaned = text.replace(/```json|```/g, "").trim();
@@ -94,7 +94,7 @@ export const recommendMovies = async (req, res) => {
 
     res.json({ success: true, recommendations });
   } catch (error) {
-    console.error("===== [ERROR] recommendMovies (Gemini) =====", error);
+    console.error("[ERROR] recommendMovies (Gemini)", error);
     res.status(500).json({
       success: false,
       message: "Gemini AI recommendation failed",

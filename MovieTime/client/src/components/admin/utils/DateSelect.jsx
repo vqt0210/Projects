@@ -13,7 +13,8 @@ const DateSelect = ({ dateTime, id, onExpired }) => {
   });
   const isExpired = availableDates.length === 0;
 
-  // Thông báo cho MovieDetails nếu hết suất chiếu
+  // SỬA: CHỈ CẦN DÙNG useEffect NÀY LÀ ĐỦ
+  // Nó sẽ đảm bảo onExpired được gọi sau khi render
   useEffect(() => {
     if (onExpired) onExpired(isExpired);
   }, [isExpired, onExpired]);
@@ -25,14 +26,15 @@ const DateSelect = ({ dateTime, id, onExpired }) => {
   };
 
   if (isExpired) {
-    return (
-      <div className="p-8 text-center border rounded-lg bg-primary/10 border-primary/20">
-        <p className="text-lg font-medium text-gray-400">
-          No Showtime Available
-        </p>
-      </div>
-    );
+    return null; 
   }
+
+  useEffect(() => {
+    if (!selected && availableDates.length > 0) {
+        setSelected(availableDates[0]);
+    }
+  }, [availableDates, selected]);
+  
 
   return (
     <div className="pt-20">

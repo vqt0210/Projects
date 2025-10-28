@@ -3,6 +3,9 @@ import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
 import { inngest } from "../inngest/index.js";
 
+const TMDB_BASE = "https://api.themoviedb.org/3";
+const TMDB_KEY = process.env.TMDB_API_KEY;
+
 const cache = new Map();
 function cacheGet(key) {
   const entry = cache.get(key);
@@ -71,9 +74,8 @@ export const addShow = async (req, res) => {
       typeof movie.trailer === "undefined"
     ) {
       // ensure key
-      const apiKey = ensureTmdbKey();
+      const apiKey = ensureTmdbKey(); // Fetch details, credits, videos in parallel
 
-      // Fetch details, credits, videos in parallel
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] =
         await Promise.all([
           axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
@@ -120,9 +122,8 @@ export const addShow = async (req, res) => {
         trailer: trailer
           ? `https://www.youtube.com/embed/${trailer.key}`
           : null,
-      };
+      }; // Add or update movie
 
-      // Add or update movie
       if (!movie) {
         movie = await Movie.create(movieDetails);
       } else if (!movie.trailer) {
@@ -189,25 +190,38 @@ export const getShows = async (req, res) => {
   }
 };
 
-
 // API to get a single show from the database
 export const getShow = async (req, res) => {
   try {
     const { movieId } = req.params;
+    let movie = null;
 
-    // Tìm movie
-    const movie =
-      (await Movie.findById(String(movieId))) ||
-      (await Movie.findOne({ _id: movieId })) ||
-      (await Movie.findOne({ id: Number(movieId) }));
+    //  Nếu là ObjectId hợp lệ → tìm theo ObjectId
+    if (/^[0-9a-fA-F]{24}$/.test(movieId)) {
+      movie = await Movie.findById(movieId);
+    }
 
+    // Nếu chưa thấy → tìm theo TMDB ID (vd: "507244")
+    if (!movie) {
+      movie = await Movie.findOne({ _id: movieId });
+    }
+
+    // Nếu vẫn không có → thử tìm theo title (trường hợp người dùng click từ /movies/coming-soon/:title)
+    if (!movie && isNaN(Number(movieId))) {
+      const decodedTitle = decodeURIComponent(movieId);
+      movie = await Movie.findOne({
+        title: { $regex: decodedTitle, $options: "i" },
+      });
+    }
+
+    // Nếu vẫn không tìm thấy
     if (!movie) {
       return res
         .status(404)
         .json({ success: false, message: "Movie not found in database" });
     }
 
-    // Lấy danh sách show của phim đó
+    // Lấy danh sách show của phim
     const shows = await Show.find({
       movie: movie._id,
       showDateTime: { $gte: new Date(Date.now() - 60 * 60 * 1000) },
@@ -222,10 +236,8 @@ export const getShow = async (req, res) => {
       dateTime[date].push({
         time: s.showDateTime,
         showId: s._id,
-        price: s.showPrice, //  Gửi giá vé ra frontend
+        price: s.showPrice,
       });
-
-      // Gán giá của show đầu tiên làm mặc định
       if (!showPrice) showPrice = s.showPrice;
     }
 
@@ -233,7 +245,7 @@ export const getShow = async (req, res) => {
       success: true,
       movie,
       dateTime,
-      showPrice: showPrice || 0, //  gửi giá vé chung
+      showPrice: showPrice || 0,
     });
   } catch (error) {
     console.error("getShow error:", error);
@@ -241,7 +253,7 @@ export const getShow = async (req, res) => {
   }
 };
 
-//  New: top-rated & upcoming
+//  New: top-rated & upcoming
 
 export const getTopRatedMovies = async (req, res) => {
   try {
@@ -270,23 +282,20 @@ export const getUpcomingMovies = async (req, res) => {
 
     // Lấy các movie đang showing trong DB
     const nowShowingMovies = await Show.find({}, "movie");
-    const nowShowingIds = nowShowingMovies.map((s) => s.movie.toString());
+    const nowShowingIds = nowShowingMovies.map((s) => s.movie.toString()); // Lấy danh sách upcoming từ TMDB
 
-    // Lấy danh sách upcoming từ TMDB
     const { data } = await axios.get(
       "https://api.themoviedb.org/3/movie/upcoming",
       {
         headers: { Authorization: `Bearer ${apiKey}` },
         params: { language: "en-US", page },
       }
-    );
+    ); // Lọc ra các movie chưa có trong Now Showing
 
-    // Lọc ra các movie chưa có trong Now Showing
     let filteredResults = data.results.filter(
       (movie) => !nowShowingIds.includes(movie.id.toString())
-    );
+    ); // Fetch chi tiết từng movie để lấy genres, runtime, trailer…
 
-    // Fetch chi tiết từng movie để lấy genres, runtime, trailer…
     const detailedResults = await Promise.all(
       filteredResults.map(async (movie) => {
         try {
@@ -325,3 +334,44 @@ export const getUpcomingMovies = async (req, res) => {
       .json({ success: false, message: "Failed to fetch TMDB upcoming" });
   }
 };
+
+export const searchMovieByTitle = async (req, res) => {
+  try {
+    const query = req.query.q || req.query.title;
+    if (!query)
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing title query" });
+
+    let movie = null;
+
+    // Nếu query là ObjectId (24 ký tự)
+    if (/^[0-9a-fA-F]{24}$/.test(query)) {
+      movie = await Movie.findById(query);
+    }
+
+    // Nếu query là số (TMDB ID)
+    if (!movie && /^\d+$/.test(query)) {
+      movie = await Movie.findOne({ _id: query });
+    }
+
+    // Nếu vẫn chưa thấy, thử tìm theo title
+    if (!movie) {
+      movie = await Movie.findOne({
+        title: { $regex: query, $options: "i" },
+      });
+    }
+
+    if (!movie) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Movie not found" });
+    }
+
+    return res.status(200).json({ success: true, movie, source: "local" });
+  } catch (error) {
+    console.error("searchMovieByTitle error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+

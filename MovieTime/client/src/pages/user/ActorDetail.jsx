@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CakeIcon, Calendar, CandlestickChart } from "lucide-react";
 import MovieCard from "@/components/movies/MovieCard";
 import Loading from "@/components/common/Loading";
 import { useAppContext } from "@/context/AppContext";
@@ -16,15 +16,48 @@ export default function ActorDetail() {
   useEffect(() => {
     const fetchActor = async () => {
       try {
-        const API_URL = import.meta.env.VITE_BASE_URL;
-        const res = await fetch(`${API_URL}/api/actors/${id}`);
-        const data = await res.json();
-        if (data.success) {
-          setActor(data.actor);
-          setMovies(data.movies);
+        const TMDB_BASE = "https://api.themoviedb.org/3";
+        const TMDB_BEARER = import.meta.env.VITE_TMDB_BEARER_TOKEN;
+
+        // Fetch thông tin diễn viên
+        const actorRes = await fetch(`${TMDB_BASE}/person/${id}`, {
+          headers: {
+            Authorization: `Bearer ${TMDB_BEARER}`,
+            Accept: "application/json",
+          },
+        });
+        const actorData = await actorRes.json();
+
+        // Nếu không có diễn viên
+        if (actorData.success === false) {
+          setActor(null);
+          setLoading(false);
+          return;
         }
+
+        setActor(actorData);
+
+        // Fetch phim liên quan
+        const moviesRes = await fetch(
+          `${TMDB_BASE}/person/${id}/movie_credits`,
+          {
+            headers: {
+              Authorization: `Bearer ${TMDB_BEARER}`,
+              Accept: "application/json",
+            },
+          }
+        );
+        const moviesData = await moviesRes.json();
+
+        // Lọc bỏ phim thiếu thông tin
+        const filtered = (moviesData.cast || []).filter(
+          (m) => m.poster_path && (m.overview || m.vote_average > 0)
+        );
+
+        // Lấy tối đa 12 phim sau khi lọc
+        setMovies(filtered.slice(0, 12));
       } catch (err) {
-        console.error(err);
+        console.error("Fetch actor failed:", err);
       } finally {
         setLoading(false);
       }
@@ -35,40 +68,56 @@ export default function ActorDetail() {
   if (loading) return <Loading />;
 
   if (!actor)
-    return <p className="text-center mt-10 text-gray-400">Actor not found</p>;
+    return <p className="mt-10 text-center text-gray-400">Actor not found</p>;
 
   return (
-    <div className="px-6 md:px-16 lg:px-40 pt-28 md:pt-40 text-white">
+    <div className="px-6 text-white md:px-16 lg:px-40 pt-28 md:pt-40">
       {/* Header */}
       <button
         onClick={() => {
           navigate(-1);
           scrollTo(0, 0);
         }}
-        className="flex items-center gap-2 text-gray-400 hover:text-white transition mb-6 cursor-pointer"
+        className="flex items-center gap-2 mb-6 text-gray-400 transition cursor-pointer hover:text-white"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
       {/* Actor info */}
-      <div className="flex flex-col md:flex-row items-start gap-8">
-        <img
-          src={
-            actor.profile_path
-              ? `${image_base_url}${actor.profile_path}`
-              : "/assets/defaultprofilepic.jpg"
-          }
-          onError={(e) => (e.target.src = "/assets/defaultprofilepic.jpg")}
-          alt={actor.name}
-          className="w-44 h-44 rounded-full object-cover bg-gray-800"
-        />
-        <div>
-          <h1 className="text-3xl font-semibold">{actor.name}</h1>
-          <p className="text-gray-400 mt-1">{actor.known_for_department}</p>
-          <p className="text-gray-500 text-sm mt-2">
-            Popularity: {actor.popularity?.toFixed(1)}
-          </p>
+      <div className="flex flex-col gap-8">
+        {/* Container Nội dung chính: Ảnh (trái) và Thông tin chi tiết (phải) */}
+        <div className="flex flex-col items-start gap-8 md:flex-row">
+          <img
+            src={
+              actor.profile_path
+                ? `${image_base_url}${actor.profile_path}`
+                : "/assets/defaultprofilepic.jpg"
+            }
+            onError={(e) => (e.target.src = "/assets/defaultprofilepic.jpg")}
+            alt={actor.name}
+            className="flex-shrink-0 object-cover bg-gray-800 rounded-full w-44 h-44"
+          />
+
+          {/* Khối Thông tin (Tên, Ngày sinh, Nghề nghiệp...) */}
+          <div className="flex flex-col mt-2 md:mt-0">
+            <h1 className="mb-2 text-3xl font-bold text-white">{actor.name}</h1>
+
+            <p className="flex items-center gap-1 text-sm text-gray-400">
+              <CakeIcon className="w-4 h-4 text-gray-400" />{" "}
+              {actor.birthday || "Unknown"} • {actor.place_of_birth || "N/A"}
+            </p>
+
+            <p className="mt-1 text-gray-400">{actor.known_for_department}</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Popularity: {actor.popularity?.toFixed(1)}
+            </p>
+          </div>
         </div>
+
+        {/* Tiểu sử (Nằm riêng biệt, bên ngoài Flex-row trên, để luôn nằm dưới cùng) */}
+        <p className="max-w-full leading-relaxed text-justify text-gray-300">
+          {actor.biography || "No biography available."}
+        </p>
       </div>
 
       {/* Related movies */}
