@@ -53,7 +53,7 @@ const MyBookings = () => {
           b._id === bookingId ? { ...b, isPaid: true, status: "PAID" } : b
         )
       );
-      toast.success("🎉 Payment Successful!", {
+      toast.success("Payment Successful!", {
         description: "Your booking has been confirmed.",
         duration: 4000,
       });

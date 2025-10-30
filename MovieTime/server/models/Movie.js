@@ -19,7 +19,7 @@ const movieSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🧩 Soft Cascade Delete Middleware
+// Soft Cascade Delete Middleware
 movieSchema.pre("findOneAndDelete", async function (next) {
   try {
     const movieId = this.getQuery()?._id;

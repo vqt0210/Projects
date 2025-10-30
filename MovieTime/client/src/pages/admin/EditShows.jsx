@@ -31,7 +31,7 @@ export default function EditShows({ shows, refreshDashboard }) {
   const [newTime, setNewTime] = useState("");
   const [newPrice, setNewPrice] = useState("");
 
-  // === Update show ===
+  // Update show
   const handleUpdate = async () => {
     try {
       const api = await authorizedApi(getToken);
@@ -53,7 +53,7 @@ export default function EditShows({ shows, refreshDashboard }) {
     }
   };
 
-  // === Delete show ===
+  //Delete show
   const handleDelete = async (show, force = false) => {
   try {
     // Hiển thị popup trước
@@ -78,7 +78,7 @@ export default function EditShows({ shows, refreshDashboard }) {
 
     if (!result.isConfirmed) return;
 
-    // ✅ Tạo API sau khi người dùng xác nhận
+    // Tạo API sau khi người dùng xác nhận
     const api = await authorizedApi(getToken);
 
     const { data } = await api.delete(`/api/admin/delete-show/${show._id}`, {
@@ -111,20 +111,20 @@ export default function EditShows({ shows, refreshDashboard }) {
 };
 
   return (
-    <div className="relative flex flex-wrap gap-6 mt-5 max-w-6xl">
+    <div className="relative flex flex-wrap max-w-6xl gap-6 mt-5">
       {shows?.map((show) => (
         <div
           key={show._id}
-          className="w-55 rounded-lg overflow-hidden h-full pb-3 bg-primary/10 border border-primary/20 hover:-translate-y-1 hover:shadow-primary/30 transition duration-300"
+          className="h-full pb-3 overflow-hidden transition duration-300 border rounded-lg w-55 bg-primary/10 border-primary/20 hover:-translate-y-1 hover:shadow-primary/30"
         >
           <img
             src={image_base_url + show.movie.poster_path}
             alt={show.movie.title}
             loading="lazy"
-            className="h-60 w-full object-cover"
+            className="object-cover w-full h-60"
           />
           <div className="p-3">
-            <p className="font-medium truncate text-white">
+            <p className="font-medium text-white truncate">
               {show.movie.title}
             </p>
             <div className="flex items-center justify-between mt-2 text-gray-300">
@@ -141,7 +141,7 @@ export default function EditShows({ shows, refreshDashboard }) {
                 </span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               {dateFormat(show.showDateTime)}
             </p>
 
@@ -169,25 +169,25 @@ export default function EditShows({ shows, refreshDashboard }) {
 
                 <DialogContent
                   className="bg-[#111]/90 text-white border border-primary/30 
-      shadow-[0_0_30px_rgba(248,69,101,0.2)] sm:max-w-[440px]
-      backdrop-blur-xl rounded-2xl
-      data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90 data-[state=open]:duration-300 
-      data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-90 data-[state=closed]:duration-200"
+                  shadow-[0_0_30px_rgba(248,69,101,0.2)] sm:max-w-[440px]
+                  backdrop-blur-xl rounded-2xl
+                  data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90 data-[state=open]:duration-300 
+                  data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-90 data-[state=closed]:duration-200"
                 >
                   <DialogHeader>
-                    <div className="flex justify-between items-start border-b border-white/10 pb-3">
+                    <div className="flex items-start justify-between pb-3 border-b border-white/10">
                       <div>
-                        <DialogTitle className="text-primary font-semibold text-lg">
+                        <DialogTitle className="text-lg font-semibold text-primary">
                           Edit Show — {show.movie.title}
                         </DialogTitle>
-                        <DialogDescription className="text-gray-400 text-sm">
+                        <DialogDescription className="text-sm text-gray-400">
                           Modify showtime or price below
                         </DialogDescription>
                       </div>
 
                       <DialogClose asChild>
                         <button
-                          className="text-gray-400 hover:text-white transition cursor-pointer"
+                          className="text-gray-400 transition cursor-pointer hover:text-white"
                           aria-label="Close"
                         >
                           <XIcon className="w-5 h-5" />
@@ -197,13 +197,13 @@ export default function EditShows({ shows, refreshDashboard }) {
                   </DialogHeader>
 
                   {/* Movie Preview */}
-                  <div className="flex items-center gap-3 mb-4 mt-4">
+                  <div className="flex items-center gap-3 mt-4 mb-4">
                     <img
                       src={image_base_url + show.movie.poster_path}
                       alt={show.movie.title}
-                      className="w-16 h-20 rounded-lg object-cover border border-gray-700 shadow"
+                      className="object-cover w-16 h-20 border border-gray-700 rounded-lg shadow"
                     />
-                    <div className="text-sm text-gray-300 space-y-1">
+                    <div className="space-y-1 text-sm text-gray-300">
                       <p>
                         Current Time:{" "}
                         <span className="text-primary">
@@ -223,20 +223,20 @@ export default function EditShows({ shows, refreshDashboard }) {
                   {/* Inputs */}
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <Label className="text-gray-300 flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-gray-300">
                         <Clock className="w-4 h-4" /> New Showtime
                       </Label>
                       <Input
                         type="datetime-local"
                         value={newTime}
                         onChange={(e) => setNewTime(e.target.value)}
-                        className="bg-gray-900/70 border border-gray-700 text-white placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="text-white border border-gray-700 bg-gray-900/70 placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
                         placeholder="Select new date & time..."
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-gray-300 flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-gray-300">
                         <DollarSign className="w-4 h-4" /> New Price
                       </Label>
                       <Input
@@ -246,17 +246,17 @@ export default function EditShows({ shows, refreshDashboard }) {
                         placeholder={`Current: ${
                           show.showPrice?.adult || show.showPrice || 0
                         }`}
-                        className="bg-gray-900/70 border border-gray-700 text-white placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="text-white border border-gray-700 bg-gray-900/70 placeholder:text-gray-500 focus:border-primary focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
 
                   {/* Footer buttons */}
-                  <DialogFooter className="flex justify-end mt-6 gap-3">
+                  <DialogFooter className="flex justify-end gap-3 mt-6">
                     <Button
                       variant="secondary"
                       onClick={() => setEditingShow(null)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg cursor-pointer transition-all"
+                      className="px-4 py-2 text-white transition-all bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600"
                     >
                       Cancel
                     </Button>
