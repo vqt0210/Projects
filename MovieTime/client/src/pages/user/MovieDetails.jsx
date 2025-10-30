@@ -270,12 +270,16 @@ const MovieDetails = () => {
       {(show?.movie?.casts || tmdbMovie?.casts) && (
         <div className="max-w-6xl mx-auto mt-12">
           <h2 className="mb-4 text-xl font-semibold">Movie Cast</h2>
-          <div className="flex gap-4 pb-4 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-primary scrollbar-track-gray-800">
+
+          <div
+            className="flex gap-4 pb-4 overflow-x-auto whitespace-nowrap scroll-smooth scrollbar-hide"
+            style={{ scrollBehavior: "smooth" }}
+          >
             <div className="flex items-center gap-6 px-4 w-max">
               {(show?.movie?.casts || tmdbMovie?.casts)?.map((cast, index) => (
                 <div
                   key={index}
-                  className="flex flex-col items-center text-center cursor-pointer"
+                  className="flex flex-col items-center text-center cursor-pointer min-w-[90px] transition-transform duration-300 hover:scale-110"
                   onClick={() => {
                     if (cast.id) navigate(`/actors/${cast.id}`);
                     scrollTo(0, 0);
@@ -285,12 +289,15 @@ const MovieDetails = () => {
                     src={
                       cast.profile_path
                         ? `https://image.tmdb.org/t/p/w200${cast.profile_path}`
-                        : "/assets/default-avatar.png"
+                        : "/assets/profile_pic.jpg"
                     }
                     alt={cast.name}
-                    className="object-cover w-20 h-20 rounded-full"
+                    className="object-cover w-20 h-20 transition-all duration-300 border rounded-full shadow-md border-white/10 hover:border-primary"
+                    onError={(e) =>
+                      (e.target.src = "/assets/profile_pic.jpg")
+                    }
                   />
-                  <p className="mt-3 text-xs font-medium transition hover:text-primary">
+                  <p className="mt-3 text-xs font-medium text-gray-300 truncate w-[80px] hover:text-primary">
                     {cast.name}
                   </p>
                 </div>
