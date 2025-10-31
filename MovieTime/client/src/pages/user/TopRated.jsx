@@ -66,19 +66,17 @@ export default function TopRated() {
         </h1>
 
         {/* Danh sách phim */}
-        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-items-center">
+        <div className="grid items-stretch gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-items-stretch">
           {topRatedMovies.map((movie, i) => (
             <div
               key={movie._id || i}
-              className="relative group w-full max-w-[280px]"
+              className="relative group w-full max-w-[280px] h-full flex flex-col"
             >
-              {/* Badge Top 1–10 */}
               <span className="absolute z-20 px-3 py-1 text-xs font-bold text-white rounded-full shadow-md top-2 left-2 bg-primary">
                 ⭐ Top {i + 1}
               </span>
 
-              {/* MovieCard với hover effect */}
-              <div className="overflow-hidden transition-all duration-300 transform border-2 border-transparent group-hover:scale-105 group-hover:border-primary rounded-xl">
+              <div className="flex-1 overflow-hidden transition-all duration-300 transform border-2 border-transparent group-hover:scale-105 group-hover:border-primary rounded-xl">
                 <MovieCard movie={movie} />
               </div>
             </div>

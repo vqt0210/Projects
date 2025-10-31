@@ -34,7 +34,7 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
       className="
         group flex flex-col justify-between bg-gray-800 
         rounded-2xl p-3 
-        w-full max-w-[270px] md:max-w-[280px] xl:max-w-[300px]
+        w-full max-w-[280px] h-[350px]
         transition-transform duration-300 hover:scale-[1.05] hover:-translate-y-1
         shadow-md hover:shadow-primary/30
       "
@@ -57,18 +57,18 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
 
       {/* Thông tin */}
       <div className="flex flex-col flex-grow mt-3">
-        <p className="font-semibold truncate text-base">
+        <p className="text-base font-semibold truncate">
           {flattenedMovie.title}
         </p>
-        <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+        <p className="mt-1 text-sm text-gray-400 line-clamp-2">
           {releaseDate} • {genres} {runtime && `• ${runtime}`}
         </p>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-4 pb-2">
+      <div className="flex items-center justify-between pb-2 mt-4">
         {isUpcoming ? (
-          <span className="w-full text-center px-4 py-2 bg-gray-600 rounded-full font-medium text-sm">
+          <span className="w-full px-4 py-2 text-sm font-medium text-center bg-gray-600 rounded-full">
             Coming Soon
           </span>
         ) : (
@@ -79,7 +79,7 @@ const MovieCard = ({ movie, isUpcoming = false }) => {
                 navigate(`/movies/${flattenedMovie._id || flattenedMovie.id}`);
                 scrollTo(0, 0);
               }}
-              className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
+              className="px-4 py-2 text-xs font-medium transition rounded-full cursor-pointer bg-primary hover:bg-primary-dull"
             >
               Buy Tickets
             </button>
