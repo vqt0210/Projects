@@ -68,6 +68,8 @@ app.post(
   stripeWebhooks
 );
 
+app.use("/api/webhooks", webhookRouter);
+
 // Global Middlewares
 app.use(express.json({ limit: "1mb" }));
 app.use(clerkMiddleware());
@@ -82,7 +84,6 @@ app.use("/api/user", userRouter);
 app.use("/api/search", searchRoutes);
 app.use("/api/me", meRouter);
 app.use("/api/stripe", stripeRouter);
-app.use("/api/webhooks", webhookRouter);
 app.use("/api/ticket", ticketRouter);
 app.use("/qr", (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "https://teasonmike.io.vn");
