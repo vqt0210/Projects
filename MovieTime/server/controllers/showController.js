@@ -3,9 +3,6 @@ import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
 import { inngest } from "../inngest/index.js";
 
-const TMDB_BASE = "https://api.themoviedb.org/3";
-const TMDB_KEY = process.env.TMDB_API_KEY;
-
 const cache = new Map();
 function cacheGet(key) {
   const entry = cache.get(key);
@@ -59,6 +56,7 @@ export const getNowPlayingMovies = async (req, res) => {
 export const addShow = async (req, res) => {
   try {
     const { movieId, showsInput, showPrice } = req.body;
+
     if (!movieId)
       return res
         .status(400)
@@ -66,6 +64,7 @@ export const addShow = async (req, res) => {
 
     let movie = await Movie.findById(String(movieId));
 
+    // Nếu phim chưa có trong DB hoặc thiếu trailer → gọi TMDB để lấy
     if (
       !movie ||
       movie.trailer == null ||
@@ -73,8 +72,7 @@ export const addShow = async (req, res) => {
       movie.trailer === "null" ||
       typeof movie.trailer === "undefined"
     ) {
-      // ensure key
-      const apiKey = ensureTmdbKey(); // Fetch details, credits, videos in parallel
+      const apiKey = ensureTmdbKey();
 
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] =
         await Promise.all([
@@ -122,8 +120,9 @@ export const addShow = async (req, res) => {
         trailer: trailer
           ? `https://www.youtube.com/embed/${trailer.key}`
           : null,
-      }; // Add or update movie
+      };
 
+      // Cập nhật hoặc tạo mới phim
       if (!movie) {
         movie = await Movie.create(movieDetails);
       } else if (!movie.trailer) {
@@ -135,38 +134,54 @@ export const addShow = async (req, res) => {
       }
     }
 
-    const showsToCreate = [];
-    (showsInput || []).forEach((sh) => {
-      // Admin nhập giờ chiếu dạng local (VD 2025-10-25T19:30)
-      // ta convert sang UTC để lưu đồng bộ toàn cầu
-      const localDateTime = new Date(`${sh.date}T${sh.time}`);
-      const utcDateTime = new Date(
-        localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
-      ); // offset phút → ms
+    // Kiểm tra show trùng
+    const addedShows = [];
+    for (const sh of showsInput || []) {
+      const localDateTime = new Date(`${sh.date}T${sh.time}:00`);
+      const utcDateTime = new Date(localDateTime.toISOString());
 
-      showsToCreate.push({
+      // Check trùng theo movieId + showDateTime
+      const exists = await Show.findOne({
         movie: movieId,
-        showDateTime: utcDateTime, // LƯU DẠNG UTC
+        showDateTime: utcDateTime,
+      });
+
+      if (exists) {
+        console.log(
+          `[SKIP] Show already exists for ${movie.title} at ${utcDateTime}`
+        );
+        continue; // Bỏ qua nếu trùng
+      }
+
+      const newShow = await Show.create({
+        movie: movieId,
+        showDateTime: utcDateTime,
         showPrice,
         occupiedSeats: {},
       });
-    });
-
-    if (showsToCreate.length > 0) {
-      await Show.insertMany(showsToCreate);
+      addedShows.push(newShow);
     }
 
+    if (addedShows.length === 0) {
+      return res.json({
+        success: false,
+        message: "Shows already exist, nothing added.",
+      });
+    }
+
+    // Gửi event Inngest
     await inngest.send({
       name: "app/show.added",
       data: { movieTitle: movie.title },
     });
 
-    res.json({ success: true, message: "Show Added Successfully" });
+    res.json({
+      success: true,
+      message: `Added ${addedShows.length} new show(s).`,
+      shows: addedShows,
+    });
   } catch (error) {
-    console.error(
-      "addShow error:",
-      error?.response?.data || error?.message || error
-    );
+    console.error("addShow error:", error?.response?.data || error?.message);
     res.status(500).json({
       success: false,
       message: error?.message || "Internal server error",
@@ -374,4 +389,3 @@ export const searchMovieByTitle = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
