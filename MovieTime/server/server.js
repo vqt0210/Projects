@@ -19,12 +19,12 @@ import searchRoutes from "./routes/searchRoutes.js";
 import meRouter from "./routes/me.js";
 import stripeRouter from "./routes/stripeRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeController.js";
-import webhookRouter from "./routes/clerkWebhookRoutes.js";
 import ticketRouter from "./routes/ticketRoutes.js";
 import recommendRouter from "./routes/recommendRoutes.js";
 
 import fs from "fs";
 import path from "path";
+import { handleClerkWebhook } from "./controllers/clerkController.js";
 
 
 const dirs = ["public/qr", "public/posters"];
@@ -60,6 +60,14 @@ app.use(
 
 app.get("/healthz", (req, res) => res.status(200).send("ok"));
 
+// Clerk Webhook
+
+app.post(
+  "/api/webhooks/clerk",
+  express.raw({ type: "application/json" }),
+  handleClerkWebhook
+);
+
 // Stripe Webhook
 
 app.post(
@@ -68,7 +76,7 @@ app.post(
   stripeWebhooks
 );
 
-app.use("/api/webhooks", webhookRouter);
+
 
 // Global Middlewares
 app.use(express.json({ limit: "1mb" }));
