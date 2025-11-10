@@ -2,6 +2,7 @@ import axios from "axios";
 
 // Cấu hình base URL từ môi trường
 const BASE_URL = import.meta.env.VITE_BASE_URL;
+console.log("Current API Base URL:", import.meta.env.VITE_BASE_URL);
 
 // Tạo instance axios cơ bản
 const api = axios.create({

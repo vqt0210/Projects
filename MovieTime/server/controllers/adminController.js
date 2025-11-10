@@ -454,7 +454,7 @@ export const updateShow = async (req, res) => {
 export const deleteShow = async (req, res) => {
   try {
     const { id } = req.params;
-    const forceDelete = Boolean(req.body.force); // thêm flag force
+    const forceDelete = req.query.force === "true";
     const show = await Show.findById(id).populate("movie");
 
     if (!show) {

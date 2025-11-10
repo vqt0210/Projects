@@ -1,7 +1,8 @@
+import mongoose from "mongoose";
+import Stripe from "stripe";
 import { inngest } from "../inngest/index.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
-import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -12,6 +13,8 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
 
     const bookings = await Booking.find({ show: showId });
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
+
+    // true nếu tất cả ghế đều còn trống
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error) {
     console.error("Seat check error:", error.message);
@@ -19,32 +22,56 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
   }
 };
 
-export const createBooking = async (req, res) => {
-  try {
-    const { userId } = req.auth();
-    const { showId, selectedSeats, promoCode } = req.body;
-    const { origin } = req.headers;
 
-    //  Kiểm tra ghế còn trống
-    const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
-    if (!isAvailable) {
-      return res.json({
+export const createBooking = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // Kiểm tra người dùng đăng nhập
+    const { userId } = req.auth() || {};
+    if (!userId) {
+      await session.abortTransaction();
+      return res.status(401).json({
         success: false,
-        message: "Selected seats are not available.",
+        message: "Unauthorized: user not logged in or token missing.",
       });
     }
 
-    // Lấy thông tin suất chiếu
-    const showData = await Show.findById(showId).populate("movie");
-    if (!showData)
-      return res.json({ success: false, message: "Show not found." });
+    const { showId, selectedSeats, promoCode } = req.body;
+    const { origin } = req.headers;
 
+    if (!showId || !Array.isArray(selectedSeats) || selectedSeats.length === 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: showId or selectedSeats",
+      });
+    }
+
+    //  Kiểm tra suất chiếu
+    const showData = await Show.findById(showId).populate("movie");
+    if (!showData) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Show not found" });
+    }
+
+    // Kiểm tra ghế còn trống (dùng hàm riêng)
+    const isAvailable = await checkSeatsAvailability(showId, selectedSeats);
+    if (!isAvailable) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        success: false,
+        message: "Selected seats are already booked",
+      });
+    }
+
+    // Tính toán giá
     const baseAmount = Number(showData.showPrice) * selectedSeats.length;
     let finalAmount = baseAmount;
     let discountValue = 0;
-    let promotion = null;
 
-    //  Kiểm tra mã giảm giá trên Stripe
+    //  Áp dụng mã giảm giá
     if (promoCode) {
       try {
         const promos = await stripe.promotionCodes.list({
@@ -53,73 +80,81 @@ export const createBooking = async (req, res) => {
         });
 
         if (promos.data.length > 0) {
-          promotion = promos.data[0];
-          discountValue = promotion.coupon?.percent_off || 0;
+          const promo = promos.data[0];
+          discountValue = promo.coupon?.percent_off || 0;
           finalAmount = baseAmount - (baseAmount * discountValue) / 100;
 
           console.log(
-            `[PROMO] Applied: ${promoCode} (-${discountValue}%) → $${finalAmount.toFixed(
-              2
-            )}`
+            `[PROMO] Applied: ${promoCode} (-${discountValue}%) → $${finalAmount.toFixed(2)}`
           );
         } else {
-          return res.json({
+          await session.abortTransaction();
+          return res.status(400).json({
             success: false,
             message: "Invalid or inactive promo code.",
           });
         }
       } catch (err) {
         console.error("Stripe promo check failed:", err.message);
-        return res.json({
+        await session.abortTransaction();
+        return res.status(500).json({
           success: false,
           message: "Error verifying promo code.",
         });
       }
     }
 
-    //  Tạo booking trong DB
-    const booking = await Booking.create({
-      userId,
-      show: showId,
-      amount: finalAmount, // giá sau giảm
-      discountValue, // phần trăm giảm giá
-      bookedSeats: selectedSeats,
-      isPaid: false,
-      status: "PENDING_PAYMENT",
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
+    // Tạo booking trong DB
+    const [booking] = await Booking.create(
+      [
+        {
+          userId,
+          show: showId,
+          amount: finalAmount,
+          discountValue,
+          bookedSeats: selectedSeats,
+          isPaid: false,
+          status: "PENDING_PAYMENT",
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      ],
+      { session }
+    );
 
-    //  Cập nhật ghế đã chọn
-    if (!showData.occupiedSeats) showData.occupiedSeats = {};
-    selectedSeats.forEach((seat) => {
-      showData.occupiedSeats[seat] = userId;
-    });
-    showData.markModified("occupiedSeats");
+    // Cập nhật ghế đã chọn trong show
     await Show.updateOne(
-  { _id: showId },
-  {
-    $set: selectedSeats.reduce((acc, seat) => {
-      acc[`occupiedSeats.${seat}`] = userId;
-      return acc;
-    }, {}),
-  }
-);
+      { _id: showId },
+      {
+        $set: selectedSeats.reduce((acc, seat) => {
+          acc[`occupiedSeats.${seat}`] = userId;
+          return acc;
+        }, {}),
+      },
+      { session }
+    );
 
-    //  Nếu giá = 0 → tự xác nhận luôn
+    //  Nếu giá = 0 → xác nhận, bỏ qua Stripe
     if (finalAmount <= 0) {
       booking.isPaid = true;
       booking.status = "CONFIRMED";
       booking.paymentLink = null;
-      await booking.save();
+      await booking.save({ session });
+
       await inngest.send({
         name: "app/show.booked",
         data: { bookingId: booking._id.toString() },
       });
-      return res.json({ success: true, url: `${origin}/loading/my-bookings` });
+
+      await session.commitTransaction();
+      return res.status(200).json({
+        success: true,
+        message: "Booking confirmed (free ticket).",
+        url: `${origin}/loading/my-bookings`,
+      });
     }
 
     //  Tạo session thanh toán Stripe
-    const session = await stripe.checkout.sessions.create({
+    const stripeSession = await stripe.checkout.sessions.create({
       success_url: `${origin}/loading/my-bookings`,
       cancel_url: `${origin}/my-bookings`,
       line_items: [
@@ -127,7 +162,7 @@ export const createBooking = async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: { name: showData.movie.title },
-            unit_amount: Math.round(finalAmount * 100), // đơn vị cent
+            unit_amount: Math.round(finalAmount * 100),
           },
           quantity: 1,
         },
@@ -136,24 +171,34 @@ export const createBooking = async (req, res) => {
       metadata: { bookingId: booking._id.toString() },
     });
 
-    //  Lưu lại session Stripe
-    booking.paymentLink = session.url;
-    booking.checkoutSessionId = session.id;
-    await booking.save();
+    //  Lưu thông tin thanh toán Stripe
+    booking.paymentLink = stripeSession.url;
+    booking.checkoutSessionId = stripeSession.id;
+    await booking.save({ session });
 
-    // Gửi event check payment (Inngest)
+    // Gửi event đến Inngest
     await inngest.send({
       name: "app/payment.success",
       data: { bookingId: booking._id.toString() },
     });
 
-    // Trả URL Stripe
-    res.json({ success: true, url: session.url });
+    await session.commitTransaction();
+
+    // Phản hồi thành công
+    res.status(200).json({
+      success: true,
+      message: "Booking created successfully",
+      url: stripeSession.url,
+    });
   } catch (error) {
     console.error("Create booking error:", error.message);
-    res.json({ success: false, message: error.message });
+    await session.abortTransaction();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    session.endSession();
   }
 };
+
 
 //  Get occupied seats 
 export const getOccupiedSeats = async (req, res) => {
