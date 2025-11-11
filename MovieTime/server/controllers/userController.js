@@ -9,7 +9,7 @@ export const getUserBookings = async (req, res) => {
   try {
     const { userId } = req.auth();
 
-    const bookings = await Booking.find({ userId: req.auth().userId })
+    const bookings = await Booking.find({ userId })
       .populate({
         path: "show",
         populate: { path: "movie" },
@@ -18,8 +18,7 @@ export const getUserBookings = async (req, res) => {
 
     res.json({ success: true, bookings });
   } catch (error) {
-    console.error(error.message);
-    res.json({ success: false, message: error.message });
+    next(error);
   }
 };
 
@@ -87,7 +86,9 @@ export const syncFavorites = async (req, res) => {
     // Lấy token từ header
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      return res.status(401).json({ success: false, message: "Missing Authorization header" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Missing Authorization header" });
     }
 
     const token = authHeader.replace("Bearer ", "").trim();
@@ -120,4 +121,3 @@ export const syncFavorites = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-

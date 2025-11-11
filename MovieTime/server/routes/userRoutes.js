@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuth } from "@clerk/express";
 import {
   getFavorites,
   getUserBookings,
@@ -8,9 +9,10 @@ import {
 
 const userRouter = express.Router();
 
-userRouter.get("/bookings", getUserBookings);
-userRouter.post("/update-favorite", updateFavorite);
-userRouter.get("/favorites", getFavorites);
-userRouter.post("/sync-favorites", syncFavorites);
+//  Bắt buộc đăng nhập cho các route cần userId
+userRouter.get("/bookings", requireAuth(), getUserBookings);
+userRouter.post("/update-favorite", requireAuth(), updateFavorite);
+userRouter.get("/favorites", requireAuth(), getFavorites);
+userRouter.post("/sync-favorites", requireAuth(), syncFavorites);
 
 export default userRouter;

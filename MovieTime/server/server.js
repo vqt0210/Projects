@@ -39,6 +39,10 @@ dirs.forEach((dir) => {
 const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Server & Middleware
 
@@ -84,7 +88,6 @@ app.use(clerkMiddleware());
 app.use("/api/inngest", serve({ client: inngest, functions }));
 
 // API Routes
-app.get("/", (req, res) => res.send("MovieTime Server is Live!"));
 app.use("/api/show", showRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/admin", adminRouter);
@@ -101,6 +104,7 @@ app.use("/qr", (req, res, next) => {
 }, express.static("public/qr"));
 app.use("/posters", express.static("public/posters"));
 app.use("/api/recommendation", recommendRouter);
+app.get("/", (req, res) => res.send("MovieTime Server is Live!"));
 
 // 404 + Error handler
 app.use((req, res) =>
