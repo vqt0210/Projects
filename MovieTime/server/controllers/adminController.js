@@ -353,14 +353,10 @@ export const updateShow = async (req, res) => {
     const { id } = req.params;
     const { showDateTime, showPrice } = req.body;
 
-    // Tìm show
     const show = await Show.findById(id).populate("movie");
     if (!show)
-      return res
-        .status(404)
-        .json({ success: false, message: "Show not found" });
+      return res.status(404).json({ success: false, message: "Show not found" });
 
-    // Không set giờ quá khứ
     if (showDateTime && new Date(showDateTime) < new Date()) {
       return res.status(400).json({
         success: false,
@@ -368,49 +364,40 @@ export const updateShow = async (req, res) => {
       });
     }
 
-    // Kiểm tra booking
     const bookings = await Booking.find({ show: id });
     const oldShowDateTime = show.showDateTime;
 
-    // Không đổi giá khi có người đặt
-    if (bookings.length > 0 && showPrice) {
+    if (bookings.length > 0 && showPrice !== undefined) {
       return res.status(400).json({
         success: false,
         message: "Cannot change price after bookings exist",
       });
     }
 
-    // Cập nhật
-    if (showPrice) show.showPrice = showPrice;
-    if (showDateTime) show.showDateTime = new Date(showDateTime);
+    //  Convert local → UTC
+    if (showDateTime) {
+      const localDateTime = new Date(showDateTime);
+      const utcDateTime = new Date(
+        localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
+      );
+      show.showDateTime = utcDateTime;
+    }
+
+    if (showPrice !== undefined) show.showPrice = showPrice;
     await show.save();
 
-    // Xác định môi trường
+    // Email notify logic giữ nguyên
     const isLocal = process.env.NODE_ENV !== "production";
     const imageBase = "https://image.tmdb.org/t/p/w500";
     const fallbackPoster = isLocal
       ? "http://localhost:5173/assets/fallBack.jpg"
       : "https://www.teasonmike.io.vn/assets/fallBack.jpg";
 
-    //Lấy posterUrl
     let posterUrl = fallbackPoster;
     if (show.movie.poster_path) {
       posterUrl = `${imageBase}${show.movie.poster_path}`;
-    } else if (show.movie.tmdb_id) {
-      try {
-        const resTMDB = await fetch(
-          `https://api.themoviedb.org/3/movie/${show.movie.tmdb_id}?api_key=YOUR_TMDB_API_KEY`
-        );
-        const data = await resTMDB.json();
-        if (data.poster_path) {
-          posterUrl = `${imageBase}${data.poster_path}`;
-        }
-      } catch {
-        console.warn("Could not fetch poster from TMDB");
-      }
     }
 
-    // Gửi email nếu có người đặt và đổi giờ
     if (bookings.length > 0 && showDateTime) {
       console.log(`Sending update emails for "${show.movie.title}"...`);
       await Promise.all(
@@ -424,9 +411,7 @@ export const updateShow = async (req, res) => {
               to: email,
               subject: `Your movie showtime has been updated 🎬`,
               body: showTimeChangedEmail({
-                user: {
-                  name: user.firstName || user.username || "Valued customer",
-                },
+                user: { name: user.firstName || user.username || "Valued customer" },
                 movieTitle: show.movie.title,
                 oldShowDateTime,
                 newShowDateTime: showDateTime,
@@ -436,7 +421,6 @@ export const updateShow = async (req, res) => {
                   : "https://www.teasonmike.io.vn",
               }),
             });
-            console.log(`Email sent to ${email}`);
           } catch (err) {
             console.warn(`Failed email for ${booking._id}:`, err.message);
           }
@@ -450,6 +434,7 @@ export const updateShow = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 export const deleteShow = async (req, res) => {
   try {
