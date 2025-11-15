@@ -168,9 +168,18 @@ const Dashboard = () => {
                 strokeDasharray="3 3"
                 stroke="rgba(255,255,255,0.1)"
               />
-              <XAxis dataKey="_id" stroke="#aaa" tick={{ fontSize: 12 }} />
+              <XAxis
+                dataKey="_id"
+                stroke="#aaa"
+                tick={{ fontSize: 12 }}
+                height={70}
+                tickFormatter={(v) =>
+                  v.length > 18 ? v.slice(0, 18) + "..." : v
+                }
+              />
               <YAxis
                 stroke="#aaa"
+                D
                 label={{
                   value: `Tickets`,
                   angle: -90,
