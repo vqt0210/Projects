@@ -7,13 +7,15 @@ import { Sparkles, RefreshCw } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useClerk } from "@clerk/clerk-react";
 
 export default function Recommend() {
-  const { getToken } = useAppContext();
+  const { getToken, isLoaded, isSignedIn } = useAppContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
   const [error, setError] = useState(null);
+  const { openSignIn } = useClerk();
 
   const TMDB_BASE = "https://api.themoviedb.org/3";
 
@@ -100,6 +102,13 @@ export default function Recommend() {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      setLoading(false);
+      return;
+    }
+
     const cached = sessionStorage.getItem("recommendations");
     if (cached) {
       setRecommendations(JSON.parse(cached));
@@ -107,9 +116,27 @@ export default function Recommend() {
     } else {
       fetchRecommendations();
     }
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   if (loading) return <Loading text="Finding your next favorite movies..." />;
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-white">
+        <h2 className="mb-3 text-2xl font-bold">🔒 Login Required</h2>
+        <p className="mb-6 text-center text-gray-400">
+          Please sign in to receive personalized movie recommendations powered
+          by AI.
+        </p>
+
+        <button
+          onClick={() => openSignIn()}
+          className="px-6 py-2 rounded-full cursor-pointer bg-primary hover:bg-primary/80"
+        >
+          Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen px-6 pt-32 pb-24 overflow-hidden text-white md:px-16 lg:px-24 xl:px-32">
@@ -123,7 +150,16 @@ export default function Recommend() {
           Movie Recommendations
         </h1>
         <button
-          onClick={() => fetchRecommendations(true)} // truyền true để hiện toast
+          onClick={() => {
+            if (!isSignedIn) {
+              toast.error(
+                "You need to be signed in to refresh recommendations."
+              );
+              openSignIn();
+              return;
+            }
+            fetchRecommendations(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all cursor-pointer rounded-2xl bg-primary hover:bg-primary/80"
         >
           <RefreshCw size={16} /> Refresh

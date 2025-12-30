@@ -19,6 +19,7 @@ export const AppProvider = ({ children }) => {
   const { getToken } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isSignedIn = !!user;
 
   // ================== AUTH & ROLE ==================
   useEffect(() => {
@@ -138,6 +139,8 @@ export const AppProvider = ({ children }) => {
   const value = {
     axios,
     user,
+    isLoaded,
+    isSignedIn,
     getToken,
     navigate,
     isAdmin,
