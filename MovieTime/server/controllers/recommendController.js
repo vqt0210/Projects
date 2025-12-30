@@ -75,7 +75,7 @@ export const recommendMovies = async (req, res) => {
     }
 
     // Call Gemini model properly
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     console.log("[STEP] Calling Gemini...");
 
     const result = await model.generateContent(prompt);
