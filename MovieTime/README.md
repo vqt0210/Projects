@@ -30,8 +30,6 @@ Website đặt vé xem phim, xây dựng theo hướng dẫn (tutorial) trực t
 - **Google Generative AI (Gemini) & OpenAI** — tích hợp AI (gợi ý phim hoặc tính năng liên quan)
 - **Nodemailer & Resend** — gửi email (xác nhận đặt vé,...)
 - **Inngest** — xử lý tác vụ nền / job (background jobs)
-- **Helmet** — bảo mật HTTP header cơ bản
-- **Svix** — xử lý webhook (thường dùng để đồng bộ dữ liệu người dùng từ Clerk)
 
 ## Tính năng chính
 
