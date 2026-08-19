@@ -10,37 +10,6 @@ import { io } from "socket.io-client";
 import { Toaster, toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-// Đếm ngược tới khi hết hạn
-const CountdownTimer = ({ expiresAt, onExpire }) => {
-  const [timeLeft, setTimeLeft] = useState(() =>
-    Math.max(0, new Date(expiresAt).getTime() - Date.now()),
-  );
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
-      setTimeLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(interval);
-        onExpire?.();
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [expiresAt]);
-
-  if (timeLeft <= 0) return null;
-
-  const totalSeconds = Math.floor(timeLeft / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  return (
-    <span className="text-xs text-yellow-400/80">
-      Expired after: {minutes}:{seconds.toString().padStart(2, "0")}
-    </span>
-  );
-};
-
 const MyBookings = () => {
   const navigate = useNavigate();
   const currency = import.meta.env.VITE_CURRENCY;
@@ -72,7 +41,6 @@ const MyBookings = () => {
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_BASE_URL || "http://localhost:10000";
     const socket = io(socketUrl, {
-      transports: ["websocket"],
       withCredentials: true,
       secure: socketUrl.startsWith("https"),
       reconnectionAttempts: 5,
@@ -93,6 +61,18 @@ const MyBookings = () => {
 
     return () => socket.disconnect();
   }, []);
+  useEffect(() => {
+    const hasPending = bookings.some(
+      (b) => b.status !== "CANCELLED" && !b.isPaid,
+    );
+    if (!hasPending) return;
+
+    const intervalId = setInterval(() => {
+      getMyBookings();
+    }, 6000);
+
+    return () => clearInterval(intervalId);
+  }, [bookings]);
 
   if (isLoading || !isLoaded) return <Loading />;
   if (!isSignedIn)
@@ -175,20 +155,16 @@ const MyBookings = () => {
                       className={`min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium text-center ${
                         item.status === "CANCELLED"
                           ? "bg-red-500/20 text-red-300"
-                          : item.status === "EXPIRED"
-                            ? "bg-gray-500/20 text-gray-400"
-                            : isPaid
-                              ? "bg-green-500/20 text-green-300"
-                              : "bg-yellow-500/20 text-yellow-300"
+                          : isPaid
+                            ? "bg-green-500/20 text-green-300"
+                            : "bg-yellow-500/20 text-yellow-300"
                       }`}
                     >
                       {item.status === "CANCELLED"
                         ? "Cancelled"
-                        : item.status === "EXPIRED"
-                          ? "Expired"
-                          : isPaid
-                            ? "Paid"
-                            : "Pending"}
+                        : isPaid
+                          ? "Paid"
+                          : "Pending"}
                     </span>
                   </div>
 
@@ -198,34 +174,7 @@ const MyBookings = () => {
                       {seats.join(", ")}
                     </p>
                   </div>
-                  {/* Đếm ngược + nút thanh toán — chỉ hiện khi đang Pending */}
-                  {item.status === "PENDING_PAYMENT" && item.expiresAt && (
-                    <div className="flex flex-col items-end gap-2 mt-2">
-                      <CountdownTimer
-                        expiresAt={item.expiresAt}
-                        onExpire={() => {
-                          // Cập nhật ngay trên giao diện, không cần đợi tải lại trang
-                          setBookings((prev) =>
-                            prev.map((b) =>
-                              b._id === item._id
-                                ? { ...b, status: "EXPIRED" }
-                                : b,
-                            ),
-                          );
-                        }}
-                      />
-                      {item.paymentLink && (
-                        <button
-                          onClick={() =>
-                            (window.location.href = item.paymentLink)
-                          }
-                          className="px-6 py-2 text-white transition-all duration-300 transform shadow-md cursor-pointer rounded-2xl bg-primary hover:bg-primary-dull hover:scale-105"
-                        >
-                          Pay Now
-                        </button>
-                      )}
-                    </div>
-                  )}
+
                   {/* View Ticket */}
                   {isPaid && (
                     <button
