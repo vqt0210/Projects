@@ -3,6 +3,8 @@ import {
   CircleDollarSignIcon,
   PlayCircleIcon,
   UsersIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Loading from "@/components/common/Loading";
@@ -25,7 +27,19 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import EditShows from "./EditShows";
+
+// Same truncation rule used across every chart's X-axis labels, so all
+// category names look consistent: show up to MAX_LABEL_LENGTH characters,
+// then "...". The full name is still shown in the tooltip on hover.
+const MAX_LABEL_LENGTH = 18;
+const truncateLabel = (value) =>
+  value && value.length > MAX_LABEL_LENGTH
+    ? `${value.slice(0, MAX_LABEL_LENGTH)}...`
+    : value;
 
 const Dashboard = () => {
   const { getToken, user } = useAppContext();
@@ -96,9 +110,152 @@ const Dashboard = () => {
     totalRevenue: item.totalRevenue,
   }));
 
+  const reportFileName = `dashboard-report-${new Date()
+    .toISOString()
+    .slice(0, 10)}`;
+
+  // ==== Export: Excel (.xlsx) ====
+  // One sheet per data set so the admin can filter/sort in Excel/Sheets
+  // without needing to touch the site itself.
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    const summarySheet = XLSX.utils.aoa_to_sheet([
+      ["Metric", "Value"],
+      ["Total Bookings", totalBookings || 0],
+      ["Total Revenue", totalRevenue?.toFixed(2) || 0],
+      ["Active Shows", activeShows?.length || 0],
+      ["Total Users", totalUser || 0],
+      ["New Users (This Month)", dashboardData.newUsersThisMonth || 0],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        ticketsByMovieData.map((d) => ({ Movie: d.movie, Tickets: d.tickets })),
+      ),
+      "Tickets by Movie",
+    );
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        revenueByMovieData.map((d) => ({
+          Movie: d.movie,
+          [`Revenue (${currency})`]: d.totalRevenue,
+        })),
+      ),
+      "Revenue by Movie",
+    );
+
+    if (dashboardData.revenueByMonth?.length) {
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(
+          dashboardData.revenueByMonth.map((d) => ({
+            Month: d.month,
+            [`Revenue (${currency})`]: d.revenue,
+          })),
+        ),
+        "Revenue by Month",
+      );
+    }
+
+    if (dashboardData.revenueByGenre?.length) {
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(
+          dashboardData.revenueByGenre.map((g) => ({
+            Genre: typeof g._id === "object" ? g._id.name : g._id,
+            [`Revenue (${currency})`]: g.totalRevenue,
+          })),
+        ),
+        "Revenue by Genre",
+      );
+    }
+
+    XLSX.writeFile(workbook, `${reportFileName}.xlsx`);
+  };
+
+  // ==== Export: PDF ====
+  // A single printable report with a summary block plus a table per chart.
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const purple = [167, 139, 250];
+
+    doc.setFontSize(16);
+    doc.text("MovieTime — Admin Dashboard Report", 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 24);
+    doc.setTextColor(0);
+
+    let cursorY = 32;
+
+    autoTable(doc, {
+      startY: cursorY,
+      head: [["Metric", "Value"]],
+      body: [
+        ["Total Bookings", String(totalBookings || 0)],
+        ["Total Revenue", `${currency}${totalRevenue?.toFixed(2) || 0}`],
+        ["Active Shows", String(activeShows?.length || 0)],
+        ["Total Users", String(totalUser || 0)],
+        [
+          "New Users (This Month)",
+          String(dashboardData.newUsersThisMonth || 0),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: purple },
+    });
+    cursorY = doc.lastAutoTable.finalY + 14;
+
+    doc.setFontSize(12);
+    doc.text("Tickets Sold per Movie", 14, cursorY - 4);
+    autoTable(doc, {
+      startY: cursorY,
+      head: [["Movie", "Tickets"]],
+      body: ticketsByMovieData.map((d) => [d.movie, d.tickets]),
+      theme: "grid",
+      headStyles: { fillColor: purple },
+    });
+    cursorY = doc.lastAutoTable.finalY + 14;
+
+    doc.setFontSize(12);
+    doc.text("Revenue by Movie", 14, cursorY - 4);
+    autoTable(doc, {
+      startY: cursorY,
+      head: [["Movie", `Revenue (${currency})`]],
+      body: revenueByMovieData.map((d) => [d.movie, d.totalRevenue]),
+      theme: "grid",
+      headStyles: { fillColor: purple },
+    });
+
+    doc.save(`${reportFileName}.pdf`);
+  };
+
   return (
     <>
-      <Title text1="Admin" text2="Dashboard" />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Title text1="Admin" text2="Dashboard" />
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition border rounded-full cursor-pointer bg-primary/10 border-primary/20 hover:bg-primary/20"
+          >
+            <FileSpreadsheetIcon className="w-4 h-4" />
+            Export Excel
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition border rounded-full cursor-pointer bg-primary/10 border-primary/20 hover:bg-primary/20"
+          >
+            <FileTextIcon className="w-4 h-4" />
+            Export PDF
+          </button>
+        </div>
+      </div>
 
       {/* ==== Stat Cards ==== */}
       <div className="relative grid grid-cols-1 gap-5 mt-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -182,13 +339,12 @@ const Dashboard = () => {
                 stroke="#aaa"
                 tick={{ fontSize: 12 }}
                 height={70}
-                tickFormatter={(v) =>
-                  v.length > 18 ? v.slice(0, 18) + "..." : v
-                }
+                interval={0}
+                tickFormatter={truncateLabel}
               />
               <YAxis
                 stroke="#aaa"
-                D
+                allowDecimals={false}
                 label={{
                   value: `Tickets`,
                   angle: -90,
@@ -219,9 +375,10 @@ const Dashboard = () => {
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
-                data={dashboardData.revenueByGenre.map((g) => ({
+                data={dashboardData.revenueByGenre.map((g, i) => ({
                   name: typeof g._id === "object" ? g._id.name : g._id,
                   value: g.totalRevenue,
+                  fill: COLORS[i % COLORS.length], // ← thêm dòng này
                 }))}
                 dataKey="value"
                 nameKey="name"
@@ -236,11 +393,8 @@ const Dashboard = () => {
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const { name, value } = payload[0];
-                    // index an toàn hơn lấy từ payload[0].payload nếu có
-                    const index =
-                      payload[0].payload?.index ?? payload[0].index ?? 0;
-                    const fill = COLORS[index % COLORS.length];
+                    const { name, value, payload: dataPoint } = payload[0];
+                    const fill = dataPoint?.fill || COLORS[0];
 
                     return (
                       <div
@@ -302,31 +456,9 @@ const Dashboard = () => {
                 stroke="#aaa"
                 tickLine={false}
                 interval={0}
-                height={80}
-                tick={({ x, y, payload }) => {
-                  const words = payload.value.split(" ");
-                  const lines = [];
-                  for (let i = 0; i < words.length; i += 3) {
-                    lines.push(words.slice(i, i + 3).join(" "));
-                  }
-
-                  return (
-                    <text
-                      x={x}
-                      y={y + 10}
-                      textAnchor="middle"
-                      fill="#ddd"
-                      fontSize={11}
-                      fontFamily="Outfit, sans-serif"
-                    >
-                      {lines.map((line, i) => (
-                        <tspan key={i} x={x} dy={i === 0 ? 0 : 12}>
-                          {line}
-                        </tspan>
-                      ))}
-                    </text>
-                  );
-                }}
+                height={70}
+                tick={{ fontSize: 12, fill: "#ddd" }}
+                tickFormatter={truncateLabel}
               />
 
               <YAxis

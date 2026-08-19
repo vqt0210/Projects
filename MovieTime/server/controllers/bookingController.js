@@ -22,7 +22,6 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
   }
 };
 
-
 export const createBooking = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -41,7 +40,11 @@ export const createBooking = async (req, res) => {
     const { showId, selectedSeats, promoCode } = req.body;
     const { origin } = req.headers;
 
-    if (!showId || !Array.isArray(selectedSeats) || selectedSeats.length === 0) {
+    if (
+      !showId ||
+      !Array.isArray(selectedSeats) ||
+      selectedSeats.length === 0
+    ) {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
@@ -53,7 +56,9 @@ export const createBooking = async (req, res) => {
     const showData = await Show.findById(showId).populate("movie");
     if (!showData) {
       await session.abortTransaction();
-      return res.status(404).json({ success: false, message: "Show not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Show not found" });
     }
 
     // Kiểm tra ghế còn trống (dùng hàm riêng)
@@ -85,7 +90,7 @@ export const createBooking = async (req, res) => {
           finalAmount = baseAmount - (baseAmount * discountValue) / 100;
 
           console.log(
-            `[PROMO] Applied: ${promoCode} (-${discountValue}%) → $${finalAmount.toFixed(2)}`
+            `[PROMO] Applied: ${promoCode} (-${discountValue}%) → $${finalAmount.toFixed(2)}`,
           );
         } else {
           await session.abortTransaction();
@@ -105,6 +110,7 @@ export const createBooking = async (req, res) => {
     }
 
     // Tạo booking trong DB
+    console.log("1. Creating booking...");
     const [booking] = await Booking.create(
       [
         {
@@ -118,8 +124,9 @@ export const createBooking = async (req, res) => {
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         },
       ],
-      { session }
+      { session },
     );
+    console.log("2. Booking created:", booking._id);
 
     // Cập nhật ghế đã chọn trong show
     await Show.updateOne(
@@ -130,7 +137,7 @@ export const createBooking = async (req, res) => {
           return acc;
         }, {}),
       },
-      { session }
+      { session },
     );
 
     //  Nếu giá = 0 → xác nhận, bỏ qua Stripe
@@ -146,6 +153,7 @@ export const createBooking = async (req, res) => {
       });
 
       await session.commitTransaction();
+
       return res.status(200).json({
         success: true,
         message: "Booking confirmed (free ticket).",
@@ -176,13 +184,21 @@ export const createBooking = async (req, res) => {
     booking.checkoutSessionId = stripeSession.id;
     await booking.save({ session });
 
-    // Gửi event đến Inngest
-    await inngest.send({
-      name: "app/payment.success",
-      data: { bookingId: booking._id.toString() },
-    });
-
     await session.commitTransaction();
+    console.log("3. Transaction committed:", booking._id);
+    const verify = await Booking.findById(booking._id);
+    console.log(
+      "3.5 Verify right after commit:",
+      verify ? "TÌM THẤY ✅" : "KHÔNG TÌM THẤY ❌",
+    );
+    console.log("4. Sending Inngest event...");
+    await inngest.send({
+      name: "app/show.booked",
+      data: {
+        bookingId: booking._id.toString(),
+      },
+    });
+    console.log("5. Inngest event sent");
 
     // Phản hồi thành công
     res.status(200).json({
@@ -199,8 +215,7 @@ export const createBooking = async (req, res) => {
   }
 };
 
-
-//  Get occupied seats 
+//  Get occupied seats
 export const getOccupiedSeats = async (req, res) => {
   try {
     const { showId } = req.params;

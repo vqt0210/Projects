@@ -13,7 +13,7 @@ export const stripeWebhooks = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_CLI_WEBHOOK_SECRET,
     );
   } catch (err) {
     console.error("[WEBHOOK] verify failed:", err.message);
@@ -109,7 +109,6 @@ export const stripeWebhooks = async (req, res) => {
   });
 };
 
-
 // Kiểm tra mã giảm giá
 export const checkStripePromo = async (req, res) => {
   try {
@@ -137,8 +136,8 @@ export const checkStripePromo = async (req, res) => {
 
     console.log(
       `[PROMO] Applied: ${code} (-${discountPercent}%) → $${finalPrice.toFixed(
-        2
-      )}`
+        2,
+      )}`,
     );
 
     return res.json({
