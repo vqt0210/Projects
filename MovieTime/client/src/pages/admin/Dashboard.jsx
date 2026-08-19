@@ -32,15 +32,26 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import EditShows from "./EditShows";
 
-// Same truncation rule used across every chart's X-axis labels, so all
-// category names look consistent: show up to MAX_LABEL_LENGTH characters,
-// then "...". The full name is still shown in the tooltip on hover.
-const MAX_LABEL_LENGTH = 18;
-const truncateLabel = (value) =>
-  value && value.length > MAX_LABEL_LENGTH
-    ? `${value.slice(0, MAX_LABEL_LENGTH)}...`
-    : value;
-
+const AngledTick = ({ x, y, payload }) => {
+  const label =
+    payload.value.length > 16
+      ? payload.value.slice(0, 16) + "…"
+      : payload.value;
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={10}
+      textAnchor="end"
+      fill="#ddd"
+      fontSize={11}
+      fontFamily="Outfit, sans-serif"
+      transform={`rotate(-35, ${x}, ${y})`}
+    >
+      {label}
+    </text>
+  );
+};
 const Dashboard = () => {
   const { getToken, user } = useAppContext();
   const currency = import.meta.env.VITE_CURRENCY;
@@ -337,10 +348,9 @@ const Dashboard = () => {
               <XAxis
                 dataKey="movie"
                 stroke="#aaa"
-                tick={{ fontSize: 12 }}
-                height={70}
+                height={90}
                 interval={0}
-                tickFormatter={truncateLabel}
+                tick={<AngledTick />}
               />
               <YAxis
                 stroke="#aaa"
@@ -456,9 +466,8 @@ const Dashboard = () => {
                 stroke="#aaa"
                 tickLine={false}
                 interval={0}
-                height={70}
-                tick={{ fontSize: 12, fill: "#ddd" }}
-                tickFormatter={truncateLabel}
+                height={90}
+                tick={<AngledTick />}
               />
 
               <YAxis
