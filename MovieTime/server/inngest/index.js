@@ -29,7 +29,7 @@ const syncUserCreation = inngest.createFunction(
       image: image_url,
     };
     await User.findByIdAndUpdate(id, userData, { upsert: true, new: true });
-  }
+  },
 );
 
 // Inngest Function to delete user from database
@@ -39,7 +39,7 @@ const syncUserDeletion = inngest.createFunction(
   async ({ event }) => {
     const { id } = event.data;
     await User.findByIdAndDelete(id);
-  }
+  },
 );
 
 // Inngest Function to update user data in database
@@ -57,7 +57,7 @@ const syncUserUpdation = inngest.createFunction(
       image: image_url,
     };
     await User.findByIdAndUpdate(id, userData);
-  }
+  },
 );
 
 // Inngest Function to cancel booking and release seats of show after 10 minutes of booking created if payment is not made
@@ -65,59 +65,92 @@ const syncUserUpdation = inngest.createFunction(
 const releaseSeatsAndDeleteBooking = inngest.createFunction(
   { id: "release-seats-delete-booking" },
   { event: "app/show.booked" },
+
   async ({ event, step }) => {
     const bookingId = event.data.bookingId;
+
+    console.log(`[EXPIRE] Start watching booking: ${bookingId}`);
+
+    // Lấy booking
     const booking = await Booking.findById(bookingId).lean();
-    if (!booking) return;
 
-    // Chờ đến khi hết hạn
-    const expiresAt =
-      booking.expiresAt instanceof Date
-        ? booking.expiresAt
-        : new Date(Date.now() + 10 * 60 * 1000);
+    if (!booking) {
+      console.log(`[EXPIRE] Booking not found: ${bookingId}`);
+      return;
+    }
 
+    // Nếu booking đã thanh toán thì không cần chờ/nhả ghế
+    if (booking.isPaid || booking.status === "PAID") {
+      console.log(`[EXPIRE] Booking already paid: ${bookingId}`);
+      return;
+    }
+
+    const expiresAt = new Date(booking.expiresAt);
+
+    console.log(
+      `[EXPIRE] Booking ${bookingId} will expire at: ${expiresAt.toISOString()}`,
+    );
+
+    // Chờ tới đúng thời điểm hết hạn
     await step.sleepUntil("wait-until-expire", expiresAt);
 
-    // Sau khi hết hạn, check nếu vẫn chưa thanh toán
+    // Lấy thời gian hiện tại sau khi sleep
     const now = new Date();
+
+    // Chỉ expire nếu booking vẫn chưa thanh toán
     const expiredBooking = await Booking.findOneAndUpdate(
       {
         _id: bookingId,
-        $and: [
-          {
-            $or: [
-              { isPaid: false },
-              { status: { $in: ["PENDING", "PENDING_PAYMENT"] } },
-            ],
-          },
-          {
-            $or: [
-              { expiresAt: { $lte: now } },
-              { expiresAt: { $exists: false } },
-            ],
-          },
-        ],
+        isPaid: false,
+        status: { $in: ["PENDING", "PENDING_PAYMENT"] },
+        expiresAt: { $lte: now },
       },
-      { $set: { status: "EXPIRED", expiredAt: now } },
-      { new: true }
+      {
+        $set: {
+          status: "EXPIRED",
+          expiredAt: now,
+        },
+      },
+      { new: true },
     ).lean();
 
-    if (!expiredBooking) return;
-
-    // Trả ghế
-    const show = await Show.findById(expiredBooking.show);
-    if (show && show.occupiedSeats) {
-      for (const seat of expiredBooking.bookedSeats) {
-        delete show.occupiedSeats[seat];
-      }
-      show.markModified("occupiedSeats");
-      await show.save();
+    // Nếu null nghĩa là booking đã được thanh toán
+    // hoặc đã được xử lý trước đó
+    if (!expiredBooking) {
+      console.log(`[EXPIRE] Booking ${bookingId} was already paid/expired.`);
+      return;
     }
 
-    await step.run("log expired booking", async () => {
-      console.log(`Released seats for expired booking: ${bookingId}`);
-    });
-  }
+    console.log(`[EXPIRE] Booking expired: ${bookingId}`);
+
+    // Tìm show
+    const unsetSeats = {};
+
+    for (const seat of expiredBooking.bookedSeats) {
+      unsetSeats[`occupiedSeats.${seat}`] = "";
+    }
+
+    if (Object.keys(unsetSeats).length > 0) {
+      await Show.updateOne(
+        { _id: expiredBooking.show },
+        { $unset: unsetSeats },
+      );
+    }
+
+    console.log(
+      `[EXPIRE] Released seats ${expiredBooking.bookedSeats.join(", ")}`,
+    );
+
+    // Thông báo frontend cập nhật real-time
+    if (global._io) {
+      global._io.emit("bookingExpired", {
+        bookingId: bookingId.toString(),
+        seats: expiredBooking.bookedSeats,
+      });
+
+      console.log(`[EXPIRE] Socket emitted: ${bookingId}`);
+    }
+  },
 );
 
 // Inngest Function to send reminders
@@ -161,11 +194,11 @@ const sendShowReminders = inngest.createFunction(
         });
 
         console.log(
-          `[REMINDER] Sent to ${user.email} for booking ${booking._id}`
+          `[REMINDER] Sent to ${user.email} for booking ${booking._id}`,
         );
       }
     }
-  }
+  },
 );
 
 //  Handle payment success → confirm booking & send email
@@ -205,7 +238,7 @@ const handlePaymentSuccess = inngest.createFunction(
 
       const posterUrl = await downloadPoster(
         booking.show.movie.poster_path,
-        booking.show.movie._id
+        booking.show.movie._id,
       );
 
       // Gửi email xác nhận
@@ -233,7 +266,7 @@ const handlePaymentSuccess = inngest.createFunction(
       console.error("[PAYMENT] Handler failed:", error);
       throw error;
     }
-  }
+  },
 );
 
 // Auto cleanup old QR & Poster files daily
@@ -242,8 +275,8 @@ const cleanupOldFiles = inngest.createFunction(
   { cron: "0 0 * * *" },
   async ({ step }) => {
     await import("../cleanupFiles.js");
-    console.log("✅ Daily cleanup (QR + Poster) done!");
-  }
+    console.log("Daily cleanup (QR + Poster) done!");
+  },
 );
 
 export const functions = [

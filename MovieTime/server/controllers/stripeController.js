@@ -13,7 +13,7 @@ export const stripeWebhooks = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET,
+      process.env.STRIPE_CLI_WEBHOOK_SECRET,
     );
   } catch (err) {
     console.error("[WEBHOOK] verify failed:", err.message);

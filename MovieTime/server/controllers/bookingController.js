@@ -11,10 +11,15 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
     const showData = await Show.findById(showId);
     if (!showData) return false;
 
-    const bookings = await Booking.find({ show: showId });
+    const bookings = await Booking.find({
+      show: showId,
+      status: {
+        $in: ["PENDING", "PENDING_PAYMENT", "PAID", "CONFIRMED"],
+      },
+    });
+
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
-    // true nếu tất cả ghế đều còn trống
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error) {
     console.error("Seat check error:", error.message);
@@ -223,7 +228,13 @@ export const getOccupiedSeats = async (req, res) => {
     if (!showData)
       return res.json({ success: false, message: "Show not found" });
 
-    const bookings = await Booking.find({ show: showId });
+    const bookings = await Booking.find({
+      show: showId,
+      status: {
+        $in: ["PENDING", "PENDING_PAYMENT", "PAID", "CONFIRMED"],
+      },
+    });
+
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
     res.json({ success: true, occupiedSeats });
