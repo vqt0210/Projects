@@ -86,6 +86,15 @@ const Dashboard = () => {
       icon: UsersIcon,
     },
   ];
+  const ticketsByMovieData = dashboardData.ticketsByMovie.map((item) => ({
+    movie: typeof item._id === "object" ? item._id.title : item._id,
+    tickets: item.tickets,
+  }));
+
+  const revenueByMovieData = dashboardData.revenueByMovie.map((item) => ({
+    movie: typeof item._id === "object" ? item._id.title : item._id,
+    totalRevenue: item.totalRevenue,
+  }));
 
   return (
     <>
@@ -163,13 +172,13 @@ const Dashboard = () => {
             <span className="text-sm text-primary/80">(Tickets)</span>
           </p>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dashboardData.ticketsByMovie}>
+            <BarChart data={ticketsByMovieData}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="rgba(255,255,255,0.1)"
               />
               <XAxis
-                dataKey="_id"
+                dataKey="movie"
                 stroke="#aaa"
                 tick={{ fontSize: 12 }}
                 height={70}
@@ -279,7 +288,7 @@ const Dashboard = () => {
 
           <ResponsiveContainer width="100%" height={360}>
             <BarChart
-              data={dashboardData.revenueByMovie}
+              data={revenueByMovieData}
               margin={{ top: 20, right: 30, left: 10, bottom: 40 }}
               barCategoryGap="20%"
             >
@@ -289,7 +298,7 @@ const Dashboard = () => {
               />
 
               <XAxis
-                dataKey="_id"
+                dataKey="movie"
                 stroke="#aaa"
                 tickLine={false}
                 interval={0}
