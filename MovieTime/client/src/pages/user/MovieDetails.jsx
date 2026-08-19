@@ -126,7 +126,7 @@ const MovieDetails = () => {
         `${TMDB_BASE}/movie/${movie.id}`,
         {
           headers: { Authorization: `Bearer ${TMDB_BEARER}` },
-        }
+        },
       );
 
       // Gộp dữ liệu chi tiết vào movie
@@ -171,11 +171,23 @@ const MovieDetails = () => {
     const trailer =
       show?.movie?.trailer ||
       tmdbMovie?.videos?.find(
-        (v) => v.type === "Trailer" && v.site === "YouTube"
+        (v) => v.type === "Trailer" && v.site === "YouTube",
       )?.key;
 
-    if (!trailer) return toast.error("Trailer not available");
-    setTrailerUrl(`https://www.youtube.com/embed/${trailer}`);
+    console.log("TRAILER:", trailer);
+
+    if (!trailer) {
+      return toast.error("Trailer not available");
+    }
+
+    // Nếu đã là URL thì dùng luôn
+    if (trailer.startsWith("http")) {
+      setTrailerUrl(trailer);
+    } else {
+      // Nếu là YouTube video key từ TMDB
+      setTrailerUrl(`https://www.youtube.com/embed/${trailer}`);
+    }
+
     setShowTrailer(true);
   };
 
@@ -293,9 +305,7 @@ const MovieDetails = () => {
                     }
                     alt={cast.name}
                     className="object-cover w-20 h-20 transition-all duration-300 border rounded-full shadow-md border-white/10 hover:border-primary"
-                    onError={(e) =>
-                      (e.target.src = "/assets/profile_pic.jpg")
-                    }
+                    onError={(e) => (e.target.src = "/assets/profile_pic.jpg")}
                   />
                   <p className="mt-3 text-xs font-medium text-gray-300 truncate w-[80px] hover:text-primary">
                     {cast.name}
