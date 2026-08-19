@@ -26,6 +26,13 @@ export default function ActorDetail() {
             Accept: "application/json",
           },
         });
+
+        if (!actorRes.ok) {
+          const errorData = await actorRes.json();
+          console.error("TMDB error:", actorRes.status, errorData);
+          throw new Error(errorData.status_message || "TMDB request failed");
+        }
+
         const actorData = await actorRes.json();
 
         // Nếu không có diễn viên
@@ -45,13 +52,13 @@ export default function ActorDetail() {
               Authorization: `Bearer ${TMDB_BEARER}`,
               Accept: "application/json",
             },
-          }
+          },
         );
         const moviesData = await moviesRes.json();
 
         // Lọc bỏ phim thiếu thông tin
         const filtered = (moviesData.cast || []).filter(
-          (m) => m.poster_path && (m.overview || m.vote_average > 0)
+          (m) => m.poster_path && (m.overview || m.vote_average > 0),
         );
 
         // Lấy tối đa 12 phim sau khi lọc
