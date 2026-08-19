@@ -1,3 +1,13 @@
+import dns from "dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+console.log(
+  await new Promise((resolve, reject) => {
+    dns.resolve4("api.themoviedb.org", (err, addresses) => {
+      if (err) reject(err);
+      else resolve(addresses);
+    });
+  }),
+);
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -26,7 +36,6 @@ import fs from "fs";
 import path from "path";
 import { handleClerkWebhook } from "./controllers/clerkController.js";
 
-
 const dirs = ["public/qr", "public/posters"];
 dirs.forEach((dir) => {
   const fullPath = path.join(process.cwd(), dir);
@@ -48,7 +57,11 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 10000;
 const HOST = "0.0.0.0";
-const allowedOrigins = ["https://teasonmike.io.vn", "http://localhost:5173", "https://www.teasonmike.io.vn",];
+const allowedOrigins = [
+  "https://teasonmike.io.vn",
+  "http://localhost:5173",
+  "https://www.teasonmike.io.vn",
+];
 
 app.use(
   cors({
@@ -57,7 +70,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 // Health check
@@ -69,7 +82,7 @@ app.get("/healthz", (req, res) => res.status(200).send("ok"));
 app.post(
   "/api/webhooks/clerk",
   express.raw({ type: "application/json" }),
-  handleClerkWebhook
+  handleClerkWebhook,
 );
 
 // Stripe Webhook
@@ -77,10 +90,8 @@ app.post(
 app.post(
   "/api/stripe/webhooks",
   express.raw({ type: "application/json" }),
-  stripeWebhooks
+  stripeWebhooks,
 );
-
-
 
 // Global Middlewares
 app.use(express.json({ limit: "1mb" }));
@@ -96,19 +107,23 @@ app.use("/api/search", searchRoutes);
 app.use("/api/me", meRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/ticket", ticketRouter);
-app.use("/qr", (req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://teasonmike.io.vn");
-  res.header("Access-Control-Allow-Methods", "GET");
-  res.header("Cross-Origin-Resource-Policy", "cross-origin");
-  next();
-}, express.static("public/qr"));
+app.use(
+  "/qr",
+  (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "https://teasonmike.io.vn");
+    res.header("Access-Control-Allow-Methods", "GET");
+    res.header("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static("public/qr"),
+);
 app.use("/posters", express.static("public/posters"));
 app.use("/api/recommendation", recommendRouter);
 app.get("/", (req, res) => res.send("MovieTime Server is Live!"));
 
 // 404 + Error handler
 app.use((req, res) =>
-  res.status(404).json({ success: false, message: "Not found" })
+  res.status(404).json({ success: false, message: "Not found" }),
 );
 app.use((err, req, res, next) => {
   console.error("Internal error:", err);
@@ -130,7 +145,9 @@ global._io = io;
 // Khi client kết nối
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
-  socket.on("disconnect", () => console.log(`Socket disconnected: ${socket.id}`));
+  socket.on("disconnect", () =>
+    console.log(`Socket disconnected: ${socket.id}`),
+  );
 });
 
 // Start Server

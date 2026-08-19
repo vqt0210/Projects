@@ -1,8 +1,13 @@
 import axios from "axios";
+import https from "https";
 import Movie from "../models/Movie.js";
 import Show from "../models/Show.js";
 import { inngest } from "../inngest/index.js";
+import dns from "dns";
 
+const tmdbAgent = new https.Agent({
+  rejectUnauthorized: false, // bỏ qua kiểm tra chứng chỉ SSL — cần thiết khi ở mạng công ty có kiểm duyệt HTTPS
+});
 const cache = new Map();
 function cacheGet(key) {
   const entry = cache.get(key);
@@ -33,17 +38,22 @@ export const getNowPlayingMovies = async (req, res) => {
     const { data } = await axios.get(
       "https://api.themoviedb.org/3/movie/now_playing",
       {
-        headers: { Authorization: `Bearer ${apiKey}` },
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
         timeout: AXIOS_DEFAULT.timeout,
-        params: { language: "en-US" },
-      }
+        params: {
+          language: "en-US",
+        },
+        httpsAgent: tmdbAgent,
+        proxy: false,
+      },
     );
-
     res.json({ success: true, movies: data.results });
   } catch (error) {
     console.error(
       "getNowPlayingMovies error:",
-      error?.response?.data || error?.message || error
+      error?.response?.data || error?.message || error,
     );
     res.status(502).json({
       success: false,
@@ -65,13 +75,7 @@ export const addShow = async (req, res) => {
     let movie = await Movie.findById(String(movieId));
 
     // Nếu phim chưa có trong DB hoặc thiếu trailer → gọi TMDB để lấy
-    if (
-      !movie ||
-      movie.trailer == null ||
-      movie.trailer === "" ||
-      movie.trailer === "null" ||
-      typeof movie.trailer === "undefined"
-    ) {
+    if (!movie || !movie.trailer || !movie.vote_average) {
       const apiKey = ensureTmdbKey();
 
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] =
@@ -96,11 +100,11 @@ export const addShow = async (req, res) => {
 
       let trailer = movieVideosData.results.find(
         (vid) =>
-          vid.type === "Trailer" && vid.site === "YouTube" && vid.official
+          vid.type === "Trailer" && vid.site === "YouTube" && vid.official,
       );
       if (!trailer) {
         trailer = movieVideosData.results.find(
-          (vid) => vid.type === "Trailer" && vid.site === "YouTube"
+          (vid) => vid.type === "Trailer" && vid.site === "YouTube",
         );
       }
 
@@ -125,12 +129,16 @@ export const addShow = async (req, res) => {
       // Cập nhật hoặc tạo mới phim
       if (!movie) {
         movie = await Movie.create(movieDetails);
-      } else if (!movie.trailer) {
-        movie = await Movie.findByIdAndUpdate(
-          String(movieId),
-          { trailer: movieDetails.trailer },
-          { new: true }
-        );
+      } else {
+        const updateFields = {};
+        if (!movie.trailer) updateFields.trailer = movieDetails.trailer;
+        if (!movie.vote_average)
+          updateFields.vote_average = movieDetails.vote_average;
+        if (Object.keys(updateFields).length > 0) {
+          movie = await Movie.findByIdAndUpdate(String(movieId), updateFields, {
+            new: true,
+          });
+        }
       }
     }
 
@@ -148,7 +156,7 @@ export const addShow = async (req, res) => {
 
       if (exists) {
         console.log(
-          `[SKIP] Show already exists for ${movie.title} at ${utcDateTime}`
+          `[SKIP] Show already exists for ${movie.title} at ${utcDateTime}`,
         );
         continue; // Bỏ qua nếu trùng
       }
@@ -304,11 +312,11 @@ export const getUpcomingMovies = async (req, res) => {
       {
         headers: { Authorization: `Bearer ${apiKey}` },
         params: { language: "en-US", page },
-      }
+      },
     ); // Lọc ra các movie chưa có trong Now Showing
 
     let filteredResults = data.results.filter(
-      (movie) => !nowShowingIds.includes(movie.id.toString())
+      (movie) => !nowShowingIds.includes(movie.id.toString()),
     ); // Fetch chi tiết từng movie để lấy genres, runtime, trailer…
 
     const detailedResults = await Promise.all(
@@ -319,13 +327,13 @@ export const getUpcomingMovies = async (req, res) => {
             {
               headers: { Authorization: `Bearer ${apiKey}` },
               params: { language: "en-US" },
-            }
+            },
           );
           return { ...movie, genres: detail.genres, runtime: detail.runtime };
         } catch {
           return movie; // fallback nếu fetch detail lỗi
         }
-      })
+      }),
     );
 
     const payload = {

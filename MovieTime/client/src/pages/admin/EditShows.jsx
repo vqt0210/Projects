@@ -37,11 +37,11 @@ export default function EditShows({ shows, refreshDashboard }) {
       const api = await authorizedApi(getToken);
       const payload = {};
       if (newTime) payload.showDateTime = newTime;
-      if (newPrice) payload.showPrice = { adult: parseFloat(newPrice) };
+      if (newPrice) payload.showPrice = parseFloat(newPrice);
 
       const { data } = await api.patch(
         `/api/admin/update-show/${editingShow._id}`,
-        payload
+        payload,
       );
       if (data.success) {
         toast.success("Show updated successfully!");
@@ -55,60 +55,60 @@ export default function EditShows({ shows, refreshDashboard }) {
 
   //Delete show
   const handleDelete = async (show, force = false) => {
-  try {
-    // Hiển thị popup trước
-    const result = await MySwal.fire({
-      title: "Are you sure?",
-      text: `Delete "${show.movie.title}"? This action cannot be undone.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#f84565",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete it!",
-      background: "#1e1e1e",
-      color: "#fff",
-      customClass: {
-        popup: "rounded-xl shadow-lg",
-        confirmButton:
-          "px-5 py-2 rounded-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all",
-        cancelButton:
-          "px-5 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 transition-all",
-      },
-    });
-
-    if (!result.isConfirmed) return;
-
-    // Tạo API sau khi người dùng xác nhận
-    const api = await authorizedApi(getToken);
-
-    const { data } = await api.delete(`/api/admin/delete-show/${show._id}`, {
-      data: { force },
-    });
-
-    if (data.success) {
-      toast.success(data.message);
-      refreshDashboard();
-    } else if (data.message?.includes("users already booked")) {
-      const forceResult = await MySwal.fire({
-        title: "⚠ Active Bookings Detected",
-        text: "This show has existing bookings. Cancel it and notify users?",
+    try {
+      // Hiển thị popup trước
+      const result = await MySwal.fire({
+        title: "Are you sure?",
+        text: `Delete "${show.movie.title}"? This action cannot be undone.`,
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#f84565",
         cancelButtonColor: "#6b7280",
-        confirmButtonText: "Yes, force delete",
+        confirmButtonText: "Yes, delete it!",
         background: "#1e1e1e",
         color: "#fff",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+          confirmButton:
+            "px-5 py-2 rounded-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 hover:shadow-[0_0_10px_#f84565] transition-all",
+          cancelButton:
+            "px-5 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 transition-all",
+        },
       });
 
-      if (forceResult.isConfirmed) await handleDelete(show, true);
-    } else {
-      toast.error(data.message || "Error deleting show");
+      if (!result.isConfirmed) return;
+
+      // Tạo API sau khi người dùng xác nhận
+      const api = await authorizedApi(getToken);
+
+      const { data } = await api.delete(`/api/admin/delete-show/${show._id}`, {
+        data: { force },
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        refreshDashboard();
+      } else if (data.message?.includes("users already booked")) {
+        const forceResult = await MySwal.fire({
+          title: "⚠ Active Bookings Detected",
+          text: "This show has existing bookings. Cancel it and notify users?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#f84565",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Yes, force delete",
+          background: "#1e1e1e",
+          color: "#fff",
+        });
+
+        if (forceResult.isConfirmed) await handleDelete(show, true);
+      } else {
+        toast.error(data.message || "Error deleting show");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error deleting show");
     }
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Error deleting show");
-  }
-};
+  };
 
   return (
     <div className="relative flex flex-wrap max-w-6xl gap-6 mt-5">
@@ -129,10 +129,7 @@ export default function EditShows({ shows, refreshDashboard }) {
             </p>
             <div className="flex items-center justify-between mt-2 text-gray-300">
               <p className="text-sm">
-                {currency}{" "}
-                {typeof show.showPrice === "object"
-                  ? show.showPrice.adult || 0
-                  : show.showPrice || 0}
+                {currency} {show.showPrice || 0}
               </p>
               <div className="flex items-center gap-1">
                 <StarIcon className="w-4 h-4 text-primary fill-primary" />
@@ -213,7 +210,7 @@ export default function EditShows({ shows, refreshDashboard }) {
                       <p>
                         Current Price:{" "}
                         <span className="text-primary">
-                          {currency}{" "}
+                          {show.showPrice || 0}
                           {show.showPrice?.adult || show.showPrice || 0}
                         </span>
                       </p>

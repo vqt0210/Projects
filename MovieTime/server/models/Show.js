@@ -4,11 +4,11 @@ const showSchema = new mongoose.Schema(
   {
     movie: { type: String, required: true, ref: "Movie" },
     showDateTime: { type: Date, required: true },
-    showPrice: { type: Object, default: {} },
+    showPrice: { type: Number, required: true, min: 0 },
     occupiedSeats: { type: Object, default: {} },
     isDeleted: { type: Boolean, default: false },
   },
-  { minimize: false, timestamps: true } // thêm timestamps để dễ truy vết
+  { minimize: false, timestamps: true }, // thêm timestamps để dễ truy vết
 );
 
 //  Soft cascade khi xoá show
@@ -27,11 +27,11 @@ showSchema.pre("findOneAndDelete", async function (next) {
             status: "CANCELLED",
             cancelledAt: new Date(),
           },
-        }
+        },
       );
 
       console.log(
-        `[SOFT CASCADE] Marked ${result.modifiedCount} bookings as CANCELLED for show ${showId}`
+        `[SOFT CASCADE] Marked ${result.modifiedCount} bookings as CANCELLED for show ${showId}`,
       );
     }
 

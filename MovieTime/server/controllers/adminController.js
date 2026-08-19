@@ -23,7 +23,7 @@ export const getDashboardData = async (req, res) => {
 
     const currentMonth = new Date().getMonth();
     const newUsersThisMonth = users.filter(
-      (u) => new Date(u.createdAt).getMonth() === currentMonth
+      (u) => new Date(u.createdAt).getMonth() === currentMonth,
     ).length;
 
     const totalBookings = bookings.length;
@@ -224,7 +224,7 @@ export const getAllBookings = async (req, res) => {
             user: { name: "Unknown user", email: "" },
           };
         }
-      })
+      }),
     );
 
     res.json({ success: true, bookings: enrichedBookings });
@@ -241,16 +241,18 @@ export const getUsers = async (req, res) => {
   try {
     const clerkUsers = await clerkClient.users.getUserList(); // Lấy tất cả user từ Clerk
 
-    const normalized = Array.isArray(clerkUsers) ? clerkUsers : clerkUsers?.data || clerkUsers?.items || [];
-    const users = normalized.map(u => ({
+    const normalized = Array.isArray(clerkUsers)
+      ? clerkUsers
+      : clerkUsers?.data || clerkUsers?.items || [];
+    const users = normalized.map((u) => ({
       id: u.id,
       name:
-        (u.firstName && u.lastName)
+        u.firstName && u.lastName
           ? `${u.firstName} ${u.lastName}`
           : u.username || "Unnamed",
       email: u.emailAddresses?.[0]?.emailAddress,
       image: u.imageUrl,
-      role: u.privateMetadata?.role || "user", 
+      role: u.privateMetadata?.role || "user",
     }));
 
     res.json({ success: true, users });
@@ -259,7 +261,6 @@ export const getUsers = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch users" });
   }
 };
-
 
 // Update role for user
 export const updateUserRole = async (req, res) => {
@@ -309,31 +310,42 @@ export const deleteUser = async (req, res) => {
     const currentUserId = req.currentUser?.id;
     const currentUserRole = req.currentUser?.role || "user";
 
-
     // Lấy user mục tiêu
-    const targetUser = await clerkClient.users.getUser(userId).catch(() => null);
+    const targetUser = await clerkClient.users
+      .getUser(userId)
+      .catch(() => null);
     if (!targetUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const targetRole = targetUser.privateMetadata?.role || "user";
 
     // Không cho xóa super-admin
     if (targetRole === "super-admin") {
-      return res.status(403).json({ success: false, message: "Cannot delete super-admin" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Cannot delete super-admin" });
     }
 
     // Admin có thể xóa user thường
     if (currentUserRole === "admin" && targetRole === "user") {
       await clerkClient.users.deleteUser(userId);
       console.log(`[ADMIN] ${currentUserId} deleted user ${userId}`);
-      return res.json({ success: true, message: "User deleted successfully by admin" });
+      return res.json({
+        success: true,
+        message: "User deleted successfully by admin",
+      });
     }
 
     // Super-admin có thể xóa bất kỳ ai (trừ chính mình)
     if (currentUserRole === "super-admin" && userId !== currentUserId) {
       await clerkClient.users.deleteUser(userId);
-      return res.json({ success: true, message: "User deleted successfully by super-admin" });
+      return res.json({
+        success: true,
+        message: "User deleted successfully by super-admin",
+      });
     }
 
     // Còn lại thì từ chối
@@ -343,10 +355,11 @@ export const deleteUser = async (req, res) => {
     });
   } catch (err) {
     console.error("Delete user error:", err);
-    return res.status(500).json({ success: false, message: "Failed to delete user" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete user" });
   }
 };
-
 
 export const updateShow = async (req, res) => {
   try {
@@ -355,7 +368,9 @@ export const updateShow = async (req, res) => {
 
     const show = await Show.findById(id).populate("movie");
     if (!show)
-      return res.status(404).json({ success: false, message: "Show not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Show not found" });
 
     if (showDateTime && new Date(showDateTime) < new Date()) {
       return res.status(400).json({
@@ -378,12 +393,21 @@ export const updateShow = async (req, res) => {
     if (showDateTime) {
       const localDateTime = new Date(showDateTime);
       const utcDateTime = new Date(
-        localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
+        localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000,
       );
       show.showDateTime = utcDateTime;
     }
 
-    if (showPrice !== undefined) show.showPrice = showPrice;
+    if (showPrice !== undefined) {
+      const parsedPrice = Number(showPrice);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "showPrice must be a valid non-negative number",
+        });
+      }
+      show.showPrice = parsedPrice;
+    }
     await show.save();
 
     // Email notify logic giữ nguyên
@@ -411,7 +435,9 @@ export const updateShow = async (req, res) => {
               to: email,
               subject: `Your movie showtime has been updated 🎬`,
               body: showTimeChangedEmail({
-                user: { name: user.firstName || user.username || "Valued customer" },
+                user: {
+                  name: user.firstName || user.username || "Valued customer",
+                },
                 movieTitle: show.movie.title,
                 oldShowDateTime,
                 newShowDateTime: showDateTime,
@@ -424,7 +450,7 @@ export const updateShow = async (req, res) => {
           } catch (err) {
             console.warn(`Failed email for ${booking._id}:`, err.message);
           }
-        })
+        }),
       );
     }
 
@@ -434,7 +460,6 @@ export const updateShow = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 export const deleteShow = async (req, res) => {
   try {
@@ -475,7 +500,7 @@ export const deleteShow = async (req, res) => {
           }),
         });
         console.log(
-          `Email sent to ${user.email} for cancelled show ${show.movie.title}`
+          `Email sent to ${user.email} for cancelled show ${show.movie.title}`,
         );
       }
     }
@@ -512,8 +537,12 @@ async function revokeAllUserSessions(userId, { keepLatest = true } = {}) {
     let targetList = sessions;
     if (keepLatest && sessions.length > 1) {
       const sorted = [...sessions].sort((a, b) => {
-        const tsB = new Date(b.lastActiveAt || b.updatedAt || b.createdAt || 0).getTime();
-        const tsA = new Date(a.lastActiveAt || a.updatedAt || a.createdAt || 0).getTime();
+        const tsB = new Date(
+          b.lastActiveAt || b.updatedAt || b.createdAt || 0,
+        ).getTime();
+        const tsA = new Date(
+          a.lastActiveAt || a.updatedAt || a.createdAt || 0,
+        ).getTime();
         return tsB - tsA;
       });
       // Keep the newest session (index 0), revoke others
@@ -535,7 +564,7 @@ async function revokeAllUserSessions(userId, { keepLatest = true } = {}) {
     if (process.env.NODE_ENV !== "production") {
       console.log(
         `Revoked ${revoked} session(s) for user ${userId}` +
-          (revokedIds.length ? `: [${revokedIds.join(", ")}]` : "")
+          (revokedIds.length ? `: [${revokedIds.join(", ")}]` : ""),
       );
     } else if (revoked > 0) {
       console.log(`Revoked ${revoked} session(s) for user ${userId}`);
