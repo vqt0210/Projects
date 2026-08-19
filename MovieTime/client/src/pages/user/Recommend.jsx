@@ -36,7 +36,7 @@ export default function Recommend() {
       console.error(
         "TMDB fetch error:",
         err.response?.status,
-        err.response?.data
+        err.response?.data,
       );
       return null;
     }
@@ -54,13 +54,13 @@ export default function Recommend() {
           (data.recommendations || []).map(async (rec) => ({
             ...rec,
             poster: await fetchPoster(rec.title),
-          }))
+          })),
         );
 
         setRecommendations(recsWithPosters);
         sessionStorage.setItem(
           "recommendations",
-          JSON.stringify(recsWithPosters)
+          JSON.stringify(recsWithPosters),
         );
 
         // Chỉ toast khi người dùng bấm Refresh
@@ -153,7 +153,7 @@ export default function Recommend() {
           onClick={() => {
             if (!isSignedIn) {
               toast.error(
-                "You need to be signed in to refresh recommendations."
+                "You need to be signed in to refresh recommendations.",
               );
               openSignIn();
               return;
@@ -200,7 +200,7 @@ export default function Recommend() {
                 onClick={() => handleViewMovieSmart(rec)}
                 className="w-full px-5 py-2 mt-5 text-sm font-medium text-white transition rounded-full cursor-pointer bg-primary hover:bg-primary/80"
               >
-                Watch Movie
+                Buy Tickets
               </button>
             </div>
           ))}
