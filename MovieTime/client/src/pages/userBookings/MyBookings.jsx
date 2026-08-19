@@ -39,6 +39,11 @@ const MyBookings = () => {
   }, []);
 
   useEffect(() => {
+    // Real-time update qua Socket.IO. Không ép transports: ["websocket"]
+    // để Socket.IO tự fallback về "polling" khi reverse proxy / CDN trên
+    // production không forward đúng header Upgrade cho WebSocket — nếu ép
+    // cứng websocket, kết nối fail âm thầm và không có transport nào khác
+    // để thử, khiến sự kiện "paymentUpdate" không bao giờ tới được client.
     const socketUrl = import.meta.env.VITE_BASE_URL || "http://localhost:10000";
     const socket = io(socketUrl, {
       withCredentials: true,
@@ -61,6 +66,12 @@ const MyBookings = () => {
 
     return () => socket.disconnect();
   }, []);
+
+  // Lớp dự phòng: nếu vì lý do gì đó (proxy chặn WebSocket, mất kết nối
+  // socket, v.v.) sự kiện real-time không tới được, tự động refetch danh
+  // sách booking mỗi vài giây khi vẫn còn booking đang Pending. Nhờ vậy
+  // trạng thái Paid vẫn tự cập nhật trong vài giây thay vì kẹt vĩnh viễn
+  // cho tới khi người dùng tự bấm F5.
   useEffect(() => {
     const hasPending = bookings.some(
       (b) => b.status !== "CANCELLED" && !b.isPaid,
@@ -184,6 +195,24 @@ const MyBookings = () => {
                       View Ticket
                     </button>
                   )}
+
+                  {/* Pay Now — booking chưa thanh toán, dùng lại chính link
+                      Stripe Checkout Session đã tạo lúc booking (paymentLink),
+                      không cần tạo session mới. Điều hướng bằng URL thật
+                      (không dùng navigate() của react-router) vì đây là link
+                      ngoài (checkout.stripe.com), cần load lại toàn trang. */}
+                  {!isPaid &&
+                    item.status !== "CANCELLED" &&
+                    item.paymentLink && (
+                      <button
+                        onClick={() =>
+                          (window.location.href = item.paymentLink)
+                        }
+                        className="px-6 py-2 mt-5 text-white transition-all duration-300 transform shadow-md cursor-pointer rounded-2xl bg-primary hover:bg-primary-dull hover:scale-105 hover:shadow-lg"
+                      >
+                        Pay Now
+                      </button>
+                    )}
                 </div>
               </div>
             );
