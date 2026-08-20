@@ -65,91 +65,58 @@ const syncUserUpdation = inngest.createFunction(
 const releaseSeatsAndDeleteBooking = inngest.createFunction(
   { id: "release-seats-delete-booking" },
   { event: "app/show.booked" },
-
   async ({ event, step }) => {
     const bookingId = event.data.bookingId;
-
-    console.log(`[EXPIRE] Start watching booking: ${bookingId}`);
-
-    // Lấy booking
     const booking = await Booking.findById(bookingId).lean();
+    if (!booking) return;
 
-    if (!booking) {
-      console.log(`[EXPIRE] Booking not found: ${bookingId}`);
-      return;
-    }
+    // Chờ đến khi hết hạn
+    const expiresAt =
+      booking.expiresAt instanceof Date
+        ? booking.expiresAt
+        : new Date(Date.now() + 10 * 60 * 1000);
 
-    // Nếu booking đã thanh toán thì không cần chờ/nhả ghế
-    if (booking.isPaid || booking.status === "PAID") {
-      console.log(`[EXPIRE] Booking already paid: ${bookingId}`);
-      return;
-    }
-
-    const expiresAt = new Date(booking.expiresAt);
-
-    console.log(
-      `[EXPIRE] Booking ${bookingId} will expire at: ${expiresAt.toISOString()}`,
-    );
-
-    // Chờ tới đúng thời điểm hết hạn
     await step.sleepUntil("wait-until-expire", expiresAt);
 
-    // Lấy thời gian hiện tại sau khi sleep
+    // Sau khi hết hạn, check nếu vẫn chưa thanh toán
     const now = new Date();
-
-    // Chỉ expire nếu booking vẫn chưa thanh toán
     const expiredBooking = await Booking.findOneAndUpdate(
       {
         _id: bookingId,
-        isPaid: false,
-        status: { $in: ["PENDING", "PENDING_PAYMENT"] },
-        expiresAt: { $lte: now },
+        $and: [
+          {
+            $or: [
+              { isPaid: false },
+              { status: { $in: ["PENDING", "PENDING_PAYMENT"] } },
+            ],
+          },
+          {
+            $or: [
+              { expiresAt: { $lte: now } },
+              { expiresAt: { $exists: false } },
+            ],
+          },
+        ],
       },
-      {
-        $set: {
-          status: "EXPIRED",
-          expiredAt: now,
-        },
-      },
+      { $set: { status: "EXPIRED", expiredAt: now } },
       { new: true },
     ).lean();
 
-    // Nếu null nghĩa là booking đã được thanh toán
-    // hoặc đã được xử lý trước đó
-    if (!expiredBooking) {
-      console.log(`[EXPIRE] Booking ${bookingId} was already paid/expired.`);
-      return;
+    if (!expiredBooking) return;
+
+    // Trả ghế
+    const show = await Show.findById(expiredBooking.show);
+    if (show && show.occupiedSeats) {
+      for (const seat of expiredBooking.bookedSeats) {
+        delete show.occupiedSeats[seat];
+      }
+      show.markModified("occupiedSeats");
+      await show.save();
     }
 
-    console.log(`[EXPIRE] Booking expired: ${bookingId}`);
-
-    // Tìm show
-    const unsetSeats = {};
-
-    for (const seat of expiredBooking.bookedSeats) {
-      unsetSeats[`occupiedSeats.${seat}`] = "";
-    }
-
-    if (Object.keys(unsetSeats).length > 0) {
-      await Show.updateOne(
-        { _id: expiredBooking.show },
-        { $unset: unsetSeats },
-      );
-    }
-
-    console.log(
-      `[EXPIRE] Released seats ${expiredBooking.bookedSeats.join(", ")}`,
-    );
-
-    // Thông báo frontend cập nhật real-time
-    if (global._io) {
-      global._io.emit("bookingExpired", {
-        bookingId: bookingId.toString(),
-        seats: expiredBooking.bookedSeats,
-      });
-
-      console.log(`[EXPIRE] Socket emitted: ${bookingId}`);
-    }
+    await step.run("log expired booking", async () => {
+      console.log(`Released seats for expired booking: ${bookingId}`);
+    });
   },
 );
 
@@ -205,9 +172,16 @@ const sendShowReminders = inngest.createFunction(
 const qrDir = path.join(process.cwd(), "public", "qr");
 if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
+// Gửi email xác nhận + tạo QR file, chạy SAU KHI webhook Stripe (trong
+// stripeController.js) đã xác nhận thanh toán thật và lưu isPaid=true vào
+// DB. Trước đây function này nghe nhầm "app/payment.success" — event bị
+// gửi ngay lúc TẠO booking (trước khi thanh toán), khiến vé có thể được
+// xác nhận + email dù người dùng chưa hề trả tiền. Đổi sang nghe đúng
+// "app/ticket.confirmed", event chỉ được webhook gửi sau khi Stripe xác
+// nhận checkout.session.completed thật sự.
 const handlePaymentSuccess = inngest.createFunction(
   { id: "payment-success-handler" },
-  { event: "app/payment.success" },
+  { event: "app/ticket.confirmed" },
   async ({ event, step }) => {
     try {
       const bookingId = event.data.bookingId;
@@ -217,10 +191,10 @@ const handlePaymentSuccess = inngest.createFunction(
 
       if (!booking) return { success: false };
 
-      // Cập nhật trạng thái thanh toán
-      booking.status = "PAID";
-      booking.isPaid = true;
-      booking.paidAt = new Date();
+      // Không set lại status/isPaid/paidAt ở đây — webhook Stripe đã làm
+      // việc đó và lưu DB TRƯỚC khi gửi event này. Function này chỉ lo
+      // phần còn lại: tạo file QR (để nhúng vào email, ổn định hơn base64
+      // vì nhiều email client chặn ảnh base64 inline) và gửi email.
 
       // Tạo file QR trên server
       const ticketUrl = `https://teasonmike.io.vn/ticket/${booking._id}`;
@@ -275,7 +249,7 @@ const cleanupOldFiles = inngest.createFunction(
   { cron: "0 0 * * *" },
   async ({ step }) => {
     await import("../cleanupFiles.js");
-    console.log("Daily cleanup (QR + Poster) done!");
+    console.log("✅ Daily cleanup (QR + Poster) done!");
   },
 );
 

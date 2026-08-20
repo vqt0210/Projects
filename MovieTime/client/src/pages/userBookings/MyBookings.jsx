@@ -74,7 +74,7 @@ const MyBookings = () => {
   // cho tới khi người dùng tự bấm F5.
   useEffect(() => {
     const hasPending = bookings.some(
-      (b) => b.status !== "CANCELLED" && !b.isPaid,
+      (b) => b.status !== "CANCELLED" && b.status !== "EXPIRED" && !b.isPaid,
     );
     if (!hasPending) return;
 
@@ -166,16 +166,20 @@ const MyBookings = () => {
                       className={`min-w-[100px] px-4 py-1.5 text-sm rounded-full font-medium text-center ${
                         item.status === "CANCELLED"
                           ? "bg-red-500/20 text-red-300"
-                          : isPaid
-                            ? "bg-green-500/20 text-green-300"
-                            : "bg-yellow-500/20 text-yellow-300"
+                          : item.status === "EXPIRED"
+                            ? "bg-gray-500/20 text-gray-300"
+                            : isPaid
+                              ? "bg-green-500/20 text-green-300"
+                              : "bg-yellow-500/20 text-yellow-300"
                       }`}
                     >
                       {item.status === "CANCELLED"
                         ? "Cancelled"
-                        : isPaid
-                          ? "Paid"
-                          : "Pending"}
+                        : item.status === "EXPIRED"
+                          ? "Expired"
+                          : isPaid
+                            ? "Paid"
+                            : "Pending"}
                     </span>
                   </div>
 
@@ -203,6 +207,7 @@ const MyBookings = () => {
                       ngoài (checkout.stripe.com), cần load lại toàn trang. */}
                   {!isPaid &&
                     item.status !== "CANCELLED" &&
+                    item.status !== "EXPIRED" &&
                     item.paymentLink && (
                       <button
                         onClick={() =>

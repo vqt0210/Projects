@@ -11,15 +11,17 @@ const checkSeatsAvailability = async (showId, selectedSeats) => {
     const showData = await Show.findById(showId);
     if (!showData) return false;
 
+    // Chỉ tính ghế của booking còn "sống" (chưa hết hạn/chưa bị hủy) là
+    // đang bị chiếm. Trước đây không lọc status nên booking EXPIRED/
+    // CANCELLED vẫn khoá ghế vĩnh viễn dù đã được trả lại trong
+    // Show.occupiedSeats — 2 nguồn dữ liệu lệch nhau gây bug ghế "ma".
     const bookings = await Booking.find({
       show: showId,
-      status: {
-        $in: ["PENDING", "PENDING_PAYMENT", "PAID", "CONFIRMED"],
-      },
+      status: { $nin: ["EXPIRED", "CANCELLED"] },
     });
-
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
+    // true nếu tất cả ghế đều còn trống
     return !selectedSeats.some((seat) => occupiedSeats.includes(seat));
   } catch (error) {
     console.error("Seat check error:", error.message);
@@ -115,7 +117,6 @@ export const createBooking = async (req, res) => {
     }
 
     // Tạo booking trong DB
-    console.log("1. Creating booking...");
     const [booking] = await Booking.create(
       [
         {
@@ -131,7 +132,6 @@ export const createBooking = async (req, res) => {
       ],
       { session },
     );
-    console.log("2. Booking created:", booking._id);
 
     // Cập nhật ghế đã chọn trong show
     await Show.updateOne(
@@ -158,7 +158,6 @@ export const createBooking = async (req, res) => {
       });
 
       await session.commitTransaction();
-
       return res.status(200).json({
         success: true,
         message: "Booking confirmed (free ticket).",
@@ -189,21 +188,24 @@ export const createBooking = async (req, res) => {
     booking.checkoutSessionId = stripeSession.id;
     await booking.save({ session });
 
-    await session.commitTransaction();
-    console.log("3. Transaction committed:", booking._id);
-    const verify = await Booking.findById(booking._id);
-    console.log(
-      "3.5 Verify right after commit:",
-      verify ? "TÌM THẤY ✅" : "KHÔNG TÌM THẤY ❌",
-    );
-    console.log("4. Sending Inngest event...");
+    // Gửi event đến Inngest
+    // Chỉ gửi "app/show.booked" — trigger releaseSeatsAndDeleteBooking, cơ
+    // chế tự hủy booking + trả ghế sau 10 phút nếu chưa thanh toán. Áp
+    // dụng cho MỌI booking (trả phí hay miễn phí).
+    //
+    // KHÔNG gửi "app/payment.success" ở đây nữa. Trước đây event này bị
+    // gửi ngay lúc tạo booking — tức là TRƯỚC khi Stripe xác nhận thanh
+    // toán thật — khiến handlePaymentSuccess có thể mark isPaid=true và
+    // gửi vé/QR dù người dùng chưa hề trả tiền. Việc xác nhận thanh toán
+    // + tạo vé giờ chỉ chạy đúng 1 chỗ duy nhất: trong stripeWebhooks
+    // (server/controllers/stripeController.js), sau khi Stripe xác nhận
+    // checkout.session.completed thật sự, qua event "app/ticket.confirmed".
     await inngest.send({
       name: "app/show.booked",
-      data: {
-        bookingId: booking._id.toString(),
-      },
+      data: { bookingId: booking._id.toString() },
     });
-    console.log("5. Inngest event sent");
+
+    await session.commitTransaction();
 
     // Phản hồi thành công
     res.status(200).json({
@@ -230,11 +232,8 @@ export const getOccupiedSeats = async (req, res) => {
 
     const bookings = await Booking.find({
       show: showId,
-      status: {
-        $in: ["PENDING", "PENDING_PAYMENT", "PAID", "CONFIRMED"],
-      },
+      status: { $nin: ["EXPIRED", "CANCELLED"] },
     });
-
     const occupiedSeats = bookings.flatMap((b) => b.bookedSeats);
 
     res.json({ success: true, occupiedSeats });
