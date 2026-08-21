@@ -1,11 +1,32 @@
 import axios from "axios";
 import https from "https";
+import dns from "dns";
+
+const customLookup = (hostname, options, callback) => {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return dns.lookup(hostname, options, callback);
+  }
+  dns.resolve4(hostname, (err, addresses) => {
+    if (err || !addresses || addresses.length === 0) {
+      return dns.lookup(hostname, options, callback);
+    }
+    if (options && options.all) {
+      return callback(null, addresses.map(ip => ({ address: ip, family: 4 })));
+    }
+    return callback(null, addresses[0], 4);
+  });
+};
 
 // Cùng cấu hình https.Agent như showController.js dùng cho các lời gọi TMDB
 // khác — bỏ qua kiểm tra chứng chỉ SSL vì cần thiết khi chạy trên mạng có
 // kiểm duyệt HTTPS.
 const tmdbAgent = new https.Agent({
   rejectUnauthorized: false,
+  lookup: customLookup,
 });
 
 function ensureTmdbKey() {
@@ -52,7 +73,7 @@ export const proxyTmdb = async (req, res) => {
     }
 
     const { data } = await axios.get(
-      `https://api.themoviedb.org/3/${tmdbPath}`,
+      `https://api.tmdb.org/3/${tmdbPath}`,
       {
         headers: { Authorization: `Bearer ${apiKey}` },
         params: req.query,

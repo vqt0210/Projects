@@ -2,7 +2,7 @@ import dns from "dns";
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 console.log(
   await new Promise((resolve, reject) => {
-    dns.resolve4("api.themoviedb.org", (err, addresses) => {
+    dns.resolve4("api.tmdb.org", (err, addresses) => {
       if (err) reject(err);
       else resolve(addresses);
     });

@@ -5,8 +5,28 @@ import Show from "../models/Show.js";
 import { inngest } from "../inngest/index.js";
 import dns from "dns";
 
+const customLookup = (hostname, options, callback) => {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return dns.lookup(hostname, options, callback);
+  }
+  dns.resolve4(hostname, (err, addresses) => {
+    if (err || !addresses || addresses.length === 0) {
+      return dns.lookup(hostname, options, callback);
+    }
+    if (options && options.all) {
+      return callback(null, addresses.map(ip => ({ address: ip, family: 4 })));
+    }
+    return callback(null, addresses[0], 4);
+  });
+};
+
 const tmdbAgent = new https.Agent({
   rejectUnauthorized: false, // bỏ qua kiểm tra chứng chỉ SSL — cần thiết khi ở mạng công ty có kiểm duyệt HTTPS
+  lookup: customLookup,
 });
 const cache = new Map();
 function cacheGet(key) {
@@ -36,7 +56,7 @@ export const getNowPlayingMovies = async (req, res) => {
   try {
     const apiKey = ensureTmdbKey();
     const { data } = await axios.get(
-      "https://api.themoviedb.org/3/movie/now_playing",
+      "https://api.tmdb.org/3/movie/now_playing",
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -80,17 +100,20 @@ export const addShow = async (req, res) => {
 
       const [movieDetailsResponse, movieCreditsResponse, movieVideosResponse] =
         await Promise.all([
-          axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
+          axios.get(`https://api.tmdb.org/3/movie/${movieId}`, {
             headers: { Authorization: `Bearer ${apiKey}` },
             timeout: AXIOS_DEFAULT.timeout,
+            httpsAgent: tmdbAgent,
           }),
-          axios.get(`https://api.themoviedb.org/3/movie/${movieId}/credits`, {
+          axios.get(`https://api.tmdb.org/3/movie/${movieId}/credits`, {
             headers: { Authorization: `Bearer ${apiKey}` },
             timeout: AXIOS_DEFAULT.timeout,
+            httpsAgent: tmdbAgent,
           }),
-          axios.get(`https://api.themoviedb.org/3/movie/${movieId}/videos`, {
+          axios.get(`https://api.tmdb.org/3/movie/${movieId}/videos`, {
             headers: { Authorization: `Bearer ${apiKey}` },
             timeout: AXIOS_DEFAULT.timeout,
+            httpsAgent: tmdbAgent,
           }),
         ]);
 
@@ -308,10 +331,11 @@ export const getUpcomingMovies = async (req, res) => {
     const nowShowingIds = nowShowingMovies.map((s) => s.movie.toString()); // Lấy danh sách upcoming từ TMDB
 
     const { data } = await axios.get(
-      "https://api.themoviedb.org/3/movie/upcoming",
+      "https://api.tmdb.org/3/movie/upcoming",
       {
         headers: { Authorization: `Bearer ${apiKey}` },
         params: { language: "en-US", page },
+        httpsAgent: tmdbAgent,
       },
     ); // Lọc ra các movie chưa có trong Now Showing
 
@@ -323,10 +347,11 @@ export const getUpcomingMovies = async (req, res) => {
       filteredResults.map(async (movie) => {
         try {
           const { data: detail } = await axios.get(
-            `https://api.themoviedb.org/3/movie/${movie.id}`,
+            `https://api.tmdb.org/3/movie/${movie.id}`,
             {
               headers: { Authorization: `Bearer ${apiKey}` },
               params: { language: "en-US" },
+              httpsAgent: tmdbAgent,
             },
           );
           return { ...movie, genres: detail.genres, runtime: detail.runtime };

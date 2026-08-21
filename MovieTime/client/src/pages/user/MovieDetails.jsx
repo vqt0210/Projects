@@ -145,9 +145,13 @@ const MovieDetails = () => {
   }, [id, title]);
 
   // Favorite
+  const targetMovieId = show?.movie?._id || (tmdbMovie?.id ? String(tmdbMovie.id) : null);
+  const targetMovieObj = show?.movie || (tmdbMovie ? { ...tmdbMovie, _id: String(tmdbMovie.id) } : null);
+
   const handleFavorite = async () => {
     if (!user) return toast.error("Please login to proceed");
-    await toggleFavorite(id, show?.movie);
+    if (!targetMovieId || !targetMovieObj) return toast.error("Invalid movie details");
+    await toggleFavorite(targetMovieId, targetMovieObj);
   };
 
   // Trailer
@@ -252,7 +256,8 @@ const MovieDetails = () => {
               <Heart
                 className={`w-5 h-5 ${
                   Array.isArray(favoriteMovies) &&
-                  favoriteMovies.some((m) => m._id === id)
+                  targetMovieId &&
+                  favoriteMovies.some((m) => m._id === targetMovieId)
                     ? "fill-primary text-primary"
                     : ""
                 }`}
