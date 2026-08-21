@@ -8,7 +8,6 @@ import timeFormat from "@/lib/timeFormat";
 import { useAppContext } from "@/context/AppContext";
 import toast from "react-hot-toast";
 import api from "@/utils/api";
-import axios from "axios";
 
 const MovieDetails = () => {
   const navigate = useNavigate();
@@ -20,8 +19,11 @@ const MovieDetails = () => {
   const [trailerUrl, setTrailerUrl] = useState("");
   const { user, favoriteMovies, toggleFavorite } = useAppContext();
 
-  const TMDB_BASE = "https://api.themoviedb.org/3";
-  const TMDB_BEARER = import.meta.env.VITE_TMDB_BEARER_TOKEN;
+  // Trước đây gọi thẳng https://api.themoviedb.org từ trình duyệt — đổi
+  // sang gọi qua backend proxy (/api/tmdb/...) để tránh lỗi DNS/kết nối
+  // trên một số mạng, `api` (axios
+  // instance) đã có sẵn baseURL trỏ về server, nên chỉ cần đổi TMDB_BASE.
+  const TMDB_BASE = "/api/tmdb";
   const languageMap = {
     en: "English",
     ja: "Japanese",
@@ -97,21 +99,12 @@ const MovieDetails = () => {
 
       // Nếu movieName là số ID TMDB -> fetch trực tiếp
       if (!isNaN(Number(movieName))) {
-        const res = await axios.get(`${TMDB_BASE}/movie/${movieName}`, {
-          headers: {
-            Authorization: `Bearer ${TMDB_BEARER}`,
-            Accept: "application/json",
-          },
-        });
+        const res = await api.get(`${TMDB_BASE}/movie/${movieName}`);
         movie = res.data;
       } else {
         // Nếu movieName là tên -> search theo tên
-        const search = await axios.get(`${TMDB_BASE}/search/movie`, {
+        const search = await api.get(`${TMDB_BASE}/search/movie`, {
           params: { query: decodeURIComponent(movieName) },
-          headers: {
-            Authorization: `Bearer ${TMDB_BEARER}`,
-            Accept: "application/json",
-          },
         });
         movie = search.data.results?.[0];
       }
@@ -122,12 +115,7 @@ const MovieDetails = () => {
       }
 
       // Lấy thêm thông tin chi tiết (runtime, genres, release_date)
-      const { data: details } = await axios.get(
-        `${TMDB_BASE}/movie/${movie.id}`,
-        {
-          headers: { Authorization: `Bearer ${TMDB_BEARER}` },
-        },
-      );
+      const { data: details } = await api.get(`${TMDB_BASE}/movie/${movie.id}`);
 
       // Gộp dữ liệu chi tiết vào movie
       movie.runtime = details.runtime;
@@ -138,12 +126,8 @@ const MovieDetails = () => {
 
       // 🎬 Lấy trailer + cast song song
       const [videos, credits] = await Promise.all([
-        axios.get(`${TMDB_BASE}/movie/${movie.id}/videos`, {
-          headers: { Authorization: `Bearer ${TMDB_BEARER}` },
-        }),
-        axios.get(`${TMDB_BASE}/movie/${movie.id}/credits`, {
-          headers: { Authorization: `Bearer ${TMDB_BEARER}` },
-        }),
+        api.get(`${TMDB_BASE}/movie/${movie.id}/videos`),
+        api.get(`${TMDB_BASE}/movie/${movie.id}/credits`),
       ]);
 
       movie.videos = videos.data.results;

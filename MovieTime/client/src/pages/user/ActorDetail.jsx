@@ -16,16 +16,13 @@ export default function ActorDetail() {
   useEffect(() => {
     const fetchActor = async () => {
       try {
-        const TMDB_BASE = "https://api.themoviedb.org/3";
-        const TMDB_BEARER = import.meta.env.VITE_TMDB_BEARER_TOKEN;
+        // Gọi qua backend proxy thay vì thẳng TMDB — xem giải thích trong
+        // tmdbController.js (server). Dùng VITE_BASE_URL (trỏ về server
+        // của chính app) thay vì domain TMDB.
+        const TMDB_BASE = `${import.meta.env.VITE_BASE_URL}/api/tmdb`;
 
         // Fetch thông tin diễn viên
-        const actorRes = await fetch(`${TMDB_BASE}/person/${id}`, {
-          headers: {
-            Authorization: `Bearer ${TMDB_BEARER}`,
-            Accept: "application/json",
-          },
-        });
+        const actorRes = await fetch(`${TMDB_BASE}/person/${id}`);
 
         if (!actorRes.ok) {
           const errorData = await actorRes.json();
@@ -47,12 +44,6 @@ export default function ActorDetail() {
         // Fetch phim liên quan
         const moviesRes = await fetch(
           `${TMDB_BASE}/person/${id}/movie_credits`,
-          {
-            headers: {
-              Authorization: `Bearer ${TMDB_BEARER}`,
-              Accept: "application/json",
-            },
-          },
         );
         const moviesData = await moviesRes.json();
 

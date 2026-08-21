@@ -31,6 +31,7 @@ import stripeRouter from "./routes/stripeRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeController.js";
 import ticketRouter from "./routes/ticketRoutes.js";
 import recommendRouter from "./routes/recommendRoutes.js";
+import tmdbRouter from "./routes/tmdbRoutes.js";
 
 import fs from "fs";
 import path from "path";
@@ -119,6 +120,7 @@ app.use(
 );
 app.use("/posters", express.static("public/posters"));
 app.use("/api/recommendation", recommendRouter);
+app.use("/api/tmdb", tmdbRouter);
 app.get("/", (req, res) => res.send("MovieTime Server is Live!"));
 
 // 404 + Error handler

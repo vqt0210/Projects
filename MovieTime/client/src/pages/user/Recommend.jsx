@@ -4,7 +4,6 @@ import BlurCircle from "@/components/common/BlurCircle";
 import api, { authorizedApi } from "@/utils/api";
 import { useAppContext } from "@/context/AppContext";
 import { Sparkles, RefreshCw } from "lucide-react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useClerk } from "@clerk/clerk-react";
@@ -17,16 +16,14 @@ export default function Recommend() {
   const [error, setError] = useState(null);
   const { openSignIn } = useClerk();
 
-  const TMDB_BASE = "https://api.themoviedb.org/3";
+  // Gọi qua backend proxy thay vì thẳng TMDB — xem giải thích trong
+  // tmdbController.js (server).
+  const TMDB_BASE = "/api/tmdb";
 
   const fetchPoster = async (title) => {
     try {
-      const res = await axios.get(`${TMDB_BASE}/search/movie`, {
+      const res = await api.get(`${TMDB_BASE}/search/movie`, {
         params: { query: title },
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_TMDB_BEARER_TOKEN}`,
-          Accept: "application/json",
-        },
       });
       const movie = res.data.results?.[0];
       return movie?.poster_path
