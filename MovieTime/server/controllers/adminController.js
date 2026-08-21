@@ -2,13 +2,33 @@
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
 import User from "../models/User.js";
-import { clerkClient } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import sendEmail from "../configs/resend.js";
 import { showTimeChangedEmail } from "../email/template.js";
 import { cancelShowEmail } from "../email/template.js";
 
+// Endpoint để BẤT KỲ user nào (kể cả không phải admin) tự kiểm tra trạng
+// thái của mình — đây là 1 câu hỏi trạng thái hợp lệ, không phải hành
+// động cần quyền admin, nên luôn trả 200 (isAdmin: true/false) chứ không
+// bao giờ trả 401/403. Route của endpoint này (server/routes/adminRoutes.js)
+// cũng được đặt TRƯỚC middleware protectAdmin vì lý do tương tự — nếu để
+// sau, user thường sẽ luôn bị chặn trước khi tới được đây.
 export const isAdmin = async (req, res) => {
-  res.json({ success: true, isAdmin: true });
+  try {
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.json({ success: true, isAdmin: false });
+    }
+
+    const user = await clerkClient.users.getUser(userId);
+    const role = user.privateMetadata?.role || "user";
+    const isAdminUser = role === "admin" || role === "super-admin";
+
+    res.json({ success: true, isAdmin: isAdminUser });
+  } catch (error) {
+    console.error("isAdmin check error:", error);
+    res.json({ success: true, isAdmin: false });
+  }
 };
 
 // API: Get Admin Dashboard Data

@@ -11,36 +11,28 @@ const FeaturedSection = () => {
 
   // Gọi API lần đầu + tự refresh mỗi 60s
   useEffect(() => {
-    console.log("Fetching shows...");
     fetchShows();
 
     const interval = setInterval(() => {
-      console.log("Auto-refreshing shows...");
       fetchShows();
     }, 60000);
 
     return () => clearInterval(interval);
   }, []);
 
-  //  CHUẨN HÓA THEO UTC 
+  //  CHUẨN HÓA THEO UTC
   const now = new Date();
 
   // Lọc show còn hiệu lực (so sánh UTC)
   const validShows = shows.filter((show) => {
     const showTime = new Date(show.showDateTime);
-    const isValid = showTime > now;
-    console.log(
-      `🎬 [${show.movie.title}] — showTime=${showTime.toISOString()}, now=${now.toISOString()}, valid=${isValid}`
-    );
-    return isValid;
+    return showTime > now;
   });
 
   // Lọc trùng phim, mỗi phim chỉ giữ 1 show đại diện
   const uniqueShows = [
     ...new Map(validShows.map((show) => [show.movie._id, show])).values(),
   ];
-
-  console.log(`Total valid shows: ${uniqueShows.length}`);
 
   return (
     <div className="relative px-6 sm:px-10 md:px-16 lg:px-24 xl:px-32 2xl:px-[12%] overflow-hidden">
@@ -80,7 +72,10 @@ const FeaturedSection = () => {
         {/* Grid phim */}
         <div className="grid grid-cols-1 gap-8 mt-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-items-center">
           {uniqueShows.slice(0, 8).map((show) => (
-            <MovieCard key={`${show._id}-${show.movie._id}`} movie={show.movie} />
+            <MovieCard
+              key={`${show._id}-${show.movie._id}`}
+              movie={show.movie}
+            />
           ))}
         </div>
 
