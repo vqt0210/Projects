@@ -163,7 +163,7 @@ const MovieDetails = () => {
   // Favorite
   const handleFavorite = async () => {
     if (!user) return toast.error("Please login to proceed");
-    await toggleFavorite(id);
+    await toggleFavorite(id, show?.movie);
   };
 
   // Trailer

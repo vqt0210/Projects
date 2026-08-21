@@ -10,7 +10,7 @@ const ListShows = () => {
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 👉 Hàm định dạng ngày giờ theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
+  //  Hàm định dạng ngày giờ theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
   const formatDateVN = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -58,7 +58,9 @@ const ListShows = () => {
           <tbody className="text-sm font-light">
             {shows.length > 0 ? (
               shows.map((show, index) => {
-                const totalBookings = Object.keys(show.occupiedSeats || {}).length;
+                const totalBookings = Object.keys(
+                  show.occupiedSeats || {},
+                ).length;
                 const earnings = totalBookings * show.showPrice;
                 const isPast = new Date(show.showDateTime) < new Date();
 

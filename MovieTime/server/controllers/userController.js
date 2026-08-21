@@ -45,7 +45,7 @@ export const updateFavorite = async (req, res) => {
     } else {
       // Xoá khỏi danh sách
       user.privateMetadata.favorites = user.privateMetadata.favorites.filter(
-        (item) => item !== movieId
+        (item) => item !== movieId,
       );
       message = "Favorite removed successfully";
     }
@@ -55,7 +55,14 @@ export const updateFavorite = async (req, res) => {
       privateMetadata: user.privateMetadata,
     });
 
-    res.json({ success: true, message });
+    // Trả luôn danh sách phim yêu thích mới nhất trong CÙNG 1 response,
+    // để frontend không cần gọi thêm request sync-favorites riêng. Việc gộp lại
+    // giảm 1 network round-trip + 1 lần gọi Clerk API mỗi lần bấm tim.
+    const movies = await Movie.find({
+      _id: { $in: user.privateMetadata.favorites },
+    });
+
+    res.json({ success: true, message, movies });
   } catch (error) {
     console.error(error.message);
     res.json({ success: false, message: error.message });
