@@ -49,11 +49,13 @@ const MovieDetails = () => {
         }
       }
 
-      // Nếu không có id hoặc không tìm thấy → thử tìm trong DB theo title
+      // Nếu không có id hoặc không tìm thấy → thử tìm trong DB theo title.
+      // validateStatus: không throw cho 404 — phim chưa có trong DB là bình thường.
       if (!foundShow && (title || id)) {
         const movieName = decodeURIComponent(title || id);
         const { data } = await api.get(`/api/show/search`, {
           params: { q: movieName },
+          validateStatus: (status) => status < 500,
         });
 
         if (data.success && data.movie?._id) {

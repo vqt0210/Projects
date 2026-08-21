@@ -76,26 +76,19 @@ export default function Recommend() {
   };
 
   const handleViewMovieSmart = async (rec) => {
-    try {
-      const { data } = await api.get("/api/show/search", {
-        params: { q: rec.title },
-      });
+    // validateStatus: không throw exception cho 404 — phim không có trong DB là
+    // trường hợp bình thường (coming soon), không phải lỗi thật sự.
+    const { data } = await api.get("/api/show/search", {
+      params: { q: rec.title },
+      validateStatus: (status) => status < 500,
+    });
 
-      if (data.success && data.movie?._id) {
-        if (data.source === "local") navigate(`/movies/${data.movie._id}`);
-        else navigate(`/movies/coming-soon/${encodeURIComponent(rec.title)}`);
-
-        setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
-        return;
-      }
-
+    if (data.success && data.movie?._id) {
+      navigate(`/movies/${data.movie._id}`);
+    } else {
       navigate(`/movies/coming-soon/${encodeURIComponent(rec.title)}`);
-      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
-    } catch (err) {
-      console.error("View movie error:", err);
-      navigate(`/movies/coming-soon/${encodeURIComponent(rec.title)}`);
-      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     }
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
   };
 
   useEffect(() => {

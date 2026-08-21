@@ -18,7 +18,10 @@ const customLookup = (hostname, options, callback) => {
       return dns.lookup(hostname, options, callback);
     }
     if (options && options.all) {
-      return callback(null, addresses.map(ip => ({ address: ip, family: 4 })));
+      return callback(
+        null,
+        addresses.map((ip) => ({ address: ip, family: 4 })),
+      );
     }
     return callback(null, addresses[0], 4);
   });
@@ -255,8 +258,10 @@ export const getShow = async (req, res) => {
     // Nếu vẫn không có → thử tìm theo title (trường hợp người dùng click từ /movies/coming-soon/:title)
     if (!movie && isNaN(Number(movieId))) {
       const decodedTitle = decodeURIComponent(movieId);
+      // Escape ký tự đặc biệt trong regex (vd: dấu ngoặc trong "Clash of the Titans (2010)")
+      const escapedTitle = decodedTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       movie = await Movie.findOne({
-        title: { $regex: decodedTitle, $options: "i" },
+        title: { $regex: escapedTitle, $options: "i" },
       });
     }
 
@@ -330,14 +335,11 @@ export const getUpcomingMovies = async (req, res) => {
     const nowShowingMovies = await Show.find({}, "movie");
     const nowShowingIds = nowShowingMovies.map((s) => s.movie.toString()); // Lấy danh sách upcoming từ TMDB
 
-    const { data } = await axios.get(
-      "https://api.tmdb.org/3/movie/upcoming",
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        params: { language: "en-US", page },
-        httpsAgent: tmdbAgent,
-      },
-    ); // Lọc ra các movie chưa có trong Now Showing
+    const { data } = await axios.get("https://api.tmdb.org/3/movie/upcoming", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      params: { language: "en-US", page },
+      httpsAgent: tmdbAgent,
+    }); // Lọc ra các movie chưa có trong Now Showing
 
     let filteredResults = data.results.filter(
       (movie) => !nowShowingIds.includes(movie.id.toString()),
@@ -398,15 +400,17 @@ export const searchMovieByTitle = async (req, res) => {
       movie = await Movie.findById(query);
     }
 
-    // Nếu query là số (TMDB ID)
+    // Nếu query là số (TMDB ID) — thử tìm theo ID trước
     if (!movie && /^\d+$/.test(query)) {
       movie = await Movie.findOne({ _id: query });
     }
 
-    // Nếu vẫn chưa thấy, thử tìm theo title
+    // Luôn thử tìm theo title (kể cả khi query là số, vd: "300" là tên phim)
     if (!movie) {
+      // Escape ký tự đặc biệt trong regex)
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       movie = await Movie.findOne({
-        title: { $regex: query, $options: "i" },
+        title: { $regex: escapedQuery, $options: "i" },
       });
     }
 

@@ -1,24 +1,15 @@
-import { useEffect, useState } from "react";
 import MovieCard from "@/components/movies/MovieCard";
 import BlurCircle from "@/components/common/BlurCircle";
 import { useAppContext } from "@/context/AppContext";
 import Loading from "@/components/common/Loading";
 
 const Favorite = () => {
-  const [loading, setLoading] = useState(true);
-  const { favoriteMovies, syncFavorites } = useAppContext();
+  // AppContext đã gọi fetchFavoriteMovies() khi user load xong.
+  // Không cần gọi lại ở đây — tránh double fetch gây delay.
+  const { favoriteMovies, isFetchingFavorites } = useAppContext();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await syncFavorites();
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return <Loading />
+  if (isFetchingFavorites) {
+    return <Loading />;
   }
 
   return favoriteMovies.length > 0 ? (
@@ -53,3 +44,4 @@ const Favorite = () => {
 };
 
 export default Favorite;
+

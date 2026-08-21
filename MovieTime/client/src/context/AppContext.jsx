@@ -12,6 +12,8 @@ export const AppProvider = ({ children }) => {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [shows, setShows] = useState([]);
   const [favoriteMovies, setFavoriteMovies] = useState([]);
+  // true trong khi đang fetch favorites lần đầu — để phân biệt "đang load" vs "thật sự rỗng"
+  const [isFetchingFavorites, setIsFetchingFavorites] = useState(false);
 
   const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
 
@@ -106,6 +108,9 @@ export const AppProvider = ({ children }) => {
       } catch (e) {
         console.warn("Cache favorites hỏng, bỏ qua:", e);
       }
+    } else {
+      // Chưa có cache → đánh dấu đang load lần đầu
+      setIsFetchingFavorites(true);
     }
 
     // 2. Gọi API phía sau, cập nhật lại cho đúng dữ liệu mới nhất
@@ -118,8 +123,11 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("fetchFavoriteMovies error:", error);
+    } finally {
+      setIsFetchingFavorites(false);
     }
   };
+
 
   const syncFavorites = async () => {
     try {
@@ -257,6 +265,7 @@ export const AppProvider = ({ children }) => {
     image_base_url,
     favoriteMovies,
     setFavoriteMovies,
+    isFetchingFavorites,
     fetchFavoriteMovies,
     syncFavorites,
     toggleFavorite,
