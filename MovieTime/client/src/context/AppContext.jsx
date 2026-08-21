@@ -96,14 +96,26 @@ export const AppProvider = ({ children }) => {
 
   // ================== FAVORITES ==================
   const fetchFavoriteMovies = async () => {
+    const cacheKey = `favorites_${user?.id}`;
+
+    // 1. Hiện dữ liệu cũ đã lưu
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        setFavoriteMovies(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Cache favorites hỏng, bỏ qua:", e);
+      }
+    }
+
+    // 2. Gọi API phía sau, cập nhật lại cho đúng dữ liệu mới nhất
     try {
       const authApi = await authorizedApi(getToken);
       const { data } = await authApi.get("/api/user/favorites");
-
       if (data.success) {
         setFavoriteMovies(data.movies);
-        syncFavoriteRefs(data.movies);
-      } else console.warn(data.message);
+        localStorage.setItem(cacheKey, JSON.stringify(data.movies));
+      }
     } catch (error) {
       console.error("fetchFavoriteMovies error:", error);
     }
